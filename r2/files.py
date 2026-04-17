@@ -2,10 +2,12 @@ import os
 import shutil
 from pathlib import Path
 
+from .conf import Config
+
 
 def move_to_hd(path: Path):
     home = Path.home()
-    hd_path = home / "hd"
+    hd_path = Config().hd.path
     hd_path.mkdir(exist_ok=True)
 
     path = path.resolve()

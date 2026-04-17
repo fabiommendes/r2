@@ -7,7 +7,7 @@ authors = [
     { name = "Fábio Macêdo Mendes", email = "fabiomacedomendes@gmail.com" },
 ]
 requires-python = ">=3.13"
-dependencies = ["rich>=14.2.0", "typer>=0.20.0"]
+dependencies = ["pydantic>=2.13.2", "rich>=14.2.0", "typer>=0.20.0"]
 
 [project.scripts]
 r2 = "r2.cli:main"
