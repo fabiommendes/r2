@@ -1,3 +1,4 @@
+import builtins
 from pathlib import Path
 from typing import Annotated
 
@@ -5,6 +6,7 @@ import rich
 import typer
 from rich import print
 
+from .project import get_project
 from .utils import error, warn
 
 app = typer.Typer()
@@ -83,8 +85,73 @@ def help():
     print("Under construction...")
 
 
+#
+# PROJECT TASKS
+#
+path_opt = typer.Option(..., "--path", help="Alternate path to search for the project.")
+
+
+@app.command()
+def init(
+    path: Annotated[Path | None, path_opt] = None,
+    type: Annotated[
+        str, typer.Option(..., "--type", "-t", help="Type of project to initialize")
+    ] = "lib",
+) -> None:
+    """
+    Initialize a new project.
+    """
+
+    project = get_project(path)
+    project.docs()
+
+
+@app.command()
+def test(path: Annotated[Path | None, path_opt] = None) -> None:
+    """
+    Run the default test suite.
+    """
+    project = get_project(path)
+    project.test()
+
+
+@app.command()
+def build(path: Annotated[Path | None, path_opt] = None) -> None:
+    """
+    Run the default build process.
+    """
+    project = get_project(path)
+    project.build()
+
+
+@app.command()
+def docs(path: Annotated[Path | None, path_opt] = None) -> None:
+    """
+    Generate project documentation.
+    """
+    project = get_project(path)
+    project.docs()
+
+
+#
+# MAIN APPLICATION
+#
 def main():
     """
     Run application.
     """
     app()
+
+
+#
+# UTILITIES
+#
+def dbg(obj):
+    """
+    Debug utility to print the type and value of an object.
+    """
+    print(f"[b red]DEBUG[/]: [b blue]{type(obj)}[/] ")
+    print(obj)
+
+
+builtins.dbg = dbg  # type: ignore
