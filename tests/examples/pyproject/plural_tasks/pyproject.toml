@@ -1,0 +1,22 @@
+[project]
+name = "plural-tasks"
+version = "0.1.0"
+description = "Example project using the plural/synonym task names r2 also accepts."
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+task = "plural_tasks.taskrunner:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "plural_tasks"
+module-root = "."
+
+[tool.taskipy.tasks]
+tests = "python -c \"import pathlib; pathlib.Path('TEST_RAN.txt').write_text('ok')\""
+builds = "python -c \"import pathlib; pathlib.Path('BUILD_RAN.txt').write_text('ok')\""
+doc = "python -c \"import pathlib; pathlib.Path('DOCS_RAN.txt').write_text('ok')\""

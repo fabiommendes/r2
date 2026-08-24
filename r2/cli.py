@@ -11,6 +11,18 @@ from .utils import error, warn
 
 app = typer.Typer()
 
+__all__ = [
+    #: Main entry point
+    "main",
+    #: Commands
+    "alias",
+    "hd",
+    "help",
+    "init",
+    "test",
+    "build",
+    "docs",
+]
 
 ERRORS = {
     "alias-name-required": "Alias name is required when not using --sections, --list, or --edit.",
@@ -136,11 +148,11 @@ def docs(path: Annotated[Path | None, path_opt] = None) -> None:
 #
 # MAIN APPLICATION
 #
-def main():
+def main(argv: list[str] | None = None) -> None:
     """
     Run application.
     """
-    app()
+    app(argv)
 
 
 #

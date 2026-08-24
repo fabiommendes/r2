@@ -12,6 +12,9 @@ dependencies = ["pydantic>=2.13.2", "rich>=14.2.0", "typer>=0.20.0"]
 [project.scripts]
 r2 = "r2.cli:main"
 
+[dependency-groups]
+dev = ["pytest>=8.0", "taskipy>=1.13"]
+
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13"]
 build-backend = "uv_build"

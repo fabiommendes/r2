@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Literal, Protocol, get_args
+from typing import Literal, Never, Protocol, Self, get_args
 
 ProjectKind = Literal["lib", "cli", "app"]
 
@@ -21,25 +23,25 @@ class Project(Protocol):
         """
         raise NotImplementedError
 
-    def test(self) -> None:
+    def test(self) -> Never:
         """
         Run tests for the project.
         """
         raise NotImplementedError
 
-    def build(self) -> None:
+    def build(self) -> Never:
         """
         Build the project.
         """
         raise NotImplementedError
 
-    def docs(self) -> None:
+    def docs(self) -> Never:
         """
         Generate documentation for the project.
         """
         raise NotImplementedError
 
-    def run(self, script: str | None = None) -> None:
+    def run(self, script: str | None = None) -> Never:
         """
         With an argument, run a script within the project.
 
@@ -48,16 +50,51 @@ class Project(Protocol):
         if script is None:
             return self.run_default()
         else:
-            return self.run_script(script)
+            return self.run_task(script)
 
-    def run_default(self) -> None:
+    def run_default(self) -> Never:
         """
         Run the default entry point for the project.
         """
         raise NotImplementedError
 
-    def run_script(self, script: str) -> None:
+    def run_task(self, script: str) -> Never:
         """
         Run a specific script within the project.
         """
         raise NotImplementedError
+
+    def run_subcommand(self, command: list[str]) -> Never:
+        exit(0)
+
+
+class NoOpProject(Project):
+    """
+    Base implementation that is a no-op for all methods.
+    """
+
+    @classmethod
+    def is_project(cls, path: Path) -> bool:
+        return False
+
+    @classmethod
+    def init(cls, path: Path, kind: ProjectKind) -> Self:
+        return cls()
+
+    def test(self) -> Never:
+        exit(0)
+
+    def build(self) -> Never:
+        exit(0)
+
+    def docs(self) -> Never:
+        exit(0)
+
+    def run_default(self) -> Never:
+        exit(0)
+
+    def run_task(self, script: str) -> Never:
+        exit(0)
+
+    def run_subcommand(self, command: list[str]) -> Never:
+        exit(0)

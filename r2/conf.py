@@ -8,6 +8,9 @@ from pydantic import BaseModel
 
 CONFIG_PATH = Path.home() / ".config" / "r2" / "config.toml"
 DEFAULT_CONFIG = """
+[r2]
+name = "$name"
+
 [hd]
 path = "~/hd"
 """
@@ -40,13 +43,15 @@ class Config:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self, name: str | None = None):
         if not hasattr(self, "_initialized"):
             if not CONFIG_PATH.exists():
                 CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
                 with CONFIG_PATH.open("w") as f:
-                    f.write(DEFAULT_CONFIG)
-            with CONFIG_PATH.open() as f:
+                    src = DEFAULT_CONFIG
+                    src = src.format(name=name or infer_user_name())
+                    f.write(src)
+            with CONFIG_PATH.open("rb") as f:
                 data = tomllib.load(f)
 
             self._data = ConfigData.model_validate(data)
@@ -73,3 +78,14 @@ def set_config(data: ConfigData):
         yield
     finally:
         cfg._data = original_config
+
+
+def infer_user_name() -> str:
+    """
+    Infer the user's name from the environment or system settings.
+    """
+    import getpass
+    import os
+
+    name = os.environ.get("USER") or os.environ.get("USERNAME") or getpass.getuser()
+    return name
