@@ -202,6 +202,7 @@ class RobinApp(App[None]):
         self, event: TabbedContent.TabActivated
     ) -> None:
         event.pane.query_one(View).focus_entry()
+        self.refresh_bindings()
 
     def _hand_over(self, command: list[str], cwd: Path | None = None) -> None:
         """Give the terminal to command and take it back when it exits."""
@@ -250,10 +251,22 @@ class RobinApp(App[None]):
         except OSError as error:
             self.notify(f"Could not run {command[0]}: {error}", severity="error")
 
+    def _active_previews(self) -> list[FilePreview]:
+        try:
+            tabs = self.query_one(TabbedContent)
+        except NoMatches:
+            return []
+        return list(tabs.query(f"#{tabs.active} FilePreview").results(FilePreview))
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        # None shows the binding dimmed in the footer instead of hiding it.
+        if action == "toggle_full":
+            return any(p.can_toggle for p in self._active_previews()) or None
+        return True
+
     def action_toggle_full(self) -> None:
         """Toggle the file preview of the active view, if it has one."""
-        tabs = self.query_one(TabbedContent)
-        for preview in tabs.query(f"#{tabs.active} FilePreview").results(FilePreview):
+        for preview in self._active_previews():
             preview.toggle_full()
 
     async def action_toggle_pin(self) -> None:

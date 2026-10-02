@@ -128,6 +128,8 @@ class FilePreview(Vertical):
         super().__init__(id=id)
         self._link: Link | None = None
         self._label = ""
+        self.can_toggle = False
+        """Whether the shown text has a range, so excerpt and full differ."""
 
     def compose(self) -> ComposeResult:
         yield Static(id="heading")
@@ -140,6 +142,8 @@ class FilePreview(Vertical):
         self._link = link
         self._label = label or (str(link.path) if link else "")
         self._update()
+        # Dims or enables the excerpt toggle in the footer.
+        self.app.refresh_bindings()
 
     def watch_full(self) -> None:
         self._update()
@@ -173,6 +177,7 @@ class FilePreview(Vertical):
         self._show_image(None)
         self.remove_class("-excerpt")
         area.faded_rows = set()
+        self.can_toggle = False
         if link is None:
             title.update("")
             area.load_text("")
@@ -202,8 +207,12 @@ class FilePreview(Vertical):
             )
             lines = lines[first - 1 : last]
             self.add_class("-excerpt")
-        mode = "excerpt" if partial else "full"
-        title.update(f"{self._label}  [dim]({mode}, f to toggle)[/]")
+        self.can_toggle = link.start is not None
+        if link.start is None:
+            title.update(self._label)
+        else:
+            mode = "excerpt" if partial else "full"
+            title.update(f"{self._label}  [dim]({mode}, f to toggle)[/]")
 
         area.language = LANGUAGES.get(link.path.suffix)
         area.load_text("\n".join(lines))
