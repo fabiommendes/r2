@@ -11,6 +11,7 @@ from rich.color import Color, blend_rgb
 from rich.segment import Segment, Segments
 from rich.style import Style
 from rich.text import Text
+from textual.color import Color as TextualColor
 from textual.scrollbar import ScrollBar, ScrollBarRender
 from textual.widgets import DirectoryTree, Tree
 
@@ -85,29 +86,34 @@ Button:focus {
 """
 
 
-# Catppuccin Mocha, the palette of the user's starship prompt.
-CRUST = "#11111b"
-PEACH = "#fab387"
-RED = "#f38ba8"
-GREEN = "#a6e3a1"
-OVERLAY0 = "#6c7086"
-LAVENDER = "#b4befe"
-
-# Nerd Font glyphs: rounded pill ends and the git branch symbol.
-PILL_LEFT = "\ue0b6"
-PILL_RIGHT = "\ue0b4"
+# Nerd Font glyphs: powerline arrow and the git branch symbol.
+ARROW = "\ue0b0"
 BRANCH_SYMBOL = "\ue0a0"
 
 
-def pills(*segments: tuple[str, str]) -> Text:
-    """Render (label, color) pairs as rounded pills, starship style."""
+def powerline(*segments: tuple[str, str]) -> Text:
+    """Render (label, color) pairs as a powerline chain, starship style.
+
+    Colors are CSS color values, such as those from the app's theme
+    variables. The label text takes the contrasting color of its segment.
+    """
     text = Text()
-    for index, (label, color) in enumerate(segments):
+    colors = [TextualColor.parse(color) for _, color in segments]
+    for index, ((label, _), color) in enumerate(zip(segments, colors, strict=True)):
         if index:
-            text.append(" ")
-        text.append(PILL_LEFT, style=color)
-        text.append(f" {label} ", style=Style(color=CRUST, bgcolor=color))
-        text.append(PILL_RIGHT, style=color)
+            text.append(
+                ARROW,
+                style=Style(
+                    color=colors[index - 1].rich_color, bgcolor=color.rich_color
+                ),
+            )
+        foreground = color + color.get_contrast_text()
+        text.append(
+            f" {label} ",
+            style=Style(color=foreground.rich_color, bgcolor=color.rich_color),
+        )
+    if colors:
+        text.append(ARROW, style=Style(color=colors[-1].rich_color))
     return text
 
 

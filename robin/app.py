@@ -35,10 +35,13 @@ MAX_RECONNECT_DELAY = 30.0
 
 GIT_POLL_INTERVAL = 5.0
 
+# Theme variables that color the top bar segments.
+PROJECT_COLOR = "accent"
+PINNED_COLOR = "primary"
 WORKTREE_COLORS = {
-    git.Worktree.DIRTY: theme.RED,
-    git.Worktree.STAGED: theme.GREEN,
-    git.Worktree.CLEAN: theme.OVERLAY0,
+    git.Worktree.DIRTY: "error",
+    git.Worktree.STAGED: "success",
+    git.Worktree.CLEAN: "panel-lighten-2",
 }
 
 
@@ -113,6 +116,9 @@ class RobinApp(App[None]):
         yield Footer()
 
     def on_mount(self) -> None:
+        if self.config.theme in self.available_themes:
+            self.theme = self.config.theme
+        self.theme_changed_signal.subscribe(self, self._on_theme_changed)
         for splitter in self.query(Splitter):
             splitter.target.styles.width = self.config.drawer_width(splitter.key)
         self.context = self.projects.get(Path.cwd())
@@ -149,13 +155,24 @@ class RobinApp(App[None]):
         self._update_subtitle()
 
     def _update_subtitle(self) -> None:
-        segments = [(self.context.name if self.context else "", theme.PEACH)]
+        colors = self.get_css_variables()
+        segments = [(self.context.name if self.context else "", colors[PROJECT_COLOR])]
         if self.git_status is not None:
             branch = f"{theme.BRANCH_SYMBOL} {self.git_status.branch}"
-            segments.append((branch, WORKTREE_COLORS[self.git_status.worktree]))
+            worktree = WORKTREE_COLORS[self.git_status.worktree]
+            segments.append((branch, colors[worktree]))
         if self.pinned:
-            segments.append(("pinned", theme.LAVENDER))
-        self.query_one("#title", Static).update(theme.pills(*segments))
+            segments.append(("pinned", colors[PINNED_COLOR]))
+        self.query_one("#title", Static).update(theme.powerline(*segments))
+
+    def _on_theme_changed(self, _: object) -> None:
+        if self.theme != self.config.theme:
+            self.config.theme = self.theme
+            try:
+                self.config.save()
+            except OSError:
+                self.notify("Could not save the config", severity="warning")
+        self._update_subtitle()
 
     def refresh_git(self) -> None:
         """Read the git status of the current project again."""

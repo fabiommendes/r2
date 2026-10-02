@@ -22,13 +22,19 @@ def config_path() -> Path:
 class Config:
     drawer_widths: dict[str, int] = field(default_factory=dict)
     """Width of the drawer on the left of each view, by view id."""
+    theme: str | None = None
+    """Name of the Textual theme picked in the command palette."""
 
     @classmethod
     def load(cls, path: Path | None = None) -> "Config":
         try:
             data = json.loads((path or config_path()).read_text())
             widths = data.get("drawer_widths", {})
-            return cls(drawer_widths={str(k): int(v) for k, v in widths.items()})
+            theme = data.get("theme")
+            return cls(
+                drawer_widths={str(k): int(v) for k, v in widths.items()},
+                theme=theme if isinstance(theme, str) else None,
+            )
         except (OSError, ValueError, AttributeError, TypeError):
             return cls()
 
