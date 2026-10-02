@@ -32,9 +32,14 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.mypy]
 strict = true
 
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "standard"
+
 [tool.taskipy.tasks]
 format = "ruff format . && ruff check --fix ."
-lint = "ruff check . && ruff format --check . && mypy robin"
+lint = "ruff check . && ruff format --check . && mypy robin && pyright robin tests"
 test = "pytest"
 docs = "doc-zero build"
 ci = "task lint && task test && task docs"
@@ -44,6 +49,7 @@ release = "task ci && uv build"
 dev = [
     "doc-zero>=0.2.3",
     "mypy>=2.4.0",
+    "pyright>=1.1.414",
     "pytest>=9.1.1",
     "ruff>=0.16.10",
     "taskipy>=1.14.1",

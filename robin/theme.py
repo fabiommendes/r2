@@ -131,11 +131,11 @@ class ThinScrollBarRender(ScrollBarRender):
 def install() -> None:
     """Apply the thin scrollbar renderer and monochrome tree icons app-wide."""
     ScrollBar.renderer = ThinScrollBarRender
-    Tree.ICON_NODE = "▸ "
-    Tree.ICON_NODE_EXPANDED = "▾ "
-    DirectoryTree.ICON_NODE = "▸ "
-    DirectoryTree.ICON_NODE_EXPANDED = "▾ "
-    DirectoryTree.ICON_FILE = "· "
+    # Tree.ICON_NODE = "▸ "
+    # Tree.ICON_NODE_EXPANDED = "▾ "
+    DirectoryTree.ICON_NODE = "🖿 "  # pyright: ignore[reportAttributeAccessIssue]
+    DirectoryTree.ICON_NODE_EXPANDED = "🗀 "  # pyright: ignore[reportAttributeAccessIssue]
+    DirectoryTree.ICON_FILE = "🖹 "  # pyright: ignore[reportAttributeAccessIssue]
 
 
 def compact(tree: Tree[Any]) -> None:
