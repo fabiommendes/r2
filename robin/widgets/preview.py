@@ -86,9 +86,20 @@ class FilePreview(Vertical):
         background: $panel;
         padding: 0 1;
     }
-    FilePreview > ExcerptArea {
+    FilePreview > ExcerptArea, FilePreview > ExcerptArea:focus {
         height: 1fr;
         border: none;
+    }
+    /* Mark focus on the heading instead of a border, which shifts the text.
+       Textual restyles children on focus changes only when the ancestor has
+       a :focus-within rule of its own, hence the rule on FilePreview. */
+    FilePreview:focus-within {
+        background-tint: $background 0%;
+    }
+    FilePreview:focus-within > #heading {
+        background: $primary-muted;
+        color: $text-primary;
+        text-style: bold;
     }
     FilePreview > #rest {
         height: 1fr;
