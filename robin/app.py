@@ -6,9 +6,9 @@ import time
 from pathlib import Path
 from typing import Any
 
+from textual import events
 from textual.app import App, ComposeResult, SuspendNotSupported
 from textual.binding import Binding
-from textual.containers import Horizontal
 from textual.css.query import NoMatches
 from textual.reactive import reactive
 from textual.widgets import Footer, Static, TabbedContent, TabPane
@@ -45,11 +45,19 @@ WORKTREE_COLORS = {
 }
 
 
-class PaletteButton(Static):
-    """Open the command palette when clicked."""
+PALETTE_ICON = "⭘"
+PALETTE_COLOR = "secondary"
 
-    def on_click(self) -> None:
-        self.app.action_command_palette()
+
+class TopBar(Static):
+    """Powerline title bar whose first segment opens the command palette."""
+
+    # The palette segment: the icon padded by spaces, plus the arrow.
+    PALETTE_WIDTH = len(PALETTE_ICON) + 3
+
+    def on_click(self, event: events.Click) -> None:
+        if event.x < self.PALETTE_WIDTH:
+            self.app.action_command_palette()
 
 
 # Claude may still be writing the transcript when the Stop hook fires.
@@ -64,18 +72,8 @@ class RobinApp(App[None]):
         theme.CSS
         + """
     #topbar {
+        dock: top;
         height: 1;
-    }
-    #palette-button {
-        width: 3;
-        padding: 0 1;
-    }
-    #palette-button:hover {
-        color: $accent;
-    }
-    #title {
-        height: 1;
-        padding: 0 1 0 0;
     }
     """
     )
@@ -106,9 +104,7 @@ class RobinApp(App[None]):
         self.config = Config.load()
 
     def compose(self) -> ComposeResult:
-        with Horizontal(id="topbar"):
-            yield PaletteButton("⭘", id="palette-button")
-            yield Static(id="title")
+        yield TopBar(id="topbar")
         with TabbedContent():
             for number, view in enumerate(VIEWS, start=1):
                 with TabPane(f"{number} {view.TITLE}", id=view.ID):
@@ -156,14 +152,17 @@ class RobinApp(App[None]):
 
     def _update_subtitle(self) -> None:
         colors = self.get_css_variables()
-        segments = [(self.context.name if self.context else "", colors[PROJECT_COLOR])]
+        segments = [
+            (PALETTE_ICON, colors[PALETTE_COLOR]),
+            (self.context.name if self.context else "", colors[PROJECT_COLOR]),
+        ]
         if self.git_status is not None:
             branch = f"{theme.BRANCH_SYMBOL} {self.git_status.branch}"
             worktree = WORKTREE_COLORS[self.git_status.worktree]
             segments.append((branch, colors[worktree]))
         if self.pinned:
             segments.append(("pinned", colors[PINNED_COLOR]))
-        self.query_one("#title", Static).update(theme.powerline(*segments))
+        self.query_one(TopBar).update(theme.powerline(*segments))
 
     def _on_theme_changed(self, _: object) -> None:
         if self.theme != self.config.theme:
