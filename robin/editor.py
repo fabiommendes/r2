@@ -33,6 +33,11 @@ def editor_command(link: Link) -> list[str]:
     return [*command, str(link.path)]
 
 
+def shell_command() -> list[str]:
+    """Return the user's interactive shell, from $SHELL."""
+    return [os.environ.get("SHELL") or "/bin/sh"]
+
+
 def open_externally(path: Path) -> None:
     """Open path in its default application, without waiting for it.
 

@@ -14,7 +14,7 @@ from textual.widgets import Footer, Static, TabbedContent, TabPane
 
 from robin import herdr, theme
 from robin.config import Config
-from robin.editor import editor_command, open_externally
+from robin.editor import editor_command, open_externally, shell_command
 from robin.events import tail
 from robin.links import extract_links, is_binary, link_from_read
 from robin.notify import events_path
@@ -50,6 +50,7 @@ class RobinApp(App[None]):
         Binding("f", "toggle_full", "Excerpt/full"),
         Binding("e", "edit", "Edit"),
         Binding("o", "open", "Open"),
+        Binding("t", "shell", "Shell"),
         *(
             Binding(str(number), f"show_view('{view.ID}')", view.TITLE, show=False)
             for number, view in enumerate(VIEWS, start=1)
@@ -121,21 +122,31 @@ class RobinApp(App[None]):
     ) -> None:
         event.pane.query_one(View).focus_drawer()
 
+    def _hand_over(self, command: list[str], cwd: Path | None = None) -> None:
+        """Give the terminal to command and take it back when it exits."""
+        try:
+            with self.suspend():
+                subprocess.run(command, cwd=cwd, check=False)
+        except OSError as error:
+            self.notify(f"Could not run {command[0]}: {error}", severity="error")
+        except SuspendNotSupported:
+            self.notify("This terminal cannot be handed over to another program")
+
     def action_edit(self) -> None:
-        """Hand the terminal to an editor on the current file, then come back."""
+        """Open the current file in the terminal editor, then come back."""
         view = self._active_view()
         link = view.current_link()
         if link is None:
             return
-        command = editor_command(link)
-        try:
-            with self.suspend():
-                subprocess.run(command, check=False)
-        except OSError as error:
-            self.notify(f"Could not run {command[0]}: {error}", severity="error")
-        except SuspendNotSupported:
-            self.notify("This terminal cannot hand control to an editor")
+        self._hand_over(editor_command(link))
         for preview in view.query(FilePreview):
+            preview.reload()
+
+    def action_shell(self) -> None:
+        """Run an interactive shell in the project root; exiting it returns here."""
+        root = self.context.root if self.context else Path.cwd()
+        self._hand_over(shell_command(), cwd=root)
+        for preview in self._active_view().query(FilePreview):
             preview.reload()
 
     def action_open(self) -> None:
