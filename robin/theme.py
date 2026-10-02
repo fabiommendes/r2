@@ -51,6 +51,27 @@ Tree {
     padding: 0;
 }
 
+CommandPalette > Vertical {
+    margin-top: 1;
+}
+CommandPalette #--input {
+    border: none;
+}
+CommandPalette SearchIcon {
+    display: none;
+}
+CommandInput, CommandInput:focus {
+    border: none;
+    height: 1;
+    padding: 0 1;
+}
+CommandList, CommandList:focus {
+    border: none;
+}
+CommandList > .option-list--option {
+    padding: 0 1;
+}
+
 Button {
     height: 1;
     min-width: 0;

@@ -1,5 +1,6 @@
 """File browser for the current project."""
 
+import subprocess
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -24,12 +25,33 @@ IGNORED = {
 }
 
 
+def git_ignored(paths: list[Path]) -> set[Path]:
+    """Return the paths that git ignores; none if git is unavailable."""
+    if not paths:
+        return set()
+    try:
+        result = subprocess.run(
+            ["git", "check-ignore", "--stdin"],
+            cwd=paths[0].parent,
+            input="\n".join(map(str, paths)),
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return set()
+    return {Path(line) for line in result.stdout.splitlines()}
+
+
 class ProjectTree(DirectoryTree):
     def on_mount(self) -> None:
         theme.compact(self)
 
     def filter_paths(self, paths: Iterable[Path]) -> Iterable[Path]:
-        return [path for path in paths if path.name not in IGNORED]
+        """Hide what git ignores, plus clutter that projects may not ignore."""
+        kept = [path for path in paths if path.name not in IGNORED]
+        ignored = git_ignored(kept)
+        return [path for path in kept if path not in ignored]
 
 
 class ProjectView(View):

@@ -8,3 +8,5 @@ docs/_build/
 .pytest_cache/
 .ruff_cache/
 .claude/settings.local.json
+.base-ast/
+.base-ast-cache/
