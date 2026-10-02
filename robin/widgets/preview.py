@@ -21,6 +21,10 @@ from textual_image.widget import Image  # noqa: E402  isort: skip
 CONTEXT_LINES = 3
 FADED_LINES = 3
 
+# Most rows of the dark band above an excerpt. The excerpt sits in the middle
+# of the spare room up to this cap; the band below takes the rest.
+MAX_TOP_BAND = 5
+
 # Raster formats Pillow decodes. SVG is text, so it shows as source.
 IMAGE_SUFFIXES = {".bmp", ".gif", ".jpeg", ".jpg", ".png", ".webp"}
 
@@ -101,16 +105,21 @@ class FilePreview(Vertical):
         color: $text-primary;
         text-style: bold;
     }
-    FilePreview > #rest {
-        height: 1fr;
+    FilePreview > #above, FilePreview > #rest {
         background: $surface-darken-1;
         display: none;
+    }
+    FilePreview > #above {
+        height: 0;
+    }
+    FilePreview > #rest {
+        height: 1fr;
     }
     FilePreview.-excerpt > ExcerptArea {
         height: auto;
         max-height: 100%;
     }
-    FilePreview.-excerpt > #rest {
+    FilePreview.-excerpt > #above, FilePreview.-excerpt > #rest {
         display: block;
     }
     FilePreview > Image {
@@ -133,6 +142,7 @@ class FilePreview(Vertical):
 
     def compose(self) -> ComposeResult:
         yield Static(id="heading")
+        yield Static(id="above")
         yield ExcerptArea()
         yield Static(id="rest")
         yield Image()
@@ -165,6 +175,23 @@ class FilePreview(Vertical):
         self.can_focus = path is not None
         return path is not None
 
+    def on_resize(self) -> None:
+        self.call_after_refresh(self._center_excerpt)
+
+    def _center_excerpt(self) -> None:
+        """Split the room the excerpt leaves between the bands around it."""
+        if not self.has_class("-excerpt"):
+            return
+        above = self.query_one("#above", Static)
+        taken = (
+            self.query_one("#heading").outer_size.height
+            + self.query_one(ExcerptArea).outer_size.height
+        )
+        spare = max(0, self.content_size.height - taken)
+        height = min(MAX_TOP_BAND, spare // 2)
+        if above.outer_size.height != height:
+            above.styles.height = height
+
     def toggle_full(self) -> None:
         self.full = not self.full
 
@@ -176,6 +203,7 @@ class FilePreview(Vertical):
         link = self._link
         self._show_image(None)
         self.remove_class("-excerpt")
+        self.query_one("#above", Static).styles.height = 0
         area.faded_rows = set()
         self.can_toggle = False
         if link is None:
@@ -207,6 +235,7 @@ class FilePreview(Vertical):
             )
             lines = lines[first - 1 : last]
             self.add_class("-excerpt")
+            self.call_after_refresh(self._center_excerpt)
         self.can_toggle = link.start is not None
         if link.start is None:
             title.update(self._label)
