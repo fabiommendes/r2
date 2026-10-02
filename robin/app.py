@@ -8,11 +8,13 @@ from typing import Any
 
 from textual.app import App, ComposeResult, SuspendNotSupported
 from textual.binding import Binding
+from textual.containers import Horizontal
 from textual.css.query import NoMatches
+from textual.markup import escape
 from textual.reactive import reactive
 from textual.widgets import Footer, Static, TabbedContent, TabPane
 
-from robin import herdr, theme
+from robin import git, herdr, theme
 from robin.config import Config
 from robin.editor import (
     editor_command,
@@ -32,6 +34,22 @@ from robin.widgets.splitter import Splitter
 
 MAX_RECONNECT_DELAY = 30.0
 
+GIT_POLL_INTERVAL = 5.0
+
+WORKTREE_COLORS = {
+    git.Worktree.DIRTY: "$error",
+    git.Worktree.STAGED: "$success",
+    git.Worktree.CLEAN: "$text-muted",
+}
+
+
+class PaletteButton(Static):
+    """Open the command palette when clicked."""
+
+    def on_click(self) -> None:
+        self.app.action_command_palette()
+
+
 # Claude may still be writing the transcript when the Stop hook fires.
 TRANSCRIPT_SETTLE_DELAY = 0.5
 
@@ -43,9 +61,19 @@ class RobinApp(App[None]):
     CSS = (
         theme.CSS
         + """
+    #topbar {
+        height: 1;
+    }
+    #palette-button {
+        width: 3;
+        padding: 0 1;
+    }
+    #palette-button:hover {
+        color: $accent;
+    }
     #title {
         height: 1;
-        padding: 0 1;
+        padding: 0 1 0 0;
     }
     """
     )
@@ -65,6 +93,7 @@ class RobinApp(App[None]):
     ]
 
     context: reactive[ProjectContext | None] = reactive(None)
+    git_status: reactive[git.GitStatus | None] = reactive(None)
     pinned: reactive[bool] = reactive(False)
     """Stay on the current project instead of following herdr focus."""
 
@@ -75,7 +104,9 @@ class RobinApp(App[None]):
         self.config = Config.load()
 
     def compose(self) -> ComposeResult:
-        yield Static(id="title")
+        with Horizontal(id="topbar"):
+            yield PaletteButton("⭘", id="palette-button")
+            yield Static(id="title")
         with TabbedContent():
             for number, view in enumerate(VIEWS, start=1):
                 with TabPane(f"{number} {view.TITLE}", id=view.ID):
@@ -89,6 +120,7 @@ class RobinApp(App[None]):
         self._active_view().focus_drawer()
         self.run_worker(self._follow_herdr(), exclusive=True, group="herdr")
         self.run_worker(self._follow_events(), group="events")
+        self.run_worker(self._poll_git(), group="git-poll")
 
     def on_splitter_resized(self, event: Splitter.Resized) -> None:
         self.config.drawer_widths[event.splitter.key] = event.width
@@ -100,6 +132,8 @@ class RobinApp(App[None]):
     def watch_context(self, context: ProjectContext | None) -> None:
         if context is None:
             return
+        self.git_status = None
+        self.refresh_git()
         for view in self.query(View):
             # A focus event may land while the app is shutting down and the
             # views have already lost their children.
@@ -112,10 +146,35 @@ class RobinApp(App[None]):
     def watch_pinned(self) -> None:
         self._update_subtitle()
 
+    def watch_git_status(self) -> None:
+        self._update_subtitle()
+
     def _update_subtitle(self) -> None:
         name = self.context.name if self.context else ""
+        branch = ""
+        if self.git_status is not None:
+            color = WORKTREE_COLORS[self.git_status.worktree]
+            branch = f" [{color}]{escape(self.git_status.branch)}[/]"
         pinned = "  [dim](pinned)[/]" if self.pinned else ""
-        self.query_one("#title", Static).update(f"[b]{name}[/]{pinned}")
+        self.query_one("#title", Static).update(f"[b]{escape(name)}[/]{branch}{pinned}")
+
+    def refresh_git(self) -> None:
+        """Read the git status of the current project again."""
+        self.run_worker(self._refresh_git(), exclusive=True, group="git")
+
+    async def _refresh_git(self) -> None:
+        root = self.context.root if self.context else None
+        try:
+            result = await git.status(root) if root else None
+        except OSError:
+            result = None
+        if self.context is not None and self.context.root == root:
+            self.git_status = result
+
+    async def _poll_git(self) -> None:
+        while True:
+            await asyncio.sleep(GIT_POLL_INTERVAL)
+            self.refresh_git()
 
     def action_show_view(self, view_id: str) -> None:
         self.query_one(TabbedContent).active = view_id
@@ -138,6 +197,7 @@ class RobinApp(App[None]):
             self.notify(f"Could not run {command[0]}: {error}", severity="error")
         except SuspendNotSupported:
             self.notify("This terminal cannot be handed over to another program")
+        self.refresh_git()
 
     def action_edit(self) -> None:
         """Open the current file in the terminal editor, then come back."""
@@ -225,6 +285,8 @@ class RobinApp(App[None]):
 
     async def _handle_event(self, event: dict[str, Any]) -> None:
         context = self.projects.get(Path(event["cwd"]))
+        if context is self.context and event.get("hook_event_name") == "Stop":
+            self.refresh_git()
         match event.get("hook_event_name"):
             case "PostToolUse" if event.get("tool_name") == "Read":
                 link = link_from_read(event["tool_input"])
