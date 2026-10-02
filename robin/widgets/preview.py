@@ -67,6 +67,10 @@ class FilePreview(Vertical):
     def watch_full(self) -> None:
         self._update()
 
+    def reload(self) -> None:
+        """Read the file again, for instance after it was edited."""
+        self._update()
+
     def toggle_full(self) -> None:
         self.full = not self.full
 

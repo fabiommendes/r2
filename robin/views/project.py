@@ -77,6 +77,12 @@ class ProjectView(View):
         self.query_one(ProjectTree).path = context.root
         self._show(context.view_state.get(self.ID))
 
+    def current_link(self) -> Link | None:
+        if self.context is None:
+            return None
+        path = self.context.view_state.get(self.ID)
+        return Link(path) if isinstance(path, Path) else None
+
     def on_directory_tree_file_selected(
         self, event: DirectoryTree.FileSelected
     ) -> None:

@@ -1,11 +1,12 @@
 """Robin's Textual application."""
 
 import asyncio
+import subprocess
 import time
 from pathlib import Path
 from typing import Any
 
-from textual.app import App, ComposeResult
+from textual.app import App, ComposeResult, SuspendNotSupported
 from textual.binding import Binding
 from textual.css.query import NoMatches
 from textual.reactive import reactive
@@ -13,6 +14,7 @@ from textual.widgets import Footer, Static, TabbedContent, TabPane
 
 from robin import herdr, theme
 from robin.config import Config
+from robin.editor import editor_command
 from robin.events import tail
 from robin.links import extract_links, link_from_read
 from robin.notify import events_path
@@ -46,6 +48,7 @@ class RobinApp(App[None]):
         Binding("q", "quit", "Quit"),
         Binding("p", "toggle_pin", "Pin project"),
         Binding("f", "toggle_full", "Excerpt/full"),
+        Binding("e", "edit", "Edit"),
         *(
             Binding(str(number), f"show_view('{view.ID}')", view.TITLE, show=False)
             for number, view in enumerate(VIEWS, start=1)
@@ -74,6 +77,7 @@ class RobinApp(App[None]):
         for splitter in self.query(Splitter):
             splitter.target.styles.width = self.config.drawer_width(splitter.key)
         self.context = self.projects.get(Path.cwd())
+        self._active_view().focus_drawer()
         self.run_worker(self._follow_herdr(), exclusive=True, group="herdr")
         self.run_worker(self._follow_events(), group="events")
 
@@ -106,6 +110,32 @@ class RobinApp(App[None]):
 
     def action_show_view(self, view_id: str) -> None:
         self.query_one(TabbedContent).active = view_id
+
+    def _active_view(self) -> View:
+        tabs = self.query_one(TabbedContent)
+        return tabs.query_one(f"#{tabs.active} View", View)
+
+    def on_tabbed_content_tab_activated(
+        self, event: TabbedContent.TabActivated
+    ) -> None:
+        event.pane.query_one(View).focus_drawer()
+
+    def action_edit(self) -> None:
+        """Hand the terminal to an editor on the current file, then come back."""
+        view = self._active_view()
+        link = view.current_link()
+        if link is None:
+            return
+        command = editor_command(link)
+        try:
+            with self.suspend():
+                subprocess.run(command, check=False)
+        except OSError as error:
+            self.notify(f"Could not run {command[0]}: {error}", severity="error")
+        except SuspendNotSupported:
+            self.notify("This terminal cannot hand control to an editor")
+        for preview in view.query(FilePreview):
+            preview.reload()
 
     def action_toggle_full(self) -> None:
         """Toggle the file preview of the active view, if it has one."""

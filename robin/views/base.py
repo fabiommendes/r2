@@ -4,6 +4,7 @@ from typing import ClassVar
 
 from textual.widget import Widget
 
+from robin.links import Link
 from robin.project import ProjectContext
 
 
@@ -33,3 +34,14 @@ class View(Widget):
 
     def links_changed(self) -> None:
         """Called when new links arrive for the current project."""
+
+    def current_link(self) -> Link | None:
+        """The file the view is showing, used to open it in an editor."""
+        return None
+
+    def focus_drawer(self) -> None:
+        """Focus the first focusable widget, which is the drawer on the left."""
+        for widget in self.query("*"):
+            if widget.focusable:
+                widget.focus()
+                return

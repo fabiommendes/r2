@@ -57,6 +57,12 @@ class LiveView(View):
         directory = "" if str(label.parent) == "." else f"  {label.parent}"
         return Text.assemble(label.name, (directory, "dim"))
 
+    def current_link(self) -> Link | None:
+        if self.context is None:
+            return None
+        link = self.context.view_state.get(self.ID)
+        return link if isinstance(link, Link) else None
+
     def on_option_list_option_highlighted(
         self, event: OptionList.OptionHighlighted
     ) -> None:
