@@ -2,9 +2,11 @@
 
 from pathlib import Path
 
+from rich.style import Style
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.reactive import reactive
+from textual.strip import Strip
 from textual.widgets import Static, TextArea
 from textual.widgets.text_area import Selection
 
@@ -14,7 +16,10 @@ from robin.links import Link, is_binary
 # must happen before Textual takes over the terminal.
 from textual_image.widget import Image  # noqa: E402  isort: skip
 
-CONTEXT_LINES = 5
+# Lines shown around a link in excerpt mode: CONTEXT_LINES at full strength,
+# then FADED_LINES dimmed where the file goes on beyond the excerpt.
+CONTEXT_LINES = 3
+FADED_LINES = 3
 
 # Raster formats Pillow decodes. SVG is text, so it shows as source.
 IMAGE_SUFFIXES = {".bmp", ".gif", ".jpeg", ".jpg", ".png", ".webp"}
@@ -40,18 +45,62 @@ LANGUAGES = {
 }
 
 
+FADED = Style(dim=True)
+
+
+def faded_rows(first: int, last: int, start: int, end: int, total: int) -> set[int]:
+    """Rows of an excerpt (lines first to last) to dim around lines start-end.
+
+    Lines more than CONTEXT_LINES away from the range fade out, but only on
+    the sides where the file goes on beyond the excerpt. Rows count from 0
+    at line first.
+    """
+    rows: set[int] = set()
+    if first > 1:
+        rows.update(range(0, start - CONTEXT_LINES - first))
+    if last < total:
+        rows.update(range(end + CONTEXT_LINES - first + 1, last - first + 1))
+    return rows
+
+
+class ExcerptArea(TextArea):
+    """Read-only text area that dims some document rows."""
+
+    def __init__(self) -> None:
+        super().__init__(read_only=True, show_line_numbers=True, soft_wrap=False)
+        self.faded_rows: set[int] = set()
+
+    def render_line(self, y: int) -> Strip:
+        strip = super().render_line(y)
+        if y + self.scroll_offset.y in self.faded_rows:
+            return strip.apply_style(FADED)
+        return strip
+
+
 class FilePreview(Vertical):
     """Show a link either as an excerpt around its lines or as the whole file."""
 
     DEFAULT_CSS = """
-    FilePreview > Static {
+    FilePreview > #heading {
         height: 1;
         background: $panel;
         padding: 0 1;
     }
-    FilePreview > TextArea {
+    FilePreview > ExcerptArea {
         height: 1fr;
         border: none;
+    }
+    FilePreview > #rest {
+        height: 1fr;
+        background: $surface-darken-1;
+        display: none;
+    }
+    FilePreview.-excerpt > ExcerptArea {
+        height: auto;
+        max-height: 100%;
+    }
+    FilePreview.-excerpt > #rest {
+        display: block;
     }
     FilePreview > Image {
         width: auto;
@@ -70,8 +119,9 @@ class FilePreview(Vertical):
         self._label = ""
 
     def compose(self) -> ComposeResult:
-        yield Static()
-        yield TextArea(read_only=True, show_line_numbers=True, soft_wrap=False)
+        yield Static(id="heading")
+        yield ExcerptArea()
+        yield Static(id="rest")
         yield Image()
 
     def show(self, link: Link | None, label: str = "") -> None:
@@ -95,7 +145,7 @@ class FilePreview(Vertical):
         except (OSError, ValueError):
             path = None
         image.display = path is not None
-        self.query_one(TextArea).display = path is None
+        self.query_one(ExcerptArea).display = path is None
         # The image cannot take focus, so the preview takes it in its place.
         self.can_focus = path is not None
         return path is not None
@@ -106,10 +156,12 @@ class FilePreview(Vertical):
     def _update(self) -> None:
         if not self.is_mounted:
             return
-        title = self.query_one(Static)
-        area = self.query_one(TextArea)
+        title = self.query_one("#heading", Static)
+        area = self.query_one(ExcerptArea)
         link = self._link
         self._show_image(None)
+        self.remove_class("-excerpt")
+        area.faded_rows = set()
         if link is None:
             title.update("")
             area.load_text("")
@@ -131,9 +183,14 @@ class FilePreview(Vertical):
         first = 1
         partial = link.start is not None and not self.full
         if link.start is not None and not self.full:
-            first = max(1, link.start - CONTEXT_LINES)
-            last = (link.end or link.start) + CONTEXT_LINES
+            margin = CONTEXT_LINES + FADED_LINES
+            first = max(1, link.start - margin)
+            last = min(len(lines), (link.end or link.start) + margin)
+            area.faded_rows = faded_rows(
+                first, last, link.start, link.end or link.start, len(lines)
+            )
             lines = lines[first - 1 : last]
+            self.add_class("-excerpt")
         mode = "excerpt" if partial else "full"
         title.update(f"{self._label}  [dim]({mode}, f to toggle)[/]")
 
@@ -144,8 +201,10 @@ class FilePreview(Vertical):
             start_row = min(link.start - first, len(lines) - 1)
             end_row = min((link.end or link.start) - first, len(lines) - 1)
             end_column = len(lines[end_row]) if lines else 0
+            # Select backwards so the cursor sits at the start of the range
+            # and scrolling to it never shifts the view sideways.
             area.selection = Selection(
-                (max(start_row, 0), 0), (max(end_row, 0), end_column)
+                (max(end_row, 0), end_column), (max(start_row, 0), 0)
             )
             self.call_after_refresh(area.scroll_cursor_visible, center=True)
         else:
