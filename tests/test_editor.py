@@ -18,3 +18,15 @@ def test_editor_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
     assert editor_command(link) == ["code", "+10", "/a.py"]
     monkeypatch.delenv("VISUAL")
     assert editor_command(Link(Path("/a.py"))) == ["micro", "/a.py"]
+
+
+def test_ide_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
+    from robin.editor import ide_command
+
+    monkeypatch.setenv("ROBIN_IDE", "zed --new")
+    monkeypatch.setenv("VISUAL", "code")
+    assert ide_command(Path("/p")) == ["zed", "--new", "/p"]
+    monkeypatch.delenv("ROBIN_IDE")
+    assert ide_command(Path("/p")) == ["code", "/p"]
+    monkeypatch.delenv("VISUAL")
+    assert ide_command(Path("/p")) == ["code", "/p"]

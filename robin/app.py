@@ -14,7 +14,13 @@ from textual.widgets import Footer, Static, TabbedContent, TabPane
 
 from robin import herdr, theme
 from robin.config import Config
-from robin.editor import editor_command, open_externally, shell_command
+from robin.editor import (
+    editor_command,
+    ide_command,
+    launch_detached,
+    open_externally,
+    shell_command,
+)
 from robin.events import tail
 from robin.links import extract_links, link_from_read
 from robin.notify import events_path
@@ -50,6 +56,7 @@ class RobinApp(App[None]):
         Binding("f", "toggle_full", "Excerpt/full"),
         Binding("e", "edit", "Edit"),
         Binding("o", "open", "Open"),
+        Binding("i", "ide", "IDE"),
         Binding("t", "shell", "Shell"),
         *(
             Binding(str(number), f"show_view('{view.ID}')", view.TITLE, show=False)
@@ -158,6 +165,15 @@ class RobinApp(App[None]):
             open_externally(link.path)
         except OSError as error:
             self.notify(f"Could not open {link.path.name}: {error}", severity="error")
+
+    def action_ide(self) -> None:
+        """Open the project root in the GUI editor."""
+        root = self.context.root if self.context else Path.cwd()
+        command = ide_command(root)
+        try:
+            launch_detached(command)
+        except OSError as error:
+            self.notify(f"Could not run {command[0]}: {error}", severity="error")
 
     def action_toggle_full(self) -> None:
         """Toggle the file preview of the active view, if it has one."""

@@ -38,17 +38,34 @@ def shell_command() -> list[str]:
     return [os.environ.get("SHELL") or "/bin/sh"]
 
 
-def open_externally(path: Path) -> None:
-    """Open path in its default application, without waiting for it.
+DEFAULT_IDE = "code"
 
-    The opener runs detached from robin's terminal, so it can neither draw
+
+def ide_command(root: Path) -> list[str]:
+    """Build the command that opens the project at root in a GUI editor.
+
+    The IDE comes from $ROBIN_IDE, $VISUAL or defaults to VS Code.
+    """
+    ide = os.environ.get("ROBIN_IDE") or os.environ.get("VISUAL") or DEFAULT_IDE
+    return [*shlex.split(ide), str(root)]
+
+
+def launch_detached(command: list[str]) -> None:
+    """Start a GUI program without waiting for it.
+
+    The program runs detached from robin's terminal, so it can neither draw
     over the UI nor read its input.
     """
-    opener = "open" if sys.platform == "darwin" else "xdg-open"
     subprocess.Popen(
-        [opener, str(path)],
+        command,
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
     )
+
+
+def open_externally(path: Path) -> None:
+    """Open path in its default application, without waiting for it."""
+    opener = "open" if sys.platform == "darwin" else "xdg-open"
+    launch_detached([opener, str(path)])
