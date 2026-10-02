@@ -1,0 +1,20 @@
+[project]
+name = "test-only"
+version = "0.1.0"
+description = "Example project with only a test task, no build or docs task."
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+task = "test_only.taskrunner:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "test_only"
+module-root = "."
+
+[tool.taskipy.tasks]
+test = "python -c \"import pathlib; pathlib.Path('TEST_RAN.txt').write_text('ok')\""

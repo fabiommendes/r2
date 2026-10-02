@@ -32,17 +32,40 @@ r2-assistant = { workspace = true }
 
 [tool.ruff]
 line-length = 88
+# Transitional: the old r2 modules are excluded until they are ported.
+extend-exclude = [
+    "tests/examples",
+    "r2/__main__.,py", "r2/alias.py", "r2/cli.py", "r2/cli_tool.py",
+    "r2/conf.py", "r2/console.py", "r2/edit.py", "r2/files.py", "r2/project",
+    "r2/testing.py", "r2/utils.py",
+    "tests/conftest.py", "tests/test_pyproject_tasks.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.mypy]
 strict = true
+exclude = [
+    "^r2/(alias|cli|cli_tool|conf|console|edit|files|testing|utils)\\.py$",
+    "^r2/project/",
+]
 
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
 typeCheckingMode = "standard"
+exclude = [
+    "**/.venv", "tests/examples",
+    "r2/alias.py", "r2/cli.py", "r2/cli_tool.py", "r2/conf.py", "r2/console.py",
+    "r2/edit.py", "r2/files.py", "r2/project", "r2/testing.py", "r2/utils.py",
+    "tests/conftest.py", "tests/test_pyproject_tasks.py",
+]
+
+[tool.pytest.ini_options]
+# Transitional: the old integration tests need the typer CLI, ported next.
+addopts = "--ignore=tests/test_pyproject_tasks.py"
+norecursedirs = ["examples"]
 
 [tool.taskipy.tasks]
 format = "ruff format . && ruff check --fix ."

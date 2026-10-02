@@ -1,0 +1,17 @@
+[project]
+name = "no-tasks"
+version = "0.1.0"
+description = "Example project with no [tool.taskipy.tasks] table at all."
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+task = "no_tasks.taskrunner:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "no_tasks"
+module-root = "."
