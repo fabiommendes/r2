@@ -5,6 +5,8 @@ import yaml
 from robin.issues import (
     Comment,
     Issue,
+    append_stub,
+    comment_stub,
     matches,
     new_issue,
     parse,
@@ -121,3 +123,9 @@ def test_status_order_follows_the_lifecycle_then_unknown_ones() -> None:
         "completed",
         "active",
     ]
+
+
+def test_appended_stub_parses_as_an_empty_comment_by_its_author() -> None:
+    text = append_stub("# Title\n\nBody.\n\n", comment_stub("fabio"))
+    assert text == "# Title\n\nBody.\n\n---\nby: fabio\n\n"
+    assert parse(text).comments == [Comment("", "fabio")]

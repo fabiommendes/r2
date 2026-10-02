@@ -1,6 +1,8 @@
 """Branch and worktree state of a project, from `git status`."""
 
 import asyncio
+import os
+import subprocess
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -62,3 +64,19 @@ async def status(root: Path) -> GitStatus | None:
     if process.returncode != 0:
         return None
     return parse_status(output.decode(errors="replace"))
+
+
+def user_name(root: Path) -> str:
+    """The git user.name of the project at root, or the login name."""
+    try:
+        result = subprocess.run(
+            ["git", "config", "user.name"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        name = result.stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        name = ""
+    return name or os.environ.get("USER", "")

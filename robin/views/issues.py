@@ -8,8 +8,17 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Input, Tree
 
-from robin import theme
-from robin.issues import Issue, load, matches, render, slugify, status_order
+from robin import git, theme
+from robin.issues import (
+    Issue,
+    append_stub,
+    comment_stub,
+    load,
+    matches,
+    render,
+    slugify,
+    status_order,
+)
 from robin.links import Link
 from robin.project import ProjectContext
 from robin.views.base import View
@@ -103,9 +112,13 @@ class IssuesView(View):
 
     BINDINGS = [
         Binding("n", "new_issue", "New issue"),
+        Binding("c", "comment", "Comment"),
         Binding("a", "toggle_closed", "Show closed"),
         Binding("slash", "filter", "Filter"),
     ]
+
+    _stub: tuple[Path, str] | None = None
+    """The issue file and the comment stub appended for the editor."""
 
     def compose(self) -> ComposeResult:
         yield IssueBrowser(self.ID)
@@ -126,7 +139,36 @@ class IssuesView(View):
         path = self.query_one(MarkdownBrowser).current
         return Link(path) if path else None
 
+    def action_comment(self) -> None:
+        """Open the issue in the editor with a new comment started at the end."""
+        path = self.query_one(MarkdownBrowser).current
+        if path is None or self.context is None:
+            return
+        stub = comment_stub(git.user_name(self.context.root))
+        try:
+            text = append_stub(path.read_text(), stub)
+            path.write_text(text)
+        except OSError as error:
+            self.notify(f"Could not comment: {error}", severity="error")
+            return
+        self._stub = (path, stub)
+        self.post_message(self.EditFile(Link(path, len(text.splitlines()) + 1)))
+
+    def _drop_empty_stub(self) -> None:
+        """Remove the comment stub if the editor left it empty."""
+        if self._stub is None:
+            return
+        path, stub = self._stub
+        self._stub = None
+        try:
+            text = path.read_text()
+            if text.endswith(stub):
+                path.write_text(text.removesuffix(stub).rstrip("\n") + "\n")
+        except OSError:
+            pass
+
     def reload(self) -> None:
+        self._drop_empty_stub()
         if self.context is not None:
             browser = self.query_one(MarkdownBrowser)
             self.run_worker(browser.reload(self.context.root))

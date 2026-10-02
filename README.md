@@ -79,6 +79,7 @@ left to open the command palette, where you can also change the theme.
 | `t` | Open a shell in the project root |
 | `p` | Pin the current project instead of following herdr focus |
 | `n` | Create an issue (Issues view) |
+| `c` | Comment on the issue on display (Issues view) |
 | `a` | Show or hide closed issues (Issues view) |
 | `/` | Filter the issues (Issues view) |
 | `q` | Quit |

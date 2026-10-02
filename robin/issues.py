@@ -203,3 +203,13 @@ def matches(issue: Issue, query: str, slug: str = "") -> bool:
 def status_order(status: str) -> tuple[int, str]:
     """Sort key that puts known statuses in lifecycle order, others last."""
     return (STATUSES.index(status) if status in STATUSES else len(STATUSES), status)
+
+
+def comment_stub(author: str) -> str:
+    """Text to append to an issue file to start a new comment."""
+    return f"\n---\nby: {author}\n\n" if author else "\n---\n\n"
+
+
+def append_stub(text: str, stub: str) -> str:
+    """Append stub to the issue text, leaving one newline before it."""
+    return text.rstrip("\n") + "\n" + stub
