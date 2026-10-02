@@ -45,10 +45,13 @@ right. Drag the bar between them to resize the drawer.
    answers, newest first, with a preview of the selected one.
 2. **Project**: the project tree, without the files git ignores, and a
    preview of the selected file.
-3. **Docs**: the Markdown files in `dev/docs`, `dev/spec` and `docs`.
-4. **Issues**: the Markdown files in `dev/issues`. Press `n` to fill in a
-   form with the metadata of a new issue; robin writes the file and opens it
-   in the editor. The format is described in `dev/spec/issues.md`.
+3. **Docs**: the Markdown files in `dev/docs`, `dev/spec` and `docs`. The
+   frontmatter shows in a bar above the document instead of in the text.
+4. **Issues**: the issues in `dev/issues`, grouped by status. Closed issues
+   are hidden until you press `a`; `/` filters by title, tags and other
+   metadata. Comments show as a thread of collapsible cards. Press `n` to fill
+   in a form with the metadata of a new issue; robin writes the file and opens
+   it in the editor. The format is described in `dev/spec/issues.md`.
 
 When a reference has a line range, the preview shows an excerpt around it.
 Press `f` to switch between the excerpt and the whole file. Images are shown
@@ -71,6 +74,8 @@ left to open the command palette, where you can also change the theme.
 | `t` | Open a shell in the project root |
 | `p` | Pin the current project instead of following herdr focus |
 | `n` | Create an issue (Issues view) |
+| `a` | Show or hide closed issues (Issues view) |
+| `/` | Filter the issues (Issues view) |
 | `q` | Quit |
 
 In the Project tree, `→` expands a folder or opens a file, and `←` collapses

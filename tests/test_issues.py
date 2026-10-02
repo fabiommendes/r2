@@ -2,7 +2,16 @@ import datetime
 
 import yaml
 
-from robin.issues import Comment, Issue, new_issue, parse, render, slugify
+from robin.issues import (
+    Comment,
+    Issue,
+    matches,
+    new_issue,
+    parse,
+    render,
+    slugify,
+    status_order,
+)
 
 THREAD = """\
 ---
@@ -94,3 +103,21 @@ def test_new_issue_is_dated_and_in_the_backlog() -> None:
 def test_slugify() -> None:
     assert slugify("The preview: loses the cursor!") == "the-preview-loses-the-cursor"
     assert slugify("???") == "issue"
+
+
+def test_matches_every_word_in_title_slug_or_metadata() -> None:
+    issue = Issue("Excerpt overflows", status="todo", meta={"tags": ["preview"]})
+    assert matches(issue, "")
+    assert matches(issue, "PREVIEW over")
+    assert matches(issue, "todo", "excerpt-overflow")
+    assert not matches(issue, "preview cursor")
+
+
+def test_status_order_follows_the_lifecycle_then_unknown_ones() -> None:
+    statuses = ["active", "completed", "todo", "backlog"]
+    assert sorted(statuses, key=status_order) == [
+        "backlog",
+        "todo",
+        "completed",
+        "active",
+    ]

@@ -191,3 +191,15 @@ def _yaml_value(value: Any) -> str:
     """Dump a value on one line, quoting only what YAML needs quoted."""
     dumped = yaml.safe_dump(value, default_flow_style=True, width=1 << 16)
     return dumped.removesuffix("...\n").strip()
+
+
+def matches(issue: Issue, query: str, slug: str = "") -> bool:
+    """Whether every word of query appears in the issue's title or metadata."""
+    fields = [issue.title, slug, issue.status, *map(str, issue.meta.values())]
+    haystack = " ".join(fields).lower()
+    return all(word in haystack for word in query.lower().split())
+
+
+def status_order(status: str) -> tuple[int, str]:
+    """Sort key that puts known statuses in lifecycle order, others last."""
+    return (STATUSES.index(status) if status in STATUSES else len(STATUSES), status)

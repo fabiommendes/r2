@@ -131,7 +131,7 @@ class MarkdownBrowser(Horizontal):
     """A tree of markdown files on the left and the rendered document on the right."""
 
     DEFAULT_CSS = """
-    MarkdownBrowser > Tree {
+    MarkdownBrowser Tree {
         height: 1fr;
     }
     MarkdownBrowser > Vertical {
@@ -150,12 +150,10 @@ class MarkdownBrowser(Horizontal):
         self.sections = sections
         self.current: Path | None = None
         """The document on display."""
+        self.root: Path | None = None
 
     def compose(self) -> ComposeResult:
-        tree: Tree[Path] = Tree("docs")
-        tree.show_root = False
-        theme.compact(tree)
-        yield tree
+        yield from self.compose_drawer()
         yield Splitter(self.key)
         with Vertical():
             yield MetaBar()
@@ -166,10 +164,22 @@ class MarkdownBrowser(Horizontal):
     ) -> None:
         self.query_one(MetaBar).show(message.meta)
 
+    def compose_drawer(self) -> ComposeResult:
+        """The left side; its first focusable widget must be the tree."""
+        tree: Tree[Path] = Tree("docs")
+        tree.show_root = False
+        theme.compact(tree)
+        yield tree
+
     def load(self, root: Path) -> None:
         """List the markdown files of the project at root."""
+        self.root = root
         tree: Tree[Path] = self.query_one(Tree)
         tree.clear()
+        self.fill(tree, root)
+
+    def fill(self, tree: "Tree[Path]", root: Path) -> None:
+        """Add a node for each section and a leaf for each of its files."""
         for title, directory in self.sections.items():
             folder = root / directory
             section = tree.root.add(title, expand=True)

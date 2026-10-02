@@ -5,7 +5,7 @@ from typing import ClassVar, Literal
 from textual.binding import Binding
 from textual.message import Message
 from textual.widget import Widget
-from textual.widgets import TabbedContent, TabPane
+from textual.widgets import Input, TabbedContent, TabPane
 
 from robin.links import Link
 from robin.project import ProjectContext
@@ -53,6 +53,10 @@ class View(Widget):
 
     entry_focus: Literal["drawer", "content"] = "drawer"
     """Where the focus goes the next time the view's tab is activated."""
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool:
+        # Leave the arrows to text inputs, to move their cursor.
+        return not (action == "navigate" and isinstance(self.app.focused, Input))
 
     def set_context(self, context: ProjectContext) -> None:
         """Called when robin switches to another project."""
