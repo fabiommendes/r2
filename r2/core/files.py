@@ -2,10 +2,10 @@ import os
 import shutil
 from pathlib import Path
 
-from .conf import Config
+from r2.core.conf import Config
 
 
-def move_to_hd(path: Path):
+def move_to_hd(path: Path) -> None:
     home = Path.home()
     hd_path = Config().hd.path
     hd_path.mkdir(exist_ok=True)

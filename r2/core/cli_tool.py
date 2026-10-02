@@ -1,11 +1,12 @@
 import os
 import shlex
 import subprocess
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable, Literal, Never, assert_never, cast
+from typing import Literal, Never, assert_never, cast
 
-from . import console
+from r2.core import console
 
 type CLIArg = str | int | float | bool
 
@@ -23,7 +24,7 @@ class CliTool[T = str]:
     on_error: Literal["log", "ignore", "raise"] = "raise"
     parser: Callable[[str], T] = lambda x: cast(T, x)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not self.name:
             object.__setattr__(self, "name", self.command)
 

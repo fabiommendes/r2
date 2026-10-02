@@ -33,6 +33,11 @@ def editor_command(link: Link) -> list[str]:
     return [*command, str(link.path)]
 
 
+def edit_file(path: Path) -> None:
+    """Open path in the terminal editor and wait for it to exit."""
+    subprocess.run(editor_command(Link(path)), check=False)
+
+
 def shell_command() -> list[str]:
     """Return the user's interactive shell, from $SHELL."""
     return [os.environ.get("SHELL") or "/bin/sh"]

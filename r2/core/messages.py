@@ -1,8 +1,10 @@
+"""Status messages for the command line, in the style of r2."""
+
 import rich
 from typer import Exit
 
 
-def error(msg: str, /, has_error: bool = True, code: int = 1):
+def error(msg: str, /, has_error: bool = True, code: int = 1) -> None:
     """
     Print an error message and exit the program.
 
@@ -17,7 +19,7 @@ def error(msg: str, /, has_error: bool = True, code: int = 1):
     raise Exit(code=code)
 
 
-def warn(msg: str, /, has_warning: bool = True):
+def warn(msg: str, /, has_warning: bool = True) -> None:
     """
     Print a warning message.
 
@@ -30,7 +32,7 @@ def warn(msg: str, /, has_warning: bool = True):
     rich.print(f"[b yellow]warning[/]: {msg}")
 
 
-def success(msg: str, /, has_success: bool = True):
+def success(msg: str, /, has_success: bool = True) -> None:
     """
     Print a success message.
 

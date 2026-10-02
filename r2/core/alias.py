@@ -2,7 +2,7 @@ from pathlib import Path
 
 import rich
 
-from .utils import error, warn
+from r2.core.messages import error, warn
 
 ERRORS = {
     "package-forbidden": "Cannot specify a package when not using --py or --js",
@@ -10,7 +10,7 @@ ERRORS = {
 BASH_ALIAS_PATH = Path.home() / ".bash_aliases"
 
 
-def create_alias(py: bool, js: bool, package: str, alias: str, section: str):
+def create_alias(py: bool, js: bool, package: str, alias: str, section: str) -> None:
     if [py, js].count(True) != 1:
         cmd = alias
         error(ERRORS["package-forbidden"], package != "")
@@ -79,5 +79,5 @@ def parse_sections() -> dict[str, list[tuple[str, str]]]:
     return {k: v for k, v in sections.items() if v}
 
 
-def get_path():
+def get_path() -> Path:
     return BASH_ALIAS_PATH

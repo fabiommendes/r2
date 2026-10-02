@@ -6,7 +6,12 @@ readme = "README.md"
 license = "MIT"
 authors = [{ name = "Fábio Macêdo Mendes", email = "fabiomacedomendes@gmail.com" }]
 requires-python = ">=3.13"
-dependencies = ["pyyaml>=6.0.3"]
+dependencies = [
+    "pydantic>=2.13.2",
+    "pyyaml>=6.0.3",
+    "rich>=14.2.0",
+    "typer>=0.20.0",
+]
 
 [project.optional-dependencies]
 tui = [
@@ -35,9 +40,7 @@ line-length = 88
 # Transitional: the old r2 modules are excluded until they are ported.
 extend-exclude = [
     "tests/examples",
-    "r2/__main__.,py", "r2/alias.py", "r2/cli.py", "r2/cli_tool.py",
-    "r2/conf.py", "r2/console.py", "r2/edit.py", "r2/files.py", "r2/project",
-    "r2/testing.py", "r2/utils.py",
+    "r2/__main__.,py", "r2/__main__.,py", "r2/cli.py", "r2/project", "r2/testing.py",
     "tests/conftest.py", "tests/test_pyproject_tasks.py",
 ]
 
@@ -47,7 +50,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.mypy]
 strict = true
 exclude = [
-    "^r2/(alias|cli|cli_tool|conf|console|edit|files|testing|utils)\\.py$",
+    "^r2/(cli|testing)\\.py$",
     "^r2/project/",
 ]
 
@@ -57,8 +60,7 @@ venv = ".venv"
 typeCheckingMode = "standard"
 exclude = [
     "**/.venv", "tests/examples",
-    "r2/alias.py", "r2/cli.py", "r2/cli_tool.py", "r2/conf.py", "r2/console.py",
-    "r2/edit.py", "r2/files.py", "r2/project", "r2/testing.py", "r2/utils.py",
+    "r2/cli.py", "r2/project", "r2/testing.py",
     "tests/conftest.py", "tests/test_pyproject_tasks.py",
 ]
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import tomllib
+from collections.abc import Iterator
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -38,12 +39,12 @@ class Config:
     def hd(self) -> ConfigHd:
         return self._data.hd
 
-    def __new__(cls, **kwargs):
+    def __new__(cls, *args: object, **kwargs: object) -> Config:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, name: str | None = None):
+    def __init__(self, name: str | None = None) -> None:
         if not hasattr(self, "_initialized"):
             if not CONFIG_PATH.exists():
                 CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -57,15 +58,15 @@ class Config:
             self._data = ConfigData.model_validate(data)
             self._initialized = True
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Config(data={self._data!r})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self._data)
 
 
 @contextlib.contextmanager
-def set_config(data: ConfigData):
+def set_config(data: ConfigData) -> Iterator[None]:
     """
     Temporarily set the configuration for the application.
 
