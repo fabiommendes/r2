@@ -6,12 +6,12 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 import pytest
 
-from r2.testing import EXAMPLES_ROOT, ExampleProjectFactory
+from tests.support import EXAMPLES_ROOT, ExampleProjectFactory
 
 
 @pytest.fixture(scope="session", autouse=True)

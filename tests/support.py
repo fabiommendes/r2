@@ -1,7 +1,7 @@
 import os
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 ExampleProjectFactory = Callable[[str], Path]
 

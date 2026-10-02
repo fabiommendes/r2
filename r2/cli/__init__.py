@@ -1,7 +1,8 @@
 """Command line entry point.
 
-This module must stay cheap to import: it must not import Textual, which is
-an optional extra and slow to load. The TUI is imported only when it launches.
+This module must stay cheap to import: it imports neither Textual, an
+optional extra that is slow to load, nor Typer. The TUI and the Typer app are
+imported only when they run.
 """
 
 import sys
@@ -21,6 +22,12 @@ def run_tui() -> None:
     tui_main()
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     """Run the r2 command: with no arguments, open the TUI."""
-    run_tui()
+    args = sys.argv[1:] if argv is None else argv
+    if not args:
+        run_tui()
+        return
+    from r2.cli.app import app
+
+    app(args=args, prog_name="r2")

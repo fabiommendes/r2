@@ -31,6 +31,10 @@ def test_cli_does_not_import_the_tui() -> None:
     assert not imported("r2.cli") & TUI_MODULES
 
 
+def test_cli_commands_do_not_import_the_tui() -> None:
+    assert not imported("r2.cli.app") & TUI_MODULES
+
+
 def test_notify_hook_imports_only_the_stdlib() -> None:
     assert not imported("r2.integrations.claude.notify") & HEAVY_MODULES
 

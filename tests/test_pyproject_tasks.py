@@ -18,7 +18,7 @@ exercise r2 itself, and it still runs through r2's real code path
 
 from __future__ import annotations
 
-from r2.testing import ExampleProjectFactory, run_r2
+from tests.support import ExampleProjectFactory, run_r2
 
 
 def test_basic_project(example_project: ExampleProjectFactory) -> None:

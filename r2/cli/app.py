@@ -1,4 +1,6 @@
-import builtins
+#
+# The app object and toplevel CLI commands.
+#
 from pathlib import Path
 from typing import Annotated
 
@@ -6,26 +8,18 @@ import rich
 import typer
 from rich import print
 
-from .project import get_project
-from .utils import error, warn
+from r2.cli.glossary import app as glossary_app
+from r2.core.messages import error, warn
+from r2.core.tasks import get_project
 
 app = typer.Typer()
+app.add_typer(glossary_app, name="glossary")
 
-__all__ = [
-    #: Main entry point
-    "main",
-    #: Commands
-    "alias",
-    "hd",
-    "help",
-    "init",
-    "test",
-    "build",
-    "docs",
-]
 
 ERRORS = {
-    "alias-name-required": "Alias name is required when not using --sections, --list, or --edit.",
+    "alias-name-required": (
+        "Alias name is required when not using --sections, --list, or --edit."
+    ),
 }
 
 
@@ -34,11 +28,11 @@ def hd(
     file: Annotated[
         Path, typer.Argument(..., help="Path that will be moved to the Hard drive")
     ],
-):
+) -> None:
     """
     Move path to the hard drive (usually, $HOME/hd) and create a symlink back to it.
     """
-    from .files import move_to_hd
+    from r2.core.files import move_to_hd
 
     move_to_hd(file)
 
@@ -67,8 +61,8 @@ def alias(
     edit: Annotated[
         bool, typer.Option("--edit", "-e", help="Open the alias file in an editor")
     ] = False,
-):
-    from .alias import create_alias, get_path, parse_sections
+) -> None:
+    from r2.core.alias import create_alias, get_path, parse_sections
 
     if sections or list:
         for section, aliases in (section_map := parse_sections()).items():
@@ -81,16 +75,16 @@ def alias(
             warn("No alias sections found.")
         return
     elif edit:
-        from .edit import edit as _edit
+        from r2.core.editor import edit_file
 
-        _edit(get_path())
+        edit_file(get_path())
     else:
         error(ERRORS["alias-name-required"], not alias)
         create_alias(py=py, js=js, package=package, alias=alias, section=section)
 
 
 @app.command()
-def help():
+def help() -> None:
     """
     Show help information about the CLI.
     """
@@ -143,27 +137,3 @@ def docs(path: Annotated[Path | None, path_opt] = None) -> None:
     """
     project = get_project(path)
     project.docs()
-
-
-#
-# MAIN APPLICATION
-#
-def main(argv: list[str] | None = None) -> None:
-    """
-    Run application.
-    """
-    app(argv)
-
-
-#
-# UTILITIES
-#
-def dbg(obj):
-    """
-    Debug utility to print the type and value of an object.
-    """
-    print(f"[b red]DEBUG[/]: [b blue]{type(obj)}[/] ")
-    print(obj)
-
-
-builtins.dbg = dbg  # type: ignore

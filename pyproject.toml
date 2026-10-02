@@ -37,35 +37,21 @@ r2-assistant = { workspace = true }
 
 [tool.ruff]
 line-length = 88
-# Transitional: the old r2 modules are excluded until they are ported.
-extend-exclude = [
-    "tests/examples",
-    "r2/__main__.,py", "r2/__main__.,py", "r2/cli.py", "r2/testing.py",
-    "tests/conftest.py", "tests/test_pyproject_tasks.py",
-]
+extend-exclude = ["tests/examples"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.mypy]
 strict = true
-exclude = [
-    "^r2/(cli|testing)\\.py$",
-]
 
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
 typeCheckingMode = "standard"
-exclude = [
-    "**/.venv", "tests/examples",
-    "r2/cli.py", "r2/testing.py",
-    "tests/conftest.py", "tests/test_pyproject_tasks.py",
-]
+exclude = ["**/.venv", "tests/examples"]
 
 [tool.pytest.ini_options]
-# Transitional: the old integration tests need the typer CLI, ported next.
-addopts = "--ignore=tests/test_pyproject_tasks.py"
 norecursedirs = ["examples"]
 
 [tool.taskipy.tasks]
