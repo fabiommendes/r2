@@ -9,6 +9,7 @@ from textual.widgets import Input, TabbedContent, TabPane, Tree
 
 from robin.links import Link
 from robin.project import ProjectContext
+from robin.widgets.markdown import MarkdownBrowser
 from robin.widgets.preview import FilePreview
 from robin.widgets.splitter import Splitter
 
@@ -73,6 +74,9 @@ class View(Widget):
         """Read the files on screen again, for instance after an edit."""
         for preview in self.query(FilePreview):
             preview.reload()
+        if self.context is not None:
+            for browser in self.query(MarkdownBrowser):
+                self.run_worker(browser.reload(self.context.root))
 
     def drawer_forward(self) -> bool:
         """Handle the right arrow inside the drawer.

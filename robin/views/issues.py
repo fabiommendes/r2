@@ -216,9 +216,7 @@ class IssuesView(View):
 
     def reload(self) -> None:
         self._drop_empty_stub()
-        if self.context is not None:
-            browser = self.query_one(MarkdownBrowser)
-            self.run_worker(browser.reload(self.context.root))
+        super().reload()
 
     def action_new_issue(self) -> None:
         self.app.push_screen(IssueForm(), self._create)

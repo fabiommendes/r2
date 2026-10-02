@@ -83,6 +83,7 @@ left to open the command palette, where you can also change the theme.
 | `c` | Comment on the issue on display (Issues view) |
 | `s` | Change the status of the issue on display (Issues view) |
 | `/` | Filter the issues (Issues view) |
+| `F5` | Read the file on display and the git status again |
 | `q` | Quit |
 
 In the trees, `→` expands a node (in the Project tree, it opens a file) and `←`

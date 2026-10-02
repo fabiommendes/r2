@@ -86,6 +86,7 @@ class RobinApp(App[None]):
         Binding("o", "open", "Open"),
         Binding("i", "ide", "IDE"),
         Binding("t", "shell", "Shell"),
+        Binding("f5", "refresh", "Refresh", show=False),
         *(
             Binding(str(number), f"show_view('{view.ID}')", view.TITLE, show=False)
             for number, view in enumerate(VIEWS, start=1)
@@ -233,6 +234,11 @@ class RobinApp(App[None]):
         root = self.context.root if self.context else Path.cwd()
         self._hand_over(shell_command(), cwd=root)
         self._active_view().reload()
+
+    def action_refresh(self) -> None:
+        """Read the files on screen and the git status again."""
+        self._active_view().reload()
+        self.refresh_git()
 
     def action_open(self) -> None:
         """Open the current file in its default application (xdg-open)."""
