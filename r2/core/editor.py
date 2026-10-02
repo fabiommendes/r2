@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from r2.links import Link
+from r2.core.links import Link
 
 DEFAULT_EDITOR = "micro"
 

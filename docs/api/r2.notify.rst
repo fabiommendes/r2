@@ -1,5 +1,0 @@
-r2.notify
-============
-
-.. automodule:: r2.notify
-   :members:

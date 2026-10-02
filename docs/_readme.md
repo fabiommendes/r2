@@ -6,11 +6,12 @@ the Claude session in that pane is doing, including the files it reads and the
 ## Installation
 
 ```bash
-uv tool install r2-assistant
+uv tool install "r2-assistant[tui]"
 ```
 
 This installs two commands: `r2`, the TUI, and `r2-notify`, the Claude
-Code hook that feeds it.
+Code hook that feeds it. The `tui` extra pulls in Textual; without it you get
+the hook and the core library only.
 
 R2 used to be called robin. `robin-notify` still works as an alias of
 `r2-notify`, so existing hook settings keep working, but point them to

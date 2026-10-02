@@ -806,6 +806,10 @@ version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "pyyaml" },
+]
+
+[package.optional-dependencies]
+tui = [
     { name = "textual", extra = ["syntax"] },
     { name = "textual-image" },
 ]
@@ -816,6 +820,7 @@ dev = [
     { name = "mypy" },
     { name = "pyright" },
     { name = "pytest" },
+    { name = "r2-assistant", extra = ["tui"] },
     { name = "ruff" },
     { name = "taskipy" },
     { name = "types-pyyaml" },
@@ -824,9 +829,10 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "textual", extras = ["syntax"], specifier = ">=8.2.8" },
-    { name = "textual-image", specifier = ">=0.14.1" },
+    { name = "textual", extras = ["syntax"], marker = "extra == 'tui'", specifier = ">=8.2.8" },
+    { name = "textual-image", marker = "extra == 'tui'", specifier = ">=0.14.1" },
 ]
+provides-extras = ["tui"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -834,6 +840,7 @@ dev = [
     { name = "mypy", specifier = ">=2.4.0" },
     { name = "pyright", specifier = ">=1.1.414" },
     { name = "pytest", specifier = ">=9.1.1" },
+    { name = "r2-assistant", extras = ["tui"], editable = "." },
     { name = "ruff", specifier = ">=0.16.10" },
     { name = "taskipy", specifier = ">=1.14.1" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20260906" },

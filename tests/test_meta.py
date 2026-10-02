@@ -1,7 +1,7 @@
 import datetime
 
-from r2.issues import split_frontmatter
-from r2.widgets.meta import STATUS_COLORS, render_meta
+from r2.core.issues import split_frontmatter
+from r2.tui.widgets.meta import STATUS_COLORS, render_meta
 
 COLORS = {name: "#808080" for name in [*STATUS_COLORS.values(), "secondary"]}
 

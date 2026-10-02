@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from r2 import notify
+from r2.integrations.claude import notify
 
 
 @pytest.fixture

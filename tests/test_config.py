@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from r2.config import DEFAULT_DRAWER_WIDTH, Config
+from r2.core.config import DEFAULT_DRAWER_WIDTH, Config
 
 
 def test_round_trip(tmp_path: Path) -> None:

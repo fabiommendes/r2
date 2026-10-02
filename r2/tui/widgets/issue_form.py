@@ -8,7 +8,7 @@ from textual.containers import Grid, Horizontal
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, Select
 
-from r2.issues import KINDS, PRIORITIES, SEVERITIES, Issue, new_issue
+from r2.core.issues import KINDS, PRIORITIES, SEVERITIES, Issue, new_issue
 
 # Body skeleton for each kind, so the editor opens on a structure to fill in.
 TEMPLATES = {

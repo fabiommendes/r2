@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from r2.links import Link, extract_links, is_binary, link_from_read
+from r2.core.links import Link, extract_links, is_binary, link_from_read
 
 
 def make_files(root: Path, *names: str) -> None:

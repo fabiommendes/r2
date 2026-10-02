@@ -2,7 +2,7 @@ import datetime
 
 import yaml
 
-from r2.issues import (
+from r2.core.issues import (
     Comment,
     Issue,
     append_stub,

@@ -2,7 +2,6 @@
 
 import asyncio
 import subprocess
-import time
 from pathlib import Path
 from typing import Any
 
@@ -13,23 +12,24 @@ from textual.css.query import NoMatches
 from textual.reactive import reactive
 from textual.widgets import Footer, Static, TabbedContent, TabPane
 
-from r2 import git, herdr, theme
-from r2.config import Config
-from r2.editor import (
+from r2.core import git
+from r2.core.config import Config
+from r2.core.editor import (
     editor_command,
     ide_command,
     launch_detached,
     open_externally,
     shell_command,
 )
-from r2.events import tail
-from r2.links import Link, extract_links, link_from_read
-from r2.notify import events_path
-from r2.project import ProjectContext, Projects
-from r2.transcript import last_turn_text
-from r2.views import VIEWS, View
-from r2.widgets.preview import FilePreview
-from r2.widgets.splitter import Splitter
+from r2.core.links import Link
+from r2.core.project import ProjectContext, Projects
+from r2.integrations import herdr
+from r2.integrations.claude.events import event_links, tail
+from r2.integrations.claude.notify import events_path
+from r2.tui import theme
+from r2.tui.views import VIEWS, View
+from r2.tui.widgets.preview import FilePreview
+from r2.tui.widgets.splitter import Splitter
 
 MAX_RECONNECT_DELAY = 30.0
 
@@ -58,10 +58,6 @@ class TopBar(Static):
     def on_click(self, event: events.Click) -> None:
         if event.x < self.PALETTE_WIDTH:
             self.app.action_command_palette()
-
-
-# Claude may still be writing the transcript when the Stop hook fires.
-TRANSCRIPT_SETTLE_DELAY = 0.5
 
 
 class R2App(App[None]):
@@ -323,29 +319,13 @@ class R2App(App[None]):
         context = self.projects.get(Path(event["cwd"]))
         if context is self.context and event.get("hook_event_name") == "Stop":
             self.refresh_git()
-        match event.get("hook_event_name"):
-            case "PostToolUse" if event.get("tool_name") == "Read":
-                link = link_from_read(event["tool_input"])
-                links = [link] if link else []
-            case "Stop":
-                links = extract_links(await self._turn_text(event), context.root)
-            case _:
-                return
+        links = await event_links(event, context.root)
         if not links:
             return
         context.add_links(links)
         if context is self.context:
             for view in self.query(View):
                 view.links_changed()
-
-    async def _turn_text(self, event: dict[str, Any]) -> str:
-        text: str | None = event.get("last_assistant_message")
-        if text:
-            return text
-        if time.time() - event.get("r2_time", 0) < TRANSCRIPT_SETTLE_DELAY:
-            await asyncio.sleep(TRANSCRIPT_SETTLE_DELAY)
-        path = Path(event["transcript_path"])
-        return await asyncio.to_thread(last_turn_text, path)
 
 
 def main() -> None:

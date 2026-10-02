@@ -6,5 +6,5 @@ Modules
    :caption: Contents:
 
    r2
-   r2.app
-   r2.notify
+   r2.tui.app
+   r2.integrations.claude.notify

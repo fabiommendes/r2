@@ -13,10 +13,10 @@ from textual.widgets import Collapsible, Markdown, MarkdownViewer, Tree
 from textual.widgets._markdown import MarkdownH1
 from textual.widgets.markdown import MarkdownTableOfContents
 
-from r2 import theme
-from r2.issues import Comment, parse, split_frontmatter
-from r2.widgets.meta import MetaBar
-from r2.widgets.splitter import Splitter
+from r2.core.issues import Comment, parse, split_frontmatter
+from r2.tui import theme
+from r2.tui.widgets.meta import MetaBar
+from r2.tui.widgets.splitter import Splitter
 
 # Comments of an issue shown open; older ones start collapsed.
 OPEN_COMMENTS = 3

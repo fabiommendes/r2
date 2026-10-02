@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from r2.git import GitStatus, Worktree, parse_status, status
+from r2.core.git import GitStatus, Worktree, parse_status, status
 
 
 def test_parse_branch_names() -> None:

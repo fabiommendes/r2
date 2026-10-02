@@ -1,0 +1,5 @@
+r2.integrations.claude.notify
+=============================
+
+.. automodule:: r2.integrations.claude.notify
+   :members:

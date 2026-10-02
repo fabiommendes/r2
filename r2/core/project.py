@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from r2.links import Link
+from r2.core.links import Link
 
 MAX_LINKS = 200
 

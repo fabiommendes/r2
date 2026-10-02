@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from r2.editor import editor_command
-from r2.links import Link
+from r2.core.editor import editor_command
+from r2.core.links import Link
 
 
 def test_editor_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -21,7 +21,7 @@ def test_editor_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_ide_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
-    from r2.editor import ide_command
+    from r2.core.editor import ide_command
 
     monkeypatch.setenv("R2_IDE", "zed --new")
     monkeypatch.setenv("VISUAL", "code")

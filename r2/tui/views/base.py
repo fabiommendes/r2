@@ -7,11 +7,11 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Input, TabbedContent, TabPane, Tree
 
-from r2.links import Link
-from r2.project import ProjectContext
-from r2.widgets.markdown import MarkdownBrowser
-from r2.widgets.preview import FilePreview
-from r2.widgets.splitter import Splitter
+from r2.core.links import Link
+from r2.core.project import ProjectContext
+from r2.tui.widgets.markdown import MarkdownBrowser
+from r2.tui.widgets.preview import FilePreview
+from r2.tui.widgets.splitter import Splitter
 
 
 class View(Widget):

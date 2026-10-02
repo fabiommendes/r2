@@ -1,5 +1,0 @@
-r2.app
-=========
-
-.. automodule:: r2.app
-   :members:
