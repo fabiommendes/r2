@@ -7,9 +7,11 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import Input, Tree
+from textual.widgets.tree import TreeNode
 
 from robin import git, theme
 from robin.issues import (
+    CLOSED_STATUSES,
     Issue,
     append_stub,
     comment_stub,
@@ -64,7 +66,9 @@ class IssueBrowser(MarkdownBrowser):
 
     def __init__(self, key: str) -> None:
         super().__init__(key, SECTIONS)
-        self.show_closed = False
+        self.expanded: dict[str, bool] = {}
+        """Groups the user opened or closed, by status."""
+        self._groups: dict[TreeNode[Path], str] = {}
 
     def compose_drawer(self) -> ComposeResult:
         tree: Tree[Path] = Tree("issues")
@@ -83,14 +87,37 @@ class IssueBrowser(MarkdownBrowser):
                 issue = load(path)
             except OSError:
                 continue
-            if (self.show_closed or issue.is_open) and matches(issue, query, path.stem):
+            if matches(issue, query, path.stem):
                 groups.setdefault(issue.status, []).append((issue, path))
+        self._groups = {}
+        cursor: TreeNode[Path] | None = None
         for status in sorted(groups, key=status_order):
             items = groups[status]
             label = f"{status.replace('_', ' ')} [dim]{len(items)}[/]"
-            node = tree.root.add(label, expand=True)
+            # Closed issues start folded, unless the filter or the document
+            # on display asks for them.
+            holds_current = any(path == self.current for _, path in items)
+            expand = (
+                holds_current
+                or bool(query)
+                or self.expanded.get(status, status not in CLOSED_STATUSES)
+            )
+            node = tree.root.add(label, expand=expand)
+            self._groups[node] = status
             for issue, path in items:
-                node.add_leaf(issue.title, data=path)
+                leaf = node.add_leaf(issue.title, data=path)
+                if path == self.current:
+                    cursor = leaf
+        if cursor is not None:
+            tree.call_after_refresh(tree.move_cursor, cursor)
+
+    def on_tree_node_expanded(self, event: Tree.NodeExpanded[Path]) -> None:
+        if status := self._groups.get(event.node):
+            self.expanded[status] = True
+
+    def on_tree_node_collapsed(self, event: Tree.NodeCollapsed[Path]) -> None:
+        if status := self._groups.get(event.node):
+            self.expanded[status] = False
 
     def refill(self) -> None:
         if self.root is not None:
@@ -116,7 +143,6 @@ class IssuesView(View):
         Binding("n", "new_issue", "New issue"),
         Binding("c", "comment", "Comment"),
         Binding("s", "status", "Status"),
-        Binding("a", "toggle_closed", "Show closed"),
         Binding("slash", "filter", "Filter"),
     ]
 
@@ -125,11 +151,6 @@ class IssuesView(View):
 
     def compose(self) -> ComposeResult:
         yield IssueBrowser(self.ID)
-
-    def action_toggle_closed(self) -> None:
-        browser = self.query_one(IssueBrowser)
-        browser.show_closed = not browser.show_closed
-        browser.refill()
 
     def action_filter(self) -> None:
         self.query_one("#filter", Input).focus()

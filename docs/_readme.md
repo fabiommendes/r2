@@ -47,8 +47,8 @@ right. Drag the bar between them to resize the drawer.
    preview of the selected file.
 3. **Docs**: the Markdown files in `dev/docs`, `dev/spec` and `docs`. The
    frontmatter shows in a bar above the document instead of in the text.
-4. **Issues**: the issues in `dev/issues`, grouped by status. Closed issues
-   are hidden until you press `a`. `/` filters them: each word must start a
+4. **Issues**: the issues in `dev/issues`, grouped by status. The groups of
+   closed issues start folded. `/` filters the issues: each word must start a
    word of the title, file name or metadata, and `key:value` looks in one key
    only, as in `tag:ui` or `kind:defect`. Comments show as a thread of collapsible cards. Press `n` to fill
    in a form with the metadata of a new issue; robin writes the file and opens
@@ -77,7 +77,6 @@ left to open the command palette, where you can also change the theme.
 | `n` | Create an issue (Issues view) |
 | `c` | Comment on the issue on display (Issues view) |
 | `s` | Change the status of the issue on display (Issues view) |
-| `a` | Show or hide closed issues (Issues view) |
 | `/` | Filter the issues (Issues view) |
 | `q` | Quit |
 
