@@ -40,7 +40,7 @@ line-length = 88
 # Transitional: the old r2 modules are excluded until they are ported.
 extend-exclude = [
     "tests/examples",
-    "r2/__main__.,py", "r2/__main__.,py", "r2/cli.py", "r2/project", "r2/testing.py",
+    "r2/__main__.,py", "r2/__main__.,py", "r2/cli.py", "r2/testing.py",
     "tests/conftest.py", "tests/test_pyproject_tasks.py",
 ]
 
@@ -51,7 +51,6 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 strict = true
 exclude = [
     "^r2/(cli|testing)\\.py$",
-    "^r2/project/",
 ]
 
 [tool.pyright]
@@ -60,7 +59,7 @@ venv = ".venv"
 typeCheckingMode = "standard"
 exclude = [
     "**/.venv", "tests/examples",
-    "r2/cli.py", "r2/project", "r2/testing.py",
+    "r2/cli.py", "r2/testing.py",
     "tests/conftest.py", "tests/test_pyproject_tasks.py",
 ]
 

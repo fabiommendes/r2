@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from .base import Project
-from .pyproject import PyProject
+from r2.core.tasks.base import Project
+from r2.core.tasks.pyproject import PyProject
 
 
 def get_project(path: Path | None) -> Project:

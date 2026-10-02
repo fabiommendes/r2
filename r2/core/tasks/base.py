@@ -48,9 +48,9 @@ class Project(Protocol):
         Without an argument, run the default entry point for the project.
         """
         if script is None:
-            return self.run_default()
+            self.run_default()
         else:
-            return self.run_task(script)
+            self.run_task(script)
 
     def run_default(self) -> Never:
         """

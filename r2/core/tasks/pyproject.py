@@ -4,12 +4,12 @@ import os
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal, assert_never
+from typing import Any, Literal, Never, assert_never
 
-from .. import console
-from ..cli_tool import CliTool
-from .base import Never, ProjectKind
-from .base import Project as BaseProject
+from r2.core import console
+from r2.core.cli_tool import CliTool
+from r2.core.tasks.base import Project as BaseProject
+from r2.core.tasks.base import ProjectKind
 
 type Data = dict[str, Any]
 type Manager = Literal["uv"]
@@ -26,7 +26,7 @@ class PyProject(BaseProject):
     root: Path
     data: Data = field(default_factory=dict)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.data == {}:
             with open(self.root / "pyproject.toml", "rb") as f:
                 data = tomllib.load(f)
@@ -58,7 +58,7 @@ class PyProject(BaseProject):
 
     @property
     def dependencies(self) -> dict[str, str]:
-        return parse_dependencies(self["dependencies"] or [])
+        return parse_dependencies(self["project.dependencies"] or [])
 
     @property
     def dev_dependencies(self) -> dict[str, str]:
@@ -98,7 +98,7 @@ class PyProject(BaseProject):
         # Try pytest run
         if self.dev_dependencies.get("pytest"):
             uv.exec("run", "pytest", _path=self.root)
-        exit("Could not find the test runner")
+        fail("Could not find the test runner")
 
     def install(self) -> Never:
         self._try_tasks(["install", "configure"])
@@ -125,15 +125,15 @@ class PyProject(BaseProject):
         if "doc-zero" in self.any_dependencies:
             uv.exec("run", "doc-zero", "build", _path=self.root)
 
-        exit("Could not build the project documentation")
+        fail("Could not build the project documentation")
 
     def run_default(self) -> Never:
         self._try_tasks(["run", "dev", "start", "main"])
-        exit("Could not find a default task to run")
+        fail("Could not find a default task to run")
 
     def run_task(self, script: str) -> Never:
         self._try_tasks([script])
-        exit(f"Could not find a task named '{script}'")
+        fail(f"Could not find a task named '{script}'")
 
     def run_subcommand(self, command: list[str]) -> Never:
         match self.manager:
@@ -143,7 +143,7 @@ class PyProject(BaseProject):
                 assert_never(other)
 
 
-def exit(msg: str) -> Never:
+def fail(msg: str) -> Never:
     console.stderr.print(msg)
     raise SystemExit(1)
 
