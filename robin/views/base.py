@@ -56,6 +56,14 @@ class View(Widget):
         """The file the view is showing, used to open it in an editor."""
         return None
 
+    def drawer_forward(self) -> bool:
+        """Handle the right arrow inside the drawer.
+
+        Return True to keep the focus in the drawer, False to move it to the
+        content.
+        """
+        return False
+
     def focus_drawer(self) -> None:
         if drawer := self._drawer():
             drawer.focus()
@@ -97,7 +105,8 @@ class View(Widget):
     def action_navigate(self, step: int) -> None:
         in_drawer = self._in_drawer()
         if step > 0 and in_drawer:
-            self.focus_content()
+            if not self.drawer_forward():
+                self.focus_content()
         elif step < 0 and not in_drawer:
             self.focus_drawer()
         else:

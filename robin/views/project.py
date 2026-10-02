@@ -83,6 +83,20 @@ class ProjectView(View):
         path = self.context.view_state.get(self.ID)
         return Link(path) if isinstance(path, Path) else None
 
+    def drawer_forward(self) -> bool:
+        """Expand a closed folder; otherwise open the file and move on."""
+        tree = self.query_one(ProjectTree)
+        node = tree.cursor_node
+        if node is None or node.data is None:
+            return False
+        if node.data.path.is_dir():
+            if node.is_expanded:
+                return False
+            node.expand()
+            return True
+        tree.select_node(node)
+        return False
+
     def on_directory_tree_file_selected(
         self, event: DirectoryTree.FileSelected
     ) -> None:
