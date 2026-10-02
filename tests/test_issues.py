@@ -108,12 +108,24 @@ def test_slugify() -> None:
     assert slugify("???") == "issue"
 
 
-def test_matches_every_word_in_title_slug_or_metadata() -> None:
+def test_matches_the_start_of_words_in_title_slug_or_metadata() -> None:
     issue = Issue("Excerpt overflows", status="todo", meta={"tags": ["preview"]})
     assert matches(issue, "")
     assert matches(issue, "PREVIEW over")
     assert matches(issue, "todo", "excerpt-overflow")
     assert not matches(issue, "preview cursor")
+    assert not matches(issue, "flows")
+
+
+def test_matches_key_value_words_in_that_key_only() -> None:
+    issue = Issue(
+        "Build the UI",
+        meta={"tags": ["ui"], "kind": "defect", "relatedTo": ["file-preview"]},
+    )
+    assert matches(issue, "tag:ui kind:def")
+    assert matches(issue, "related:preview")
+    assert not matches(issue, "tag:build")
+    assert not matches(issue, "milestone:v1")
 
 
 def test_status_order_follows_the_lifecycle_then_unknown_ones() -> None:

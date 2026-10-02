@@ -193,11 +193,44 @@ def _yaml_value(value: Any) -> str:
     return dumped.removesuffix("...\n").strip()
 
 
+# Short names accepted in "key:value" filter words.
+FILTER_ALIASES = {"tag": "tags", "related": "relatedto"}
+
+
+def _words(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [word for item in value for word in _words(item)]
+    return re.findall(r"[a-z0-9]+", str(value).lower())
+
+
+def _starts_words(query: str, words: list[str]) -> bool:
+    """Whether each word of query starts some word in words."""
+    return all(any(w.startswith(q) for w in words) for q in _words(query))
+
+
 def matches(issue: Issue, query: str, slug: str = "") -> bool:
-    """Whether every word of query appears in the issue's title or metadata."""
-    fields = [issue.title, slug, issue.status, *map(str, issue.meta.values())]
-    haystack = " ".join(fields).lower()
-    return all(word in haystack for word in query.lower().split())
+    """Whether the issue passes the filter query.
+
+    Each word of query must start a word of the title, the file name or the
+    metadata. A "key:value" word looks in that key only, as in "tag:ui" or
+    "kind:defect".
+    """
+    fields: dict[str, Any] = {
+        "title": issue.title,
+        "slug": slug,
+        "status": issue.status,
+        **{key.lower(): value for key, value in issue.meta.items()},
+    }
+    everything = _words(list(map(str, fields.values())))
+    for token in query.lower().split():
+        key, colon, value = token.partition(":")
+        if colon and key and value:
+            key = FILTER_ALIASES.get(key, key)
+            if not _starts_words(value, _words(fields.get(key, ""))):
+                return False
+        elif not _starts_words(token, everything):
+            return False
+    return True
 
 
 def status_order(status: str) -> tuple[int, str]:
