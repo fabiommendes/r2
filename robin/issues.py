@@ -74,20 +74,32 @@ def slugify(title: str) -> str:
     return "-".join(words) or "issue"
 
 
+def split_frontmatter(text: str) -> tuple[dict[str, Any] | None, str]:
+    """Split text into its YAML frontmatter and the Markdown after it.
+
+    Without a frontmatter, or with one that is not a YAML mapping, return
+    None and the text untouched.
+    """
+    match = FRONTMATTER_RE.match(text)
+    if not match:
+        return None, text
+    try:
+        loaded = yaml.safe_load(match.group(1) or "")
+    except yaml.YAMLError:
+        return None, text
+    if not isinstance(loaded, dict):
+        return None, text
+    return {str(key): value for key, value in loaded.items()}, text[match.end() :]
+
+
 def parse(text: str, slug: str = "") -> Issue:
     """Read an issue, accepting any Markdown text."""
-    meta: dict[str, Any] = {}
+    loaded, text = split_frontmatter(text)
+    meta = loaded or {}
     broken = ""
-    if match := FRONTMATTER_RE.match(text):
-        try:
-            loaded = yaml.safe_load(match.group(1) or "")
-        except yaml.YAMLError:
-            loaded = None
-        if isinstance(loaded, dict):
-            meta = {str(key): value for key, value in loaded.items()}
-        else:
-            # Keep the block as text, but never split it into comments.
-            broken = match.group(0).rstrip("\n")
+    if loaded is None and (match := FRONTMATTER_RE.match(text)):
+        # Keep a broken block as text, but never split it into comments.
+        broken = match.group(0).rstrip("\n")
         text = text[match.end() :]
     meta.pop("type", None)
     status = str(meta.pop("status", None) or "backlog")
