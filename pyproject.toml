@@ -1,0 +1,49 @@
+[project]
+name = "robin-tui"
+version = "0.1.0"
+description = "Sidekick TUI that follows Claude Code sessions running inside herdr."
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Fábio Macêdo Mendes", email = "fabiomacedomendes@gmail.com" }]
+requires-python = ">=3.13"
+dependencies = [
+    "textual[syntax]>=8.2.8",
+]
+
+[project.scripts]
+robin = "robin.app:main"
+robin-notify = "robin.notify:main"
+
+[build-system]
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "robin"
+module-root = "."
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+strict = true
+
+[tool.taskipy.tasks]
+format = "ruff format . && ruff check --fix ."
+lint = "ruff check . && ruff format --check . && mypy robin"
+test = "pytest"
+docs = "doc-zero build"
+ci = "task lint && task test && task docs"
+release = "task ci && uv build"
+
+[dependency-groups]
+dev = [
+    "doc-zero>=0.2.3",
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "ruff>=0.16.10",
+    "taskipy>=1.14.1",
+]

@@ -1,0 +1,1 @@
+"""Widgets shared between views."""
