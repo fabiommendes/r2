@@ -1,0 +1,5 @@
+r2.tui.widgets.preview
+======================
+
+.. automodule:: r2.tui.widgets.preview
+   :members:

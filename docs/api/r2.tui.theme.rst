@@ -1,0 +1,5 @@
+r2.tui.theme
+============
+
+.. automodule:: r2.tui.theme
+   :members:

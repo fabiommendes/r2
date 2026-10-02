@@ -1,0 +1,10 @@
+r2.tui.views
+============
+
+.. automodule:: r2.tui.views
+
+.. autodata:: r2.tui.views.VIEWS
+
+.. autoclass:: r2.tui.views.View
+   :members:
+   :member-order: bysource

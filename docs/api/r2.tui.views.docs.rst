@@ -1,0 +1,5 @@
+r2.tui.views.docs
+=================
+
+.. automodule:: r2.tui.views.docs
+   :members:

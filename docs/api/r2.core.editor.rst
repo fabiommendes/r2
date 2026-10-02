@@ -1,0 +1,5 @@
+r2.core.editor
+==============
+
+.. automodule:: r2.core.editor
+   :members:

@@ -1,0 +1,5 @@
+r2.integrations.claude.events
+=============================
+
+.. automodule:: r2.integrations.claude.events
+   :members:

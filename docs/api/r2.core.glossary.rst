@@ -1,0 +1,14 @@
+r2.core.glossary
+================
+
+.. automodule:: r2.core.glossary
+
+.. autoclass:: r2.core.glossary.Glossary
+   :members:
+   :member-order: bysource
+
+.. autoclass:: r2.core.glossary.Term
+   :members:
+   :member-order: bysource
+
+.. autofunction:: r2.core.glossary.parse

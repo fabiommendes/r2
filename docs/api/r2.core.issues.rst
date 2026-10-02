@@ -1,0 +1,5 @@
+r2.core.issues
+==============
+
+.. automodule:: r2.core.issues
+   :members:

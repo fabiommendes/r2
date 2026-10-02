@@ -1,0 +1,5 @@
+r2.tui.views.base
+=================
+
+.. automodule:: r2.tui.views.base
+   :members:

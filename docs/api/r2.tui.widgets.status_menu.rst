@@ -1,0 +1,5 @@
+r2.tui.widgets.status_menu
+==========================
+
+.. automodule:: r2.tui.widgets.status_menu
+   :members:

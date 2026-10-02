@@ -1,0 +1,5 @@
+r2.tui.widgets.issue_form
+=========================
+
+.. automodule:: r2.tui.widgets.issue_form
+   :members:
