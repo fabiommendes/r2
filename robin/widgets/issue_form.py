@@ -4,7 +4,7 @@ from typing import Any
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
+from textual.containers import Grid, Horizontal
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, Select
 
@@ -40,57 +40,66 @@ class IssueForm(ModalScreen[Issue | None]):
     IssueForm {
         align: center middle;
     }
-    IssueForm > Vertical {
+    IssueForm > Grid {
+        grid-size: 2;
+        grid-columns: 11 1fr;
+        grid-rows: 1;
+        grid-gutter: 0 1;
         width: 70;
         height: auto;
-        padding: 1 2;
+        padding: 0 1;
         border: round $primary;
+        border-title-color: $text-primary;
         background: $surface;
     }
     IssueForm Label {
-        margin-top: 1;
+        color: $text-muted;
     }
-    IssueForm Horizontal {
-        height: auto;
+    IssueForm Input, IssueForm SelectCurrent {
+        background: $surface-lighten-1;
     }
-    IssueForm Horizontal > Vertical {
-        width: 1fr;
-        height: auto;
+    IssueForm Input:focus, IssueForm Select:focus > SelectCurrent {
+        background: $primary-muted;
     }
     IssueForm #buttons {
-        margin-top: 1;
+        column-span: 2;
+        height: 1;
         align-horizontal: right;
     }
     """
 
     def compose(self) -> ComposeResult:
-        with Vertical():
+        with Grid() as grid:
+            grid.border_title = "New issue"
             yield Label("Title")
-            yield Input(id="title", placeholder="What is wrong or missing")
-            with Horizontal():
-                yield self._select("Kind", "kind", KINDS, None)
-                yield self._select("Priority", "priority", PRIORITIES, "normal")
-                yield self._select("Severity", "severity", SEVERITIES, "normal")
-            yield Label("Tags")
-            yield Input(id="tags", placeholder="comma separated")
-            yield Label("Related to")
-            yield Input(id="relatedTo", placeholder="entity slugs or paths")
-            yield Label("Milestone")
-            yield Input(id="milestone", placeholder="only for one milestone")
+            yield Input(
+                id="title", placeholder="What is wrong or missing", compact=True
+            )
+            yield from self._select("Kind", "kind", KINDS, None)
+            yield from self._select("Priority", "priority", PRIORITIES, "normal")
+            yield from self._select("Severity", "severity", SEVERITIES, "normal")
+            yield from self._input("Tags", "tags", "comma separated")
+            yield from self._input("Related to", "relatedTo", "entity slugs or paths")
+            yield from self._input("Milestone", "milestone", "only for one milestone")
             with Horizontal(id="buttons"):
-                yield Button("Cancel", id="cancel")
-                yield Button("Create", id="create", variant="primary")
+                yield Button("Cancel", id="cancel", compact=True)
+                yield Button("Create", id="create", variant="primary", compact=True)
+
+    def _input(self, label: str, id: str, placeholder: str) -> ComposeResult:
+        yield Label(label)
+        yield Input(id=id, placeholder=placeholder, compact=True)
 
     def _select(
         self, label: str, id: str, values: list[str], value: str | None
-    ) -> Vertical:
-        select: Select[str] = Select(
+    ) -> ComposeResult:
+        yield Label(label)
+        yield Select(
             [(item, item) for item in values],
             id=id,
             value=value if value is not None else Select.NULL,
             allow_blank=value is None,
+            compact=True,
         )
-        return Vertical(Label(label), select)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "create":
