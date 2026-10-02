@@ -1,8 +1,12 @@
 """Links mentioned by Claude, with a preview of each one."""
 
+from pathlib import Path
+
+from rich.text import Text
 from textual.app import ComposeResult
 from textual.widgets import OptionList
 
+from robin.links import Link
 from robin.project import ProjectContext
 from robin.views.base import View
 from robin.widgets.preview import FilePreview
@@ -16,6 +20,8 @@ class LiveView(View):
     DEFAULT_CSS = """
     LiveView > OptionList {
         height: 1fr;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
     }
     LiveView > FilePreview {
         width: 1fr;
@@ -37,14 +43,19 @@ class LiveView(View):
         options = self.query_one(OptionList)
         selected = self.context.view_state.get(self.ID)
         options.clear_options()
-        options.add_options(
-            link.label(self.context.root) for link in self.context.links
-        )
+        options.add_options(self._prompt(link) for link in self.context.links)
         if self.context.links:
             links = self.context.links
             options.highlighted = links.index(selected) if selected in links else 0
         else:
             self.query_one(FilePreview).show(None)
+
+    def _prompt(self, link: Link) -> Text:
+        """Show the file name first, so truncation only hides the directory."""
+        assert self.context is not None
+        label = Path(link.label(self.context.root))
+        directory = "" if str(label.parent) == "." else f"  {label.parent}"
+        return Text.assemble(label.name, (directory, "dim"))
 
     def on_option_list_option_highlighted(
         self, event: OptionList.OptionHighlighted

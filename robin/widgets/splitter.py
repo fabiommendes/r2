@@ -18,10 +18,10 @@ class Splitter(Widget):
     Splitter {
         width: 1;
         height: 1fr;
-        background: $panel;
+        color: $foreground 25%;
     }
     Splitter:hover, Splitter.-dragging {
-        background: $accent;
+        color: $accent;
     }
     """
 
@@ -36,6 +36,9 @@ class Splitter(Widget):
         super().__init__()
         self.key = key
         self._dragging = False
+
+    def render(self) -> str:
+        return "\n".join("│" * self.size.height)
 
     @property
     def target(self) -> Widget:

@@ -11,7 +11,7 @@ from textual.css.query import NoMatches
 from textual.reactive import reactive
 from textual.widgets import Footer, Header, TabbedContent, TabPane
 
-from robin import herdr
+from robin import herdr, theme
 from robin.config import Config
 from robin.events import tail
 from robin.links import extract_links, link_from_read
@@ -32,6 +32,7 @@ class RobinApp(App[None]):
     """Follow the Claude session in the herdr pane that has focus."""
 
     TITLE = "robin"
+    CSS = theme.CSS
 
     BINDINGS = [
         Binding("q", "quit", "Quit"),
@@ -48,6 +49,7 @@ class RobinApp(App[None]):
     """Stay on the current project instead of following herdr focus."""
 
     def __init__(self) -> None:
+        theme.install()
         super().__init__()
         self.projects = Projects()
         self.config = Config.load()
