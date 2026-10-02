@@ -16,7 +16,7 @@ from robin import herdr, theme
 from robin.config import Config
 from robin.editor import editor_command, open_externally, shell_command
 from robin.events import tail
-from robin.links import extract_links, is_binary, link_from_read
+from robin.links import extract_links, link_from_read
 from robin.notify import events_path
 from robin.project import ProjectContext, Projects
 from robin.transcript import last_turn_text
@@ -217,7 +217,6 @@ class RobinApp(App[None]):
                 links = extract_links(await self._turn_text(event), context.root)
             case _:
                 return
-        links = [link for link in links if not is_binary(link.path)]
         if not links:
             return
         context.add_links(links)

@@ -1,5 +1,7 @@
 """Read-only file viewer that can focus on a range of lines."""
 
+from pathlib import Path
+
 from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.reactive import reactive
@@ -8,7 +10,14 @@ from textual.widgets.text_area import Selection
 
 from robin.links import Link, is_binary
 
+# Importing the widget queries the terminal for its graphics protocol, which
+# must happen before Textual takes over the terminal.
+from textual_image.widget import Image  # noqa: E402  isort: skip
+
 CONTEXT_LINES = 5
+
+# Raster formats Pillow decodes. SVG is text, so it shows as source.
+IMAGE_SUFFIXES = {".bmp", ".gif", ".jpeg", ".jpg", ".png", ".webp"}
 
 LANGUAGES = {
     ".bash": "bash",
@@ -44,6 +53,12 @@ class FilePreview(Vertical):
         height: 1fr;
         border: none;
     }
+    FilePreview > Image {
+        width: auto;
+        height: auto;
+        max-height: 100%;
+        display: none;
+    }
     """
 
     full: reactive[bool] = reactive(False)
@@ -57,6 +72,7 @@ class FilePreview(Vertical):
     def compose(self) -> ComposeResult:
         yield Static()
         yield TextArea(read_only=True, show_line_numbers=True, soft_wrap=False)
+        yield Image()
 
     def show(self, link: Link | None, label: str = "") -> None:
         """Display link, using label as the title."""
@@ -71,6 +87,17 @@ class FilePreview(Vertical):
         """Read the file again, for instance after it was edited."""
         self._update()
 
+    def _show_image(self, path: Path | None) -> bool:
+        """Show the image at path in place of the text, or go back to text."""
+        image = self.query_one(Image)
+        try:
+            image.image = path
+        except (OSError, ValueError):
+            path = None
+        image.display = path is not None
+        self.query_one(TextArea).display = path is None
+        return path is not None
+
     def toggle_full(self) -> None:
         self.full = not self.full
 
@@ -80,13 +107,17 @@ class FilePreview(Vertical):
         title = self.query_one(Static)
         area = self.query_one(TextArea)
         link = self._link
+        self._show_image(None)
         if link is None:
             title.update("")
             area.load_text("")
             return
+        if link.path.suffix.lower() in IMAGE_SUFFIXES and self._show_image(link.path):
+            title.update(f"{self._label}  [dim](image, o to open)[/]")
+            return
         if is_binary(link.path):
             title.update(self._label)
-            area.load_text("Binary file, not shown.")
+            area.load_text("Binary file, not shown. Press o to open it.")
             return
         try:
             lines = link.path.read_text(errors="replace").splitlines()

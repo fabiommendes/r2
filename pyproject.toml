@@ -7,6 +7,7 @@ license = "MIT"
 authors = [{ name = "Fábio Macêdo Mendes", email = "fabiomacedomendes@gmail.com" }]
 requires-python = ">=3.13"
 dependencies = [
+    "textual-image>=0.14.1",
     "textual[syntax]>=8.2.8",
 ]
 
