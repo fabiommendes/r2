@@ -64,6 +64,14 @@ class View(Widget):
         """
         return False
 
+    def drawer_back(self) -> bool:
+        """Handle the left arrow inside the drawer.
+
+        Return True to keep the focus in the drawer, False to move it to the
+        previous tab.
+        """
+        return False
+
     def focus_drawer(self) -> None:
         if drawer := self._drawer():
             drawer.focus()
@@ -109,6 +117,8 @@ class View(Widget):
                 self.focus_content()
         elif step < 0 and not in_drawer:
             self.focus_drawer()
+        elif step < 0 and self.drawer_back():
+            return
         else:
             self._switch_tab(step, "drawer" if step > 0 else "content")
 

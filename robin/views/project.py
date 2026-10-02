@@ -97,6 +97,14 @@ class ProjectView(View):
         tree.select_node(node)
         return False
 
+    def drawer_back(self) -> bool:
+        """Collapse an open folder; otherwise leave for the previous tab."""
+        node = self.query_one(ProjectTree).cursor_node
+        if node is None or not node.is_expanded:
+            return False
+        node.collapse()
+        return True
+
     def on_directory_tree_file_selected(
         self, event: DirectoryTree.FileSelected
     ) -> None:
