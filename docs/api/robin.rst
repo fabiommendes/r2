@@ -1,5 +1,0 @@
-robin
-=====
-
-.. automodule:: robin
-   :members:

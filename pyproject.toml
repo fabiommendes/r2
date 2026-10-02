@@ -1,6 +1,6 @@
 [project]
-name = "robin-tui"
-version = "0.1.0"
+name = "r2-assistant"
+version = "0.3.0"
 description = "Sidekick TUI that follows Claude Code sessions running inside herdr."
 readme = "README.md"
 license = "MIT"
@@ -13,15 +13,16 @@ dependencies = [
 ]
 
 [project.scripts]
-robin = "robin.app:main"
-robin-notify = "robin.notify:main"
+r2 = "r2.app:main"
+r2-notify = "r2.notify:main"
+robin-notify = "r2.notify:main"
 
 [build-system]
 requires = ["uv_build>=0.11,<0.12"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-module-name = "robin"
+module-name = "r2"
 module-root = "."
 
 [tool.ruff]
@@ -40,7 +41,7 @@ typeCheckingMode = "standard"
 
 [tool.taskipy.tasks]
 format = "ruff format . && ruff check --fix ."
-lint = "ruff check . && ruff format --check . && mypy robin && pyright robin tests"
+lint = "ruff check . && ruff format --check . && mypy r2 && pyright r2 tests"
 test = "pytest"
 docs = "doc-zero build"
 ci = "task lint && task test && task docs"

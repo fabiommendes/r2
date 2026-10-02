@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from robin.links import Link
-from robin.project import Projects
+from r2.links import Link
+from r2.project import Projects
 
 
 def test_contexts_are_shared_by_git_root(tmp_path: Path) -> None:
@@ -23,7 +23,7 @@ def test_new_links_go_on_top_without_duplicates(tmp_path: Path) -> None:
 def test_git_ignored(tmp_path: Path) -> None:
     import subprocess
 
-    from robin.views.project import git_ignored
+    from r2.views.project import git_ignored
 
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     (tmp_path / ".gitignore").write_text("build/\n*.log\n")

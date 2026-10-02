@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from robin.transcript import last_turn_text
+from r2.transcript import last_turn_text
 
 
 def entry(kind: str, content: object) -> str:

@@ -2,7 +2,7 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
-from robin.events import tail
+from r2.events import tail
 
 
 def test_tail_replays_and_follows(tmp_path: Path) -> None:

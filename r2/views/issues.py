@@ -9,8 +9,8 @@ from textual.containers import Vertical
 from textual.widgets import Input, Tree
 from textual.widgets.tree import TreeNode
 
-from robin import git, theme
-from robin.issues import (
+from r2 import git, theme
+from r2.issues import (
     CLOSED_STATUSES,
     Issue,
     append_stub,
@@ -22,12 +22,12 @@ from robin.issues import (
     slugify,
     status_order,
 )
-from robin.links import Link
-from robin.project import ProjectContext
-from robin.views.base import View
-from robin.widgets.issue_form import IssueForm
-from robin.widgets.markdown import MarkdownBrowser
-from robin.widgets.status_menu import StatusMenu
+from r2.links import Link
+from r2.project import ProjectContext
+from r2.views.base import View
+from r2.widgets.issue_form import IssueForm
+from r2.widgets.markdown import MarkdownBrowser
+from r2.widgets.status_menu import StatusMenu
 
 ISSUES_DIR = "dev/issues"
 SECTIONS = {"Issues": ISSUES_DIR}

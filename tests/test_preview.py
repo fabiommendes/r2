@@ -1,4 +1,4 @@
-from robin.widgets.preview import faded_rows
+from r2.widgets.preview import faded_rows
 
 
 def test_fades_both_sides_inside_a_long_file() -> None:

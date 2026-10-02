@@ -6,7 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from robin.links import Link
+from r2.links import Link
 
 DEFAULT_EDITOR = "micro"
 
@@ -14,7 +14,7 @@ DEFAULT_EDITOR = "micro"
 def editor_command(link: Link) -> list[str]:
     """Build the command that opens link in a terminal editor.
 
-    The editor comes from $ROBIN_EDITOR, $EDITOR, $VISUAL or defaults to
+    The editor comes from $R2_EDITOR, $EDITOR, $VISUAL or defaults to
     micro. $EDITOR goes before $VISUAL because $VISUAL often names a GUI
     editor, which would return at once instead of taking over the terminal.
 
@@ -22,7 +22,7 @@ def editor_command(link: Link) -> list[str]:
     jump to a line.
     """
     editor = (
-        os.environ.get("ROBIN_EDITOR")
+        os.environ.get("R2_EDITOR")
         or os.environ.get("EDITOR")
         or os.environ.get("VISUAL")
         or DEFAULT_EDITOR
@@ -44,16 +44,16 @@ DEFAULT_IDE = "code"
 def ide_command(root: Path) -> list[str]:
     """Build the command that opens the project at root in a GUI editor.
 
-    The IDE comes from $ROBIN_IDE, $VISUAL or defaults to VS Code.
+    The IDE comes from $R2_IDE, $VISUAL or defaults to VS Code.
     """
-    ide = os.environ.get("ROBIN_IDE") or os.environ.get("VISUAL") or DEFAULT_IDE
+    ide = os.environ.get("R2_IDE") or os.environ.get("VISUAL") or DEFAULT_IDE
     return [*shlex.split(ide), str(root)]
 
 
 def launch_detached(command: list[str]) -> None:
     """Start a GUI program without waiting for it.
 
-    The program runs detached from robin's terminal, so it can neither draw
+    The program runs detached from r2's terminal, so it can neither draw
     over the UI nor read its input.
     """
     subprocess.Popen(

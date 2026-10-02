@@ -5,6 +5,6 @@ Modules
    :maxdepth: 2
    :caption: Contents:
 
-   robin
-   robin.app
-   robin.notify
+   r2
+   r2.app
+   r2.notify

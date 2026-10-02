@@ -6,7 +6,7 @@ from typing import Any
 from rich.text import Text
 from textual.widgets import Static
 
-from robin import theme
+from r2 import theme
 
 # Theme variable that colors the status pill, by status.
 STATUS_COLORS = {

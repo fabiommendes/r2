@@ -1,10 +1,10 @@
-"""Claude Code hook that forwards events to robin.
+"""Claude Code hook that forwards events to r2.
 
 The hook reads the event payload from stdin, tags it with the herdr pane that
-runs Claude, and appends it as a single line to the events log. Robin tails
+runs Claude, and appends it as a single line to the events log. R2 tails
 that log, so it does not need to be running when the event happens.
 
-Tool responses are dropped: they may hold whole files and robin does not
+Tool responses are dropped: they may hold whole files and r2 does not
 use them.
 
 The hook never fails: a broken log must never block or slow down Claude.
@@ -20,7 +20,7 @@ from pathlib import Path
 def events_path() -> Path:
     """Return the path of the JSONL file that collects hook events."""
     state = os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state"
-    return Path(state) / "robin" / "events.jsonl"
+    return Path(state) / "r2" / "events.jsonl"
 
 
 def append_event(event: dict[str, object], path: Path) -> None:
@@ -43,7 +43,7 @@ def main() -> None:
         event = json.load(sys.stdin)
         event.pop("tool_response", None)
         event["herdr_pane_id"] = os.environ.get("HERDR_PANE_ID")
-        event["robin_time"] = time.time()
+        event["r2_time"] = time.time()
         append_event(event, events_path())
     except Exception:
         pass

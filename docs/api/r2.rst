@@ -1,0 +1,5 @@
+r2
+=====
+
+.. automodule:: r2
+   :members:

@@ -1,4 +1,4 @@
-"""Robin's Textual application."""
+"""R2's Textual application."""
 
 import asyncio
 import subprocess
@@ -13,23 +13,23 @@ from textual.css.query import NoMatches
 from textual.reactive import reactive
 from textual.widgets import Footer, Static, TabbedContent, TabPane
 
-from robin import git, herdr, theme
-from robin.config import Config
-from robin.editor import (
+from r2 import git, herdr, theme
+from r2.config import Config
+from r2.editor import (
     editor_command,
     ide_command,
     launch_detached,
     open_externally,
     shell_command,
 )
-from robin.events import tail
-from robin.links import Link, extract_links, link_from_read
-from robin.notify import events_path
-from robin.project import ProjectContext, Projects
-from robin.transcript import last_turn_text
-from robin.views import VIEWS, View
-from robin.widgets.preview import FilePreview
-from robin.widgets.splitter import Splitter
+from r2.events import tail
+from r2.links import Link, extract_links, link_from_read
+from r2.notify import events_path
+from r2.project import ProjectContext, Projects
+from r2.transcript import last_turn_text
+from r2.views import VIEWS, View
+from r2.widgets.preview import FilePreview
+from r2.widgets.splitter import Splitter
 
 MAX_RECONNECT_DELAY = 30.0
 
@@ -64,10 +64,10 @@ class TopBar(Static):
 TRANSCRIPT_SETTLE_DELAY = 0.5
 
 
-class RobinApp(App[None]):
+class R2App(App[None]):
     """Follow the Claude session in the herdr pane that has focus."""
 
-    TITLE = "robin"
+    TITLE = "r2"
     CSS = (
         theme.CSS
         + """
@@ -342,11 +342,11 @@ class RobinApp(App[None]):
         text: str | None = event.get("last_assistant_message")
         if text:
             return text
-        if time.time() - event.get("robin_time", 0) < TRANSCRIPT_SETTLE_DELAY:
+        if time.time() - event.get("r2_time", 0) < TRANSCRIPT_SETTLE_DELAY:
             await asyncio.sleep(TRANSCRIPT_SETTLE_DELAY)
         path = Path(event["transcript_path"])
         return await asyncio.to_thread(last_turn_text, path)
 
 
 def main() -> None:
-    RobinApp().run()
+    R2App().run()

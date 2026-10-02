@@ -8,7 +8,7 @@ relatedTo: [issues-view, issue-form]
 # Issue files
 
 Issues live in `dev/issues/<slug>.md`, one file per issue. A file is plain
-Markdown with YAML frontmatter. Robin reads any Markdown file in that folder
+Markdown with YAML frontmatter. R2 reads any Markdown file in that folder
 (lenient read) and always writes the format below (strict write).
 
 ## Frontmatter
@@ -49,7 +49,7 @@ The base lifecycle, plus two terminal states:
 ### Writing order
 
 Keys are written in the order of the table. Lists use the flow style
-(`tags: [a, b]`). Keys robin does not know are kept as they are, after the
+(`tags: [a, b]`). Keys r2 does not know are kept as they are, after the
 known ones.
 
 ## Body

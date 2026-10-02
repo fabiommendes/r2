@@ -1,4 +1,4 @@
-"""Base class for robin's views."""
+"""Base class for r2's views."""
 
 from typing import ClassVar, Literal
 
@@ -7,15 +7,15 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Input, TabbedContent, TabPane, Tree
 
-from robin.links import Link
-from robin.project import ProjectContext
-from robin.widgets.markdown import MarkdownBrowser
-from robin.widgets.preview import FilePreview
-from robin.widgets.splitter import Splitter
+from r2.links import Link
+from r2.project import ProjectContext
+from r2.widgets.markdown import MarkdownBrowser
+from r2.widgets.preview import FilePreview
+from r2.widgets.splitter import Splitter
 
 
 class View(Widget):
-    """A tab of robin.
+    """A tab of r2.
 
     The app calls the hooks below; subclasses override the ones they need.
     Views keep their per-project state in `ProjectContext.view_state`, under
@@ -60,7 +60,7 @@ class View(Widget):
         return not (action == "navigate" and isinstance(self.app.focused, Input))
 
     def set_context(self, context: ProjectContext) -> None:
-        """Called when robin switches to another project."""
+        """Called when r2 switches to another project."""
         self.context = context
 
     def links_changed(self) -> None:

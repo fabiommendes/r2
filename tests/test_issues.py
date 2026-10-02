@@ -2,7 +2,7 @@ import datetime
 
 import yaml
 
-from robin.issues import (
+from r2.issues import (
     Comment,
     Issue,
     append_stub,

@@ -1,7 +1,7 @@
 """Lighter look for Textual's default widgets.
 
 Textual draws scrollbars as solid blocks and buttons as three-line boxes.
-Robin replaces them with line glyphs and single-line buttons, so the UI
+R2 replaces them with line glyphs and single-line buttons, so the UI
 chrome gets out of the way of the content.
 """
 

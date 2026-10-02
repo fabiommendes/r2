@@ -2,9 +2,9 @@
 
 from textual.app import ComposeResult
 
-from robin.project import ProjectContext
-from robin.views.base import View
-from robin.widgets.markdown import MarkdownBrowser
+from r2.project import ProjectContext
+from r2.views.base import View
+from r2.widgets.markdown import MarkdownBrowser
 
 SECTIONS = {
     "Architecture": "dev/docs",

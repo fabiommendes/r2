@@ -1,4 +1,4 @@
-"""Follow the events log written by robin-notify."""
+"""Follow the events log written by r2-notify."""
 
 import asyncio
 import json
@@ -11,7 +11,7 @@ async def tail(path: Path, poll: float = 0.25) -> AsyncIterator[dict[str, Any]]:
     """Yield every event in the log, then keep yielding new ones as they arrive.
 
     The log may not exist yet, and it may be truncated or replaced while
-    robin runs. Lines that are not valid JSON are skipped.
+    r2 runs. Lines that are not valid JSON are skipped.
     """
     position = 0
     pending = b""

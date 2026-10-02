@@ -1,4 +1,4 @@
-project = "robin-tui"
+project = "r2-assistant"
 copyright = "2026, Fábio Macêdo Mendes"
 author = "Fábio Macêdo Mendes <fabiomacedomendes@gmail.com>"
 extensions = ["sphinx.ext.autodoc", "sphinx_mdinclude"]

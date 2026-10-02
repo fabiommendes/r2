@@ -6,7 +6,7 @@ from textual.screen import ModalScreen
 from textual.widgets import OptionList
 from textual.widgets.option_list import Option
 
-from robin.issues import CLOSED_STATUSES, STATUSES
+from r2.issues import CLOSED_STATUSES, STATUSES
 
 
 class StatusMenu(ModalScreen[str | None]):

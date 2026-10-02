@@ -10,7 +10,7 @@ from textual.strip import Strip
 from textual.widgets import Static, TextArea
 from textual.widgets.text_area import Selection
 
-from robin.links import Link, is_binary
+from r2.links import Link, is_binary
 
 # Importing the widget queries the terminal for its graphics protocol, which
 # must happen before Textual takes over the terminal.

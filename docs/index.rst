@@ -1,4 +1,4 @@
-Welcome to the robin-tui documentation!
+Welcome to the r2-assistant documentation!
 =======================================
 .. mdinclude:: _readme.md
 

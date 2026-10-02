@@ -1,6 +1,6 @@
 """Per-project state.
 
-Herdr focus can move between projects at any time, so robin keeps one context
+Herdr focus can move between projects at any time, so r2 keeps one context
 per project and switches between them instead of resetting its views.
 """
 
@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from robin.links import Link
+from r2.links import Link
 
 MAX_LINKS = 200
 
@@ -23,7 +23,7 @@ def find_root(path: Path) -> Path:
 
 @dataclass
 class ProjectContext:
-    """Everything robin knows about one project."""
+    """Everything r2 knows about one project."""
 
     root: Path
     links: list[Link] = field(default_factory=list)

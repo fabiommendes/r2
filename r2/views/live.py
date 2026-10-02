@@ -6,11 +6,11 @@ from rich.text import Text
 from textual.app import ComposeResult
 from textual.widgets import OptionList
 
-from robin.links import Link
-from robin.project import ProjectContext
-from robin.views.base import View
-from robin.widgets.preview import FilePreview
-from robin.widgets.splitter import Splitter
+from r2.links import Link
+from r2.project import ProjectContext
+from r2.views.base import View
+from r2.widgets.preview import FilePreview
+from r2.widgets.splitter import Splitter
 
 
 class LiveView(View):

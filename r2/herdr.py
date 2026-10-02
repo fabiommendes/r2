@@ -21,7 +21,7 @@ class HerdrError(Exception):
 
 @dataclass(frozen=True)
 class PaneInfo:
-    """The parts of a herdr pane that robin cares about."""
+    """The parts of a herdr pane that r2 cares about."""
 
     pane_id: str
     workspace_id: str
@@ -35,7 +35,7 @@ def socket_path() -> Path:
 
 
 def _encode(method: str, params: dict[str, Any] | None = None) -> bytes:
-    request = {"id": "robin", "method": method, "params": params or {}}
+    request = {"id": "r2", "method": method, "params": params or {}}
     return (json.dumps(request) + "\n").encode()
 
 

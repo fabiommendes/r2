@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from robin import notify
+from r2 import notify
 
 
 @pytest.fixture
@@ -27,10 +27,10 @@ def test_appends_event_tagged_with_pane(
     run_hook(monkeypatch, '{"hook_event_name": "Stop"}')
     run_hook(monkeypatch, '{"hook_event_name": "Stop", "tool_response": "big"}')
 
-    lines = (state_dir / "robin" / "events.jsonl").read_text().splitlines()
+    lines = (state_dir / "r2" / "events.jsonl").read_text().splitlines()
     events = [json.loads(line) for line in lines]
     for event in events:
-        assert isinstance(event.pop("robin_time"), float)
+        assert isinstance(event.pop("r2_time"), float)
     assert (
         events
         == [
@@ -44,4 +44,4 @@ def test_invalid_payload_exits_cleanly(
     state_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     run_hook(monkeypatch, "not json")
-    assert not (state_dir / "robin" / "events.jsonl").exists()
+    assert not (state_dir / "r2" / "events.jsonl").exists()
