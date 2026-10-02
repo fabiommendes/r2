@@ -10,6 +10,7 @@ from typing import Any
 from rich.color import Color, blend_rgb
 from rich.segment import Segment, Segments
 from rich.style import Style
+from rich.text import Text
 from textual.scrollbar import ScrollBar, ScrollBarRender
 from textual.widgets import DirectoryTree, Tree
 
@@ -82,6 +83,32 @@ Button:focus {
     text-style: bold;
 }
 """
+
+
+# Catppuccin Mocha, the palette of the user's starship prompt.
+CRUST = "#11111b"
+PEACH = "#fab387"
+RED = "#f38ba8"
+GREEN = "#a6e3a1"
+OVERLAY0 = "#6c7086"
+LAVENDER = "#b4befe"
+
+# Nerd Font glyphs: rounded pill ends and the git branch symbol.
+PILL_LEFT = "\ue0b6"
+PILL_RIGHT = "\ue0b4"
+BRANCH_SYMBOL = "\ue0a0"
+
+
+def pills(*segments: tuple[str, str]) -> Text:
+    """Render (label, color) pairs as rounded pills, starship style."""
+    text = Text()
+    for index, (label, color) in enumerate(segments):
+        if index:
+            text.append(" ")
+        text.append(PILL_LEFT, style=color)
+        text.append(f" {label} ", style=Style(color=CRUST, bgcolor=color))
+        text.append(PILL_RIGHT, style=color)
+    return text
 
 
 class ThinScrollBarRender(ScrollBarRender):

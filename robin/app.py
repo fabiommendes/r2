@@ -10,7 +10,6 @@ from textual.app import App, ComposeResult, SuspendNotSupported
 from textual.binding import Binding
 from textual.containers import Horizontal
 from textual.css.query import NoMatches
-from textual.markup import escape
 from textual.reactive import reactive
 from textual.widgets import Footer, Static, TabbedContent, TabPane
 
@@ -37,9 +36,9 @@ MAX_RECONNECT_DELAY = 30.0
 GIT_POLL_INTERVAL = 5.0
 
 WORKTREE_COLORS = {
-    git.Worktree.DIRTY: "$error",
-    git.Worktree.STAGED: "$success",
-    git.Worktree.CLEAN: "$text-muted",
+    git.Worktree.DIRTY: theme.RED,
+    git.Worktree.STAGED: theme.GREEN,
+    git.Worktree.CLEAN: theme.OVERLAY0,
 }
 
 
@@ -150,13 +149,13 @@ class RobinApp(App[None]):
         self._update_subtitle()
 
     def _update_subtitle(self) -> None:
-        name = self.context.name if self.context else ""
-        branch = ""
+        segments = [(self.context.name if self.context else "", theme.PEACH)]
         if self.git_status is not None:
-            color = WORKTREE_COLORS[self.git_status.worktree]
-            branch = f" [{color}]{escape(self.git_status.branch)}[/]"
-        pinned = "  [dim](pinned)[/]" if self.pinned else ""
-        self.query_one("#title", Static).update(f"[b]{escape(name)}[/]{branch}{pinned}")
+            branch = f"{theme.BRANCH_SYMBOL} {self.git_status.branch}"
+            segments.append((branch, WORKTREE_COLORS[self.git_status.worktree]))
+        if self.pinned:
+            segments.append(("pinned", theme.LAVENDER))
+        self.query_one("#title", Static).update(theme.pills(*segments))
 
     def refresh_git(self) -> None:
         """Read the git status of the current project again."""
