@@ -23,7 +23,7 @@ from robin.editor import (
     shell_command,
 )
 from robin.events import tail
-from robin.links import extract_links, link_from_read
+from robin.links import Link, extract_links, link_from_read
 from robin.notify import events_path
 from robin.project import ProjectContext, Projects
 from robin.transcript import last_turn_text
@@ -217,20 +217,22 @@ class RobinApp(App[None]):
 
     def action_edit(self) -> None:
         """Open the current file in the terminal editor, then come back."""
-        view = self._active_view()
-        link = view.current_link()
-        if link is None:
-            return
+        link = self._active_view().current_link()
+        if link is not None:
+            self._edit(link)
+
+    def on_view_edit_file(self, message: View.EditFile) -> None:
+        self._edit(message.link)
+
+    def _edit(self, link: Link) -> None:
         self._hand_over(editor_command(link))
-        for preview in view.query(FilePreview):
-            preview.reload()
+        self._active_view().reload()
 
     def action_shell(self) -> None:
         """Run an interactive shell in the project root; exiting it returns here."""
         root = self.context.root if self.context else Path.cwd()
         self._hand_over(shell_command(), cwd=root)
-        for preview in self._active_view().query(FilePreview):
-            preview.reload()
+        self._active_view().reload()
 
     def action_open(self) -> None:
         """Open the current file in its default application (xdg-open)."""

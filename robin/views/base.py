@@ -3,11 +3,13 @@
 from typing import ClassVar, Literal
 
 from textual.binding import Binding
+from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import TabbedContent, TabPane
 
 from robin.links import Link
 from robin.project import ProjectContext
+from robin.widgets.preview import FilePreview
 from robin.widgets.splitter import Splitter
 
 
@@ -29,6 +31,13 @@ class View(Widget):
         Binding("left", "navigate(-1)", show=False, priority=True),
         Binding("right", "navigate(1)", show=False, priority=True),
     ]
+
+    class EditFile(Message):
+        """Ask the app to open link in the terminal editor."""
+
+        def __init__(self, link: Link) -> None:
+            super().__init__()
+            self.link = link
 
     ID: ClassVar[str]
     TITLE: ClassVar[str]
@@ -55,6 +64,11 @@ class View(Widget):
     def current_link(self) -> Link | None:
         """The file the view is showing, used to open it in an editor."""
         return None
+
+    def reload(self) -> None:
+        """Read the files on screen again, for instance after an edit."""
+        for preview in self.query(FilePreview):
+            preview.reload()
 
     def drawer_forward(self) -> bool:
         """Handle the right arrow inside the drawer.

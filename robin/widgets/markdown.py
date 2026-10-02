@@ -43,6 +43,8 @@ class MarkdownBrowser(Horizontal):
         super().__init__()
         self.key = key
         self.sections = sections
+        self.current: Path | None = None
+        """The document on display."""
 
     def compose(self) -> ComposeResult:
         tree: Tree[Path] = Tree("docs")
@@ -63,7 +65,14 @@ class MarkdownBrowser(Horizontal):
                 section.add_leaf(str(path.relative_to(folder)), data=path)
 
     async def open(self, path: Path) -> None:
+        self.current = path
         await self.query_one(DocumentViewer).go(path)
+
+    async def reload(self, root: Path) -> None:
+        """List the files again and show the current document as it is now."""
+        self.load(root)
+        if self.current is not None and self.current.exists():
+            await self.open(self.current)
 
     async def on_tree_node_selected(self, event: Tree.NodeSelected[Path]) -> None:
         if event.node.data is not None:

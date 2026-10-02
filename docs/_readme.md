@@ -46,7 +46,9 @@ right. Drag the bar between them to resize the drawer.
 2. **Project**: the project tree, without the files git ignores, and a
    preview of the selected file.
 3. **Docs**: the Markdown files in `dev/docs`, `dev/spec` and `docs`.
-4. **Issues**: the Markdown files in `dev/issues`.
+4. **Issues**: the Markdown files in `dev/issues`. Press `n` to fill in a
+   form with the metadata of a new issue; robin writes the file and opens it
+   in the editor. The format is described in `dev/spec/issues.md`.
 
 When a reference has a line range, the preview shows an excerpt around it.
 Press `f` to switch between the excerpt and the whole file. Images are shown
@@ -68,6 +70,7 @@ left to open the command palette, where you can also change the theme.
 | `i` | Open the project in the GUI editor |
 | `t` | Open a shell in the project root |
 | `p` | Pin the current project instead of following herdr focus |
+| `n` | Create an issue (Issues view) |
 | `q` | Quit |
 
 In the Project tree, `→` expands a folder or opens a file, and `←` collapses
