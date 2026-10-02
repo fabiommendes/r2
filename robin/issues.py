@@ -213,3 +213,12 @@ def comment_stub(author: str) -> str:
 def append_stub(text: str, stub: str) -> str:
     """Append stub to the issue text, leaving one newline before it."""
     return text.rstrip("\n") + "\n" + stub
+
+
+def set_status(issue: Issue, status: str, today: datetime.date | None = None) -> None:
+    """Move the issue to status, dating it when it closes."""
+    if status in CLOSED_STATUSES and issue.is_open:
+        issue.meta["closed"] = today or datetime.date.today()
+    elif status not in CLOSED_STATUSES:
+        issue.meta.pop("closed", None)
+    issue.status = status

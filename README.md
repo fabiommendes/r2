@@ -80,6 +80,7 @@ left to open the command palette, where you can also change the theme.
 | `p` | Pin the current project instead of following herdr focus |
 | `n` | Create an issue (Issues view) |
 | `c` | Comment on the issue on display (Issues view) |
+| `s` | Change the status of the issue on display (Issues view) |
 | `a` | Show or hide closed issues (Issues view) |
 | `/` | Filter the issues (Issues view) |
 | `q` | Quit |

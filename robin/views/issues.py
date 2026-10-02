@@ -16,6 +16,7 @@ from robin.issues import (
     load,
     matches,
     render,
+    set_status,
     slugify,
     status_order,
 )
@@ -24,6 +25,7 @@ from robin.project import ProjectContext
 from robin.views.base import View
 from robin.widgets.issue_form import IssueForm
 from robin.widgets.markdown import MarkdownBrowser
+from robin.widgets.status_menu import StatusMenu
 
 ISSUES_DIR = "dev/issues"
 SECTIONS = {"Issues": ISSUES_DIR}
@@ -113,6 +115,7 @@ class IssuesView(View):
     BINDINGS = [
         Binding("n", "new_issue", "New issue"),
         Binding("c", "comment", "Comment"),
+        Binding("s", "status", "Status"),
         Binding("a", "toggle_closed", "Show closed"),
         Binding("slash", "filter", "Filter"),
     ]
@@ -153,6 +156,29 @@ class IssuesView(View):
             return
         self._stub = (path, stub)
         self.post_message(self.EditFile(Link(path, len(text.splitlines()) + 1)))
+
+    def action_status(self) -> None:
+        path = self.query_one(MarkdownBrowser).current
+        if path is None:
+            return
+        try:
+            issue = load(path)
+        except OSError as error:
+            self.notify(f"Could not read the issue: {error}", severity="error")
+            return
+
+        def apply(status: str | None) -> None:
+            if status is None or status == issue.status:
+                return
+            set_status(issue, status)
+            try:
+                path.write_text(render(issue))
+            except OSError as error:
+                self.notify(f"Could not save the issue: {error}", severity="error")
+                return
+            self.reload()
+
+        self.app.push_screen(StatusMenu(issue.status), apply)
 
     def _drop_empty_stub(self) -> None:
         """Remove the comment stub if the editor left it empty."""

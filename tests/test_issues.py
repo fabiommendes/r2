@@ -11,6 +11,7 @@ from robin.issues import (
     new_issue,
     parse,
     render,
+    set_status,
     slugify,
     status_order,
 )
@@ -129,3 +130,13 @@ def test_appended_stub_parses_as_an_empty_comment_by_its_author() -> None:
     text = append_stub("# Title\n\nBody.\n\n", comment_stub("fabio"))
     assert text == "# Title\n\nBody.\n\n---\nby: fabio\n\n"
     assert parse(text).comments == [Comment("", "fabio")]
+
+
+def test_set_status_dates_closing_and_clears_it_on_reopening() -> None:
+    issue = Issue("X", status="todo")
+    set_status(issue, "completed", datetime.date(2026, 1, 2))
+    assert issue.meta["closed"] == datetime.date(2026, 1, 2)
+    set_status(issue, "wont_fix", datetime.date(2026, 3, 4))
+    assert issue.meta["closed"] == datetime.date(2026, 1, 2)
+    set_status(issue, "todo")
+    assert "closed" not in issue.meta
