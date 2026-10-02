@@ -74,6 +74,18 @@ CommandList > .option-list--option {
     padding: 0 1;
 }
 
+MarkdownHeader {
+    margin: 1 0 0 0;
+}
+MarkdownH1 {
+    content-align: left middle;
+    padding: 0 1;
+    margin: 0 0 1 0;
+    background: $panel;
+    color: $text-primary;
+    text-style: bold;
+}
+
 Button {
     height: 1;
     min-width: 0;
