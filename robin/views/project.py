@@ -97,25 +97,6 @@ class ProjectView(View):
         tree.select_node(node)
         return False
 
-    def drawer_back(self) -> bool:
-        """Collapse an open folder, else go up to the parent folder.
-
-        At the top level, leave for the previous tab: going up to the root
-        would only offer to collapse the whole tree.
-        """
-        tree = self.query_one(ProjectTree)
-        node = tree.cursor_node
-        if node is None:
-            return False
-        if node.is_expanded:
-            node.collapse()
-            return True
-        parent = node.parent
-        if parent is None or parent is tree.root:
-            return False
-        tree.move_cursor(parent)
-        return True
-
     def on_directory_tree_file_selected(
         self, event: DirectoryTree.FileSelected
     ) -> None:

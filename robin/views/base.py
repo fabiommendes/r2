@@ -5,7 +5,7 @@ from typing import ClassVar, Literal
 from textual.binding import Binding
 from textual.message import Message
 from textual.widget import Widget
-from textual.widgets import Input, TabbedContent, TabPane
+from textual.widgets import Input, TabbedContent, TabPane, Tree
 
 from robin.links import Link
 from robin.project import ProjectContext
@@ -78,17 +78,39 @@ class View(Widget):
         """Handle the right arrow inside the drawer.
 
         Return True to keep the focus in the drawer, False to move it to the
-        content.
+        content. In a tree, expand a folded node first.
         """
-        return False
+        tree = self._drawer()
+        if not isinstance(tree, Tree):
+            return False
+        node = tree.cursor_node
+        if node is None or not node.allow_expand or node.is_expanded:
+            return False
+        node.expand()
+        return True
 
     def drawer_back(self) -> bool:
         """Handle the left arrow inside the drawer.
 
         Return True to keep the focus in the drawer, False to move it to the
-        previous tab.
+        previous tab. In a tree, fold an open node, else go up to its parent.
+        Top level nodes leave: going up to the root would only offer to fold
+        the whole tree.
         """
-        return False
+        tree = self._drawer()
+        if not isinstance(tree, Tree):
+            return False
+        node = tree.cursor_node
+        if node is None:
+            return False
+        if node.is_expanded:
+            node.collapse()
+            return True
+        parent = node.parent
+        if parent is None or parent is tree.root:
+            return False
+        tree.move_cursor(parent)
+        return True
 
     def focus_drawer(self) -> None:
         if drawer := self._drawer():

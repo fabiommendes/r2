@@ -85,8 +85,8 @@ left to open the command palette, where you can also change the theme.
 | `/` | Filter the issues (Issues view) |
 | `q` | Quit |
 
-In the Project tree, `→` expands a folder or opens a file, and `←` collapses
-a folder or goes up to the parent folder.
+In the trees, `→` expands a node (in the Project tree, it opens a file) and `←`
+folds an open node or goes up to its parent before leaving the tree.
 
 ## Configuration
 
