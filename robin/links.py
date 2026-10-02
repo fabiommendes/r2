@@ -34,6 +34,15 @@ class Link:
         return f"{path}:{self.start}-{self.end}"
 
 
+def is_binary(path: Path) -> bool:
+    """Guess whether a file is binary from NUL bytes at its start, as git does."""
+    try:
+        with path.open("rb") as file:
+            return b"\0" in file.read(8192)
+    except OSError:
+        return False
+
+
 def extract_links(text: str, root: Path) -> list[Link]:
     """Find references to existing files in text, in order and without repeats."""
     links: dict[Link, None] = {}

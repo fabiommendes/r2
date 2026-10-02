@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from robin.links import Link, extract_links, link_from_read
+from robin.links import Link, extract_links, is_binary, link_from_read
 
 
 def make_files(root: Path, *names: str) -> None:
@@ -38,3 +38,11 @@ def test_link_from_read() -> None:
         Path("/a.py"), 10, 14
     )
     assert link_from_read({}) is None
+
+
+def test_is_binary(tmp_path: Path) -> None:
+    text, binary = tmp_path / "a.txt", tmp_path / "a.png"
+    text.write_text("hello\n")
+    binary.write_bytes(b"\x89PNG\r\n\x1a\n\0\0\0")
+    assert not is_binary(text)
+    assert is_binary(binary)

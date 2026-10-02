@@ -6,7 +6,7 @@ from textual.reactive import reactive
 from textual.widgets import Static, TextArea
 from textual.widgets.text_area import Selection
 
-from robin.links import Link
+from robin.links import Link, is_binary
 
 CONTEXT_LINES = 5
 
@@ -83,6 +83,10 @@ class FilePreview(Vertical):
         if link is None:
             title.update("")
             area.load_text("")
+            return
+        if is_binary(link.path):
+            title.update(self._label)
+            area.load_text("Binary file, not shown.")
             return
         try:
             lines = link.path.read_text(errors="replace").splitlines()
