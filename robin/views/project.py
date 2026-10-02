@@ -10,6 +10,7 @@ from robin.links import Link
 from robin.project import ProjectContext
 from robin.views.base import View
 from robin.widgets.preview import FilePreview
+from robin.widgets.splitter import Splitter
 
 IGNORED = {
     ".git",
@@ -33,16 +34,16 @@ class ProjectView(View):
 
     DEFAULT_CSS = """
     ProjectView > ProjectTree {
-        width: 2fr;
         height: 1fr;
     }
     ProjectView > FilePreview {
-        width: 3fr;
+        width: 1fr;
     }
     """
 
     def compose(self) -> ComposeResult:
         yield ProjectTree(Path.cwd())
+        yield Splitter(self.ID)
         yield FilePreview()
 
     def set_context(self, context: ProjectContext) -> None:

@@ -6,6 +6,7 @@ from textual.widgets import OptionList
 from robin.project import ProjectContext
 from robin.views.base import View
 from robin.widgets.preview import FilePreview
+from robin.widgets.splitter import Splitter
 
 
 class LiveView(View):
@@ -14,16 +15,16 @@ class LiveView(View):
 
     DEFAULT_CSS = """
     LiveView > OptionList {
-        width: 2fr;
         height: 1fr;
     }
     LiveView > FilePreview {
-        width: 3fr;
+        width: 1fr;
     }
     """
 
     def compose(self) -> ComposeResult:
         yield OptionList()
+        yield Splitter(self.ID)
         yield FilePreview()
 
     def set_context(self, context: ProjectContext) -> None:

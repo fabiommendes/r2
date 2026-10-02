@@ -12,6 +12,7 @@ from textual.reactive import reactive
 from textual.widgets import Footer, Header, TabbedContent, TabPane
 
 from robin import herdr
+from robin.config import Config
 from robin.events import tail
 from robin.links import extract_links, link_from_read
 from robin.notify import events_path
@@ -19,6 +20,7 @@ from robin.project import ProjectContext, Projects
 from robin.transcript import last_turn_text
 from robin.views import VIEWS, View
 from robin.widgets.preview import FilePreview
+from robin.widgets.splitter import Splitter
 
 MAX_RECONNECT_DELAY = 30.0
 
@@ -48,6 +50,7 @@ class RobinApp(App[None]):
     def __init__(self) -> None:
         super().__init__()
         self.projects = Projects()
+        self.config = Config.load()
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -58,9 +61,18 @@ class RobinApp(App[None]):
         yield Footer()
 
     def on_mount(self) -> None:
+        for splitter in self.query(Splitter):
+            splitter.target.styles.width = self.config.drawer_width(splitter.key)
         self.context = self.projects.get(Path.cwd())
         self.run_worker(self._follow_herdr(), exclusive=True, group="herdr")
         self.run_worker(self._follow_events(), group="events")
+
+    def on_splitter_resized(self, event: Splitter.Resized) -> None:
+        self.config.drawer_widths[event.splitter.key] = event.width
+        try:
+            self.config.save()
+        except OSError:
+            self.notify("Could not save the config", severity="warning")
 
     def watch_context(self, context: ProjectContext | None) -> None:
         if context is None:

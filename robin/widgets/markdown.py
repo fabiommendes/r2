@@ -7,6 +7,8 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Markdown, MarkdownViewer, Tree
 
+from robin.widgets.splitter import Splitter
+
 
 class DocumentViewer(MarkdownViewer):
     """Markdown viewer that follows local links and opens web links in the browser."""
@@ -24,24 +26,28 @@ class MarkdownBrowser(Horizontal):
 
     DEFAULT_CSS = """
     MarkdownBrowser > Tree {
-        width: 1fr;
         height: 1fr;
     }
     MarkdownBrowser > DocumentViewer {
-        width: 3fr;
+        width: 1fr;
         height: 1fr;
     }
     """
 
-    def __init__(self, sections: dict[str, str]) -> None:
-        """Sections map titles to directories relative to the project root."""
+    def __init__(self, key: str, sections: dict[str, str]) -> None:
+        """Sections map titles to directories relative to the project root.
+
+        Key identifies the browser's splitter in the saved settings.
+        """
         super().__init__()
+        self.key = key
         self.sections = sections
 
     def compose(self) -> ComposeResult:
         tree: Tree[Path] = Tree("docs")
         tree.show_root = False
         yield tree
+        yield Splitter(self.key)
         yield DocumentViewer(show_table_of_contents=False, open_links=False)
 
     def load(self, root: Path) -> None:

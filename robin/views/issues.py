@@ -14,7 +14,7 @@ class IssuesView(View):
     TITLE = "Issues"
 
     def compose(self) -> ComposeResult:
-        yield MarkdownBrowser(SECTIONS)
+        yield MarkdownBrowser(self.ID, SECTIONS)
 
     def set_context(self, context: ProjectContext) -> None:
         super().set_context(context)
