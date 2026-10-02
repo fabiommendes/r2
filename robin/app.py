@@ -9,7 +9,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.css.query import NoMatches
 from textual.reactive import reactive
-from textual.widgets import Footer, Header, TabbedContent, TabPane
+from textual.widgets import Footer, Static, TabbedContent, TabPane
 
 from robin import herdr, theme
 from robin.config import Config
@@ -32,7 +32,15 @@ class RobinApp(App[None]):
     """Follow the Claude session in the herdr pane that has focus."""
 
     TITLE = "robin"
-    CSS = theme.CSS
+    CSS = (
+        theme.CSS
+        + """
+    #title {
+        height: 1;
+        padding: 0 1;
+    }
+    """
+    )
 
     BINDINGS = [
         Binding("q", "quit", "Quit"),
@@ -55,7 +63,7 @@ class RobinApp(App[None]):
         self.config = Config.load()
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield Static(id="title")
         with TabbedContent():
             for number, view in enumerate(VIEWS, start=1):
                 with TabPane(f"{number} {view.TITLE}", id=view.ID):
@@ -93,7 +101,8 @@ class RobinApp(App[None]):
 
     def _update_subtitle(self) -> None:
         name = self.context.name if self.context else ""
-        self.sub_title = f"{name} (pinned)" if self.pinned else name
+        pinned = "  [dim](pinned)[/]" if self.pinned else ""
+        self.query_one("#title", Static).update(f"[b]{name}[/]{pinned}")
 
     def action_show_view(self, view_id: str) -> None:
         self.query_one(TabbedContent).active = view_id

@@ -6,6 +6,7 @@ from pathlib import Path
 from textual.app import ComposeResult
 from textual.widgets import DirectoryTree
 
+from robin import theme
 from robin.links import Link
 from robin.project import ProjectContext
 from robin.views.base import View
@@ -24,6 +25,9 @@ IGNORED = {
 
 
 class ProjectTree(DirectoryTree):
+    def on_mount(self) -> None:
+        theme.compact(self)
+
     def filter_paths(self, paths: Iterable[Path]) -> Iterable[Path]:
         return [path for path in paths if path.name not in IGNORED]
 

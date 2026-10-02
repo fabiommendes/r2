@@ -7,6 +7,7 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Markdown, MarkdownViewer, Tree
 
+from robin import theme
 from robin.widgets.splitter import Splitter
 
 
@@ -46,6 +47,7 @@ class MarkdownBrowser(Horizontal):
     def compose(self) -> ComposeResult:
         tree: Tree[Path] = Tree("docs")
         tree.show_root = False
+        theme.compact(tree)
         yield tree
         yield Splitter(self.key)
         yield DocumentViewer(show_table_of_contents=False, open_links=False)

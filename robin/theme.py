@@ -5,13 +5,19 @@ Robin replaces them with line glyphs and single-line buttons, so the UI
 chrome gets out of the way of the content.
 """
 
+from typing import Any
+
 from rich.color import Color, blend_rgb
 from rich.segment import Segment, Segments
 from rich.style import Style
 from textual.scrollbar import ScrollBar, ScrollBarRender
+from textual.widgets import DirectoryTree, Tree
 
 DEFAULT_BACK = Color.parse("#555555")
 DEFAULT_BAR = Color.parse("bright_magenta")
+
+# Tree indentation per level; 2 is the smallest Textual allows.
+TREE_INDENT = 2
 
 # How far the track color goes from the background toward the thumb color.
 TRACK_FADE = 0.35
@@ -27,6 +33,22 @@ CSS = """
     scrollbar-color-hover: $accent;
     scrollbar-color-active: $accent;
     scrollbar-corner-color: $background 0%;
+}
+
+Tabs {
+    height: 1;
+}
+Tabs Underline {
+    display: none;
+}
+Tabs Tab.-active, Tabs:focus Tab.-active {
+    color: $accent;
+    background: $background 0%;
+    text-style: bold;
+}
+
+Tree {
+    padding: 0;
 }
 
 Button {
@@ -86,5 +108,15 @@ class ThinScrollBarRender(ScrollBarRender):
 
 
 def install() -> None:
-    """Make every scrollbar in the app use the thin renderer."""
+    """Apply the thin scrollbar renderer and monochrome tree icons app-wide."""
     ScrollBar.renderer = ThinScrollBarRender
+    Tree.ICON_NODE = "▸ "
+    Tree.ICON_NODE_EXPANDED = "▾ "
+    DirectoryTree.ICON_NODE = "▸ "
+    DirectoryTree.ICON_NODE_EXPANDED = "▾ "
+    DirectoryTree.ICON_FILE = "· "
+
+
+def compact(tree: Tree[Any]) -> None:
+    """Use the smallest indentation for each level of tree."""
+    tree.guide_depth = TREE_INDENT
