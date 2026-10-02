@@ -49,7 +49,7 @@ right. Drag the bar between them to resize the drawer.
 1. **Live**: the files Claude read and the references it wrote in its last
    answers, newest first, with a preview of the selected one.
 2. **Project**: the project tree, without the files git ignores, and a
-   preview of the selected file.
+   preview of the selected file. Markdown files are rendered, as in Docs.
 3. **Docs**: the Markdown files in `dev/docs`, `dev/spec` and `docs`. The
    frontmatter shows in a bar above the document instead of in the text.
 4. **Issues**: the issues in `dev/issues`, grouped by status. The groups of

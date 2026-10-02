@@ -11,8 +11,11 @@ from robin import theme
 from robin.links import Link
 from robin.project import ProjectContext
 from robin.views.base import View
+from robin.widgets.markdown import MarkdownPane
 from robin.widgets.preview import FilePreview
 from robin.widgets.splitter import Splitter
+
+MARKDOWN_SUFFIXES = {".md", ".markdown"}
 
 IGNORED = {
     ".git",
@@ -65,12 +68,16 @@ class ProjectView(View):
     ProjectView > FilePreview {
         width: 1fr;
     }
+    ProjectView > MarkdownPane {
+        display: none;
+    }
     """
 
     def compose(self) -> ComposeResult:
         yield ProjectTree(Path.cwd())
         yield Splitter(self.ID)
         yield FilePreview()
+        yield MarkdownPane()
 
     def set_context(self, context: ProjectContext) -> None:
         super().set_context(context)
@@ -105,8 +112,23 @@ class ProjectView(View):
         self._show(event.path)
 
     def _show(self, path: Path | None) -> None:
+        """Render Markdown files; show the others in the file preview."""
         preview = self.query_one(FilePreview)
+        pane = self.query_one(MarkdownPane)
+        markdown = path is not None and path.suffix.lower() in MARKDOWN_SUFFIXES
+        preview.display = not markdown
+        pane.display = markdown
         if path is None or self.context is None:
             preview.show(None)
+        elif markdown:
+            # Clear the preview, so its excerpt toggle does not linger.
+            preview.show(None)
+            self.run_worker(pane.open(path), exclusive=True, group="markdown")
         else:
             preview.show(Link(path), Link(path).label(self.context.root))
+
+    def reload(self) -> None:
+        super().reload()
+        pane = self.query_one(MarkdownPane)
+        if pane.display:
+            self.run_worker(pane.reload(), exclusive=True, group="markdown")

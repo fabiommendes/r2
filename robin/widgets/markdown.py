@@ -127,15 +127,43 @@ class DocumentViewer(MarkdownViewer):
             await self.go(message.href)
 
 
+class MarkdownPane(Vertical):
+    """A rendered Markdown document under a bar with its frontmatter."""
+
+    DEFAULT_CSS = """
+    MarkdownPane {
+        width: 1fr;
+        height: 1fr;
+    }
+    """
+
+    current: Path | None = None
+    """The document on display."""
+
+    def compose(self) -> ComposeResult:
+        yield MetaBar()
+        yield DocumentViewer(show_table_of_contents=False, open_links=False)
+
+    def on_frontmatter_markdown_parsed(
+        self, message: FrontmatterMarkdown.Parsed
+    ) -> None:
+        self.query_one(MetaBar).show(message.meta)
+
+    async def open(self, path: Path) -> None:
+        self.current = path
+        await self.query_one(DocumentViewer).go(path)
+
+    async def reload(self) -> None:
+        """Show the current document as it is now."""
+        if self.current is not None and self.current.exists():
+            await self.open(self.current)
+
+
 class MarkdownBrowser(Horizontal):
     """A tree of markdown files on the left and the rendered document on the right."""
 
     DEFAULT_CSS = """
     MarkdownBrowser Tree {
-        height: 1fr;
-    }
-    MarkdownBrowser > Vertical {
-        width: 1fr;
         height: 1fr;
     }
     """
@@ -155,14 +183,7 @@ class MarkdownBrowser(Horizontal):
     def compose(self) -> ComposeResult:
         yield from self.compose_drawer()
         yield Splitter(self.key)
-        with Vertical():
-            yield MetaBar()
-            yield DocumentViewer(show_table_of_contents=False, open_links=False)
-
-    def on_frontmatter_markdown_parsed(
-        self, message: FrontmatterMarkdown.Parsed
-    ) -> None:
-        self.query_one(MetaBar).show(message.meta)
+        yield MarkdownPane()
 
     def compose_drawer(self) -> ComposeResult:
         """The left side; its first focusable widget must be the tree."""
@@ -188,7 +209,7 @@ class MarkdownBrowser(Horizontal):
 
     async def open(self, path: Path) -> None:
         self.current = path
-        await self.query_one(DocumentViewer).go(path)
+        await self.query_one(MarkdownPane).open(path)
 
     async def reload(self, root: Path) -> None:
         """List the files again and show the current document as it is now."""

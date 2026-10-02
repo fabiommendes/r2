@@ -176,4 +176,7 @@ class View(Widget):
 
 
 def _can_focus(widget: Widget) -> bool:
-    return widget.focusable and widget.display
+    """Whether widget can take focus, skipping those inside hidden containers."""
+    if not widget.focusable or not widget.display:
+        return False
+    return all(node.display for node in widget.ancestors if isinstance(node, Widget))
