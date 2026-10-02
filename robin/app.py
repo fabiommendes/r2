@@ -120,7 +120,7 @@ class RobinApp(App[None]):
     def on_tabbed_content_tab_activated(
         self, event: TabbedContent.TabActivated
     ) -> None:
-        event.pane.query_one(View).focus_drawer()
+        event.pane.query_one(View).focus_entry()
 
     def _hand_over(self, command: list[str], cwd: Path | None = None) -> None:
         """Give the terminal to command and take it back when it exits."""

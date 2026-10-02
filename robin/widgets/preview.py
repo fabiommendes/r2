@@ -96,6 +96,8 @@ class FilePreview(Vertical):
             path = None
         image.display = path is not None
         self.query_one(TextArea).display = path is None
+        # The image cannot take focus, so the preview takes it in its place.
+        self.can_focus = path is not None
         return path is not None
 
     def toggle_full(self) -> None:
