@@ -8,7 +8,8 @@ from robin.views.docs import DocsView
 from robin.views.issues import IssuesView
 from robin.views.live import LiveView
 from robin.views.project import ProjectView
+from robin.views.terminal import TerminalView
 
-VIEWS: list[type[View]] = [LiveView, ProjectView, DocsView, IssuesView]
+VIEWS: list[type[View]] = [LiveView, ProjectView, DocsView, IssuesView, TerminalView]
 
 __all__ = ["VIEWS", "View"]
