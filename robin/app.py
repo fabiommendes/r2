@@ -14,7 +14,7 @@ from textual.widgets import Footer, Static, TabbedContent, TabPane
 
 from robin import herdr, theme
 from robin.config import Config
-from robin.editor import editor_command
+from robin.editor import editor_command, open_externally
 from robin.events import tail
 from robin.links import extract_links, is_binary, link_from_read
 from robin.notify import events_path
@@ -49,6 +49,7 @@ class RobinApp(App[None]):
         Binding("p", "toggle_pin", "Pin project"),
         Binding("f", "toggle_full", "Excerpt/full"),
         Binding("e", "edit", "Edit"),
+        Binding("o", "open", "Open"),
         *(
             Binding(str(number), f"show_view('{view.ID}')", view.TITLE, show=False)
             for number, view in enumerate(VIEWS, start=1)
@@ -136,6 +137,16 @@ class RobinApp(App[None]):
             self.notify("This terminal cannot hand control to an editor")
         for preview in view.query(FilePreview):
             preview.reload()
+
+    def action_open(self) -> None:
+        """Open the current file in its default application (xdg-open)."""
+        link = self._active_view().current_link()
+        if link is None:
+            return
+        try:
+            open_externally(link.path)
+        except OSError as error:
+            self.notify(f"Could not open {link.path.name}: {error}", severity="error")
 
     def action_toggle_full(self) -> None:
         """Toggle the file preview of the active view, if it has one."""

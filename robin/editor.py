@@ -1,7 +1,10 @@
-"""Open files in the user's terminal editor."""
+"""Open files in the user's terminal editor or in their default application."""
 
 import os
 import shlex
+import subprocess
+import sys
+from pathlib import Path
 
 from robin.links import Link
 
@@ -28,3 +31,19 @@ def editor_command(link: Link) -> list[str]:
     if link.start is not None:
         command.append(f"+{link.start}")
     return [*command, str(link.path)]
+
+
+def open_externally(path: Path) -> None:
+    """Open path in its default application, without waiting for it.
+
+    The opener runs detached from robin's terminal, so it can neither draw
+    over the UI nor read its input.
+    """
+    opener = "open" if sys.platform == "darwin" else "xdg-open"
+    subprocess.Popen(
+        [opener, str(path)],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
