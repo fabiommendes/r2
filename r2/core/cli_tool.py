@@ -1,5 +1,4 @@
 import os
-import shlex
 import subprocess
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -7,6 +6,7 @@ from pathlib import Path
 from typing import Literal, Never, assert_never, cast
 
 from r2.core import console
+from r2.core.mode import mode
 
 type CLIArg = str | int | float | bool
 
@@ -100,6 +100,7 @@ class CliTool[T = str]:
                 text=True,
                 cwd=path,
                 env=env,
+                stdin=subprocess.DEVNULL if mode.agent else None,
             )
         except subprocess.CalledProcessError as e:
             match self.on_error:
@@ -119,6 +120,4 @@ class CliTool[T = str]:
 def render_arg(arg: CLIArg) -> str:
     if isinstance(arg, bool):
         return "1" if arg else "0"
-    elif isinstance(arg, str):
-        return shlex.quote(arg)
     return str(arg)

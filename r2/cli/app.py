@@ -1,94 +1,83 @@
 #
 # The app object and toplevel CLI commands.
 #
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Annotated
 
-import rich
 import typer
-from rich import print
+from typer.core import TyperGroup
 
 from r2.cli.glossary import app as glossary_app
-from r2.core.messages import error, warn
+from r2.cli.plugins import app as plugins_app
+from r2.core import console
+from r2.core.mode import configure
 from r2.core.tasks import get_project
 
+__all__ = ["app", "build_app"]
+
 app = typer.Typer()
-app.add_typer(glossary_app, name="glossary")
 
 
-ERRORS = {
-    "alias-name-required": (
-        "Alias name is required when not using --sections, --list, or --edit."
-    ),
-}
-
-
-@app.command()
-def hd(
-    file: Annotated[
-        Path, typer.Argument(..., help="Path that will be moved to the Hard drive")
-    ],
-) -> None:
-    """
-    Move path to the hard drive (usually, $HOME/hd) and create a symlink back to it.
-    """
-    from r2.core.files import move_to_hd
-
-    move_to_hd(file)
-
-
-@app.command()
-def alias(
-    alias: Annotated[
-        str, typer.Argument(help="Alias to add to your shell configuration")
-    ] = "",
-    py: Annotated[
-        bool, typer.Option("--py", "-p", help="Add a uvx Python script alias")
+def root(
+    agent: Annotated[
+        bool,
+        typer.Option(
+            "--agent",
+            envvar="R2_AGENT",
+            help="Agent mode: no prompts, reduced output, --yes for destructive "
+            "commands.",
+        ),
     ] = False,
-    js: Annotated[
-        bool, typer.Option("--js", "-j", help="Add a npx JavaScript script alias")
+    full: Annotated[
+        bool,
+        typer.Option("--full", help="In agent mode, do not reduce command output."),
     ] = False,
-    package: Annotated[str, typer.Option("--from", "-f", help="Source project")] = "",
-    section: Annotated[
-        str, typer.Option("--section", "-s", help="Section to add the alias to")
-    ] = "",
-    sections: Annotated[
-        bool, typer.Option("--sections", "-S", help="List existing alias sections")
-    ] = False,
-    list: Annotated[
-        bool, typer.Option("--list", "-l", help="List existing aliases and sections")
-    ] = False,
-    edit: Annotated[
-        bool, typer.Option("--edit", "-e", help="Open the alias file in an editor")
+    yes: Annotated[
+        bool, typer.Option("--yes", "-y", help="Pre-approve destructive commands.")
     ] = False,
 ) -> None:
-    from r2.core.alias import create_alias, get_path, parse_sections
+    """
+    A development assistant for humans and coding agents. With no arguments,
+    r2 opens the TUI.
+    """
+    configure(agent=agent, full=full, yes=yes)
 
-    if sections or list:
-        for section, aliases in (section_map := parse_sections()).items():
-            rich.print(f"[b blue]{section}[/]")
-            if list:
-                for alias, value in aliases:
-                    print(f"  - [b yellow]{alias}[/]=[fg]{value}[/]")
-                print()
-        if not section_map:
-            warn("No alias sections found.")
-        return
-    elif edit:
-        from r2.core.editor import edit_file
 
-        edit_file(get_path())
-    else:
-        error(ERRORS["alias-name-required"], not alias)
-        create_alias(py=py, js=js, package=package, alias=alias, section=section)
+app.callback()(root)
 
 
 @app.command()
-def help() -> None:
+def help(
+    ctx: typer.Context,
+    all: Annotated[
+        bool, typer.Option("--all", "-a", help="Include hidden commands.")
+    ] = False,
+) -> None:
     """
-    Show help information about the CLI.
+    List every available command as plain text, one per line.
     """
-    print("Under construction...")
+    from r2.cli.registry import registry
+
+    group = ctx.find_root().command
+    assert isinstance(group, TyperGroup)
+
+    rows: list[tuple[str, str]] = []
+    for name in sorted(group.commands):
+        cmd = group.commands[name]
+        if cmd.hidden and not all:
+            continue
+        tags = ""
+        if entry := registry.entries.get(name):
+            tags = "".join(f"[{tag}] " for tag in entry.tags)
+        summary = (cmd.help or "").strip().splitlines()[0] if cmd.help else ""
+        label = f"{name} ..." if isinstance(cmd, TyperGroup) else name
+        rows.append((label, tags + summary))
+
+    width = max((len(label) for label, _ in rows), default=0)
+    for label, text in rows:
+        console.plain.print(f"r2 {label.ljust(width)}  {text}".rstrip())
 
 
 #
@@ -137,3 +126,27 @@ def docs(path: Annotated[Path | None, path_opt] = None) -> None:
     """
     project = get_project(path)
     project.docs()
+
+
+app.add_typer(glossary_app, name="glossary")
+app.add_typer(plugins_app, name="plugins")
+
+
+def build_app(
+    plugins_dir: Path | None = None, project_start: Path | None = None
+) -> typer.Typer:
+    """
+    The root app with builtin commands plus every discovered plugin command.
+
+    Defaults: plugins from `$R2_CONFIG_DIR/plugins`, project manifest found
+    from the current directory.
+    """
+    from r2.cli.registry import install
+
+    # `add_typer` without a name drops the callback, so rebuild explicitly.
+    new = typer.Typer()
+    new.callback()(root)
+    new.registered_commands += app.registered_commands
+    new.registered_groups += app.registered_groups
+    install(new, plugins_dir=plugins_dir, project_start=project_start)
+    return new

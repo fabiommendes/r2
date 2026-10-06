@@ -1,7 +1,8 @@
 """Status messages for the command line, in the style of r2."""
 
-import rich
 from typer import Exit
+
+from r2.core import console
 
 
 def error(msg: str, /, has_error: bool = True, code: int = 1) -> None:
@@ -15,7 +16,7 @@ def error(msg: str, /, has_error: bool = True, code: int = 1) -> None:
     """
     if not has_error:
         return
-    rich.print(f"[b red]error[/]: {msg}")
+    console.stdout.print(f"[b red]error[/]: {msg}")
     raise Exit(code=code)
 
 
@@ -29,7 +30,7 @@ def warn(msg: str, /, has_warning: bool = True) -> None:
     """
     if not has_warning:
         return
-    rich.print(f"[b yellow]warning[/]: {msg}")
+    console.stdout.print(f"[b yellow]warning[/]: {msg}")
 
 
 def success(msg: str, /, has_success: bool = True) -> None:
@@ -42,4 +43,4 @@ def success(msg: str, /, has_success: bool = True) -> None:
     """
     if not has_success:
         return
-    rich.print(f"[b green]success[/]: {msg}")
+    console.stdout.print(f"[b green]success[/]: {msg}")

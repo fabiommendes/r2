@@ -1,28 +1,52 @@
+"""
+Global configuration, read from `$R2_CONFIG_DIR/config.toml` (default:
+`~/.config/r2/config.toml`).
+
+Plugins keep their settings under `[plugins.<name>]`; see `r2.plugin.Plugin`.
+"""
+
 from __future__ import annotations
 
 import contextlib
+import os
 import tomllib
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-CONFIG_PATH = Path.home() / ".config" / "r2" / "config.toml"
+CONFIG_DIR_ENV = "R2_CONFIG_DIR"
 DEFAULT_CONFIG = """
 [r2]
-name = "$name"
+name = "{name}"
 
-[hd]
-path = "~/hd"
+# Plugin settings go under [plugins.<name>], e.g.
+#
+# [plugins.sys]
+# hd = "~/hd"
 """
 
 
-class ConfigHd(BaseModel):
-    path: Path = Path("~/hd")
-
-
 class ConfigData(BaseModel):
-    hd: ConfigHd = ConfigHd()
+    plugins: dict[str, dict[str, Any]] = Field(default_factory=dict)
+
+
+def config_dir() -> Path:
+    """
+    Directory holding config.toml and the plugins/ folder.
+    """
+    if value := os.environ.get(CONFIG_DIR_ENV):
+        return Path(value).expanduser()
+    return Path.home() / ".config" / "r2"
+
+
+def config_path() -> Path:
+    return config_dir() / "config.toml"
+
+
+def plugins_dir() -> Path:
+    return config_dir() / "plugins"
 
 
 class Config:
@@ -36,8 +60,8 @@ class Config:
     _data: ConfigData
 
     @property
-    def hd(self) -> ConfigHd:
-        return self._data.hd
+    def plugins(self) -> dict[str, dict[str, Any]]:
+        return self._data.plugins
 
     def __new__(cls, *args: object, **kwargs: object) -> Config:
         if cls._instance is None:
@@ -46,17 +70,24 @@ class Config:
 
     def __init__(self, name: str | None = None) -> None:
         if not hasattr(self, "_initialized"):
-            if not CONFIG_PATH.exists():
-                CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-                with CONFIG_PATH.open("w") as f:
-                    src = DEFAULT_CONFIG
-                    src = src.format(name=name or infer_user_name())
-                    f.write(src)
-            with CONFIG_PATH.open("rb") as f:
+            path = config_path()
+            if not path.exists():
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(DEFAULT_CONFIG.format(name=name or infer_user_name()))
+            with path.open("rb") as f:
                 data = tomllib.load(f)
 
             self._data = ConfigData.model_validate(data)
             self._initialized = True
+
+    @classmethod
+    def reset(cls) -> None:
+        """
+        Drop the singleton so the next `Config()` re-reads the file.
+
+        Useful for tests that point `R2_CONFIG_DIR` somewhere else.
+        """
+        cls._instance = None
 
     def __repr__(self) -> str:
         return f"Config(data={self._data!r})"
@@ -86,7 +117,6 @@ def infer_user_name() -> str:
     Infer the user's name from the environment or system settings.
     """
     import getpass
-    import os
 
     name = os.environ.get("USER") or os.environ.get("USERNAME") or getpass.getuser()
     return name

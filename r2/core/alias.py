@@ -10,7 +10,15 @@ ERRORS = {
 BASH_ALIAS_PATH = Path.home() / ".bash_aliases"
 
 
-def create_alias(py: bool, js: bool, package: str, alias: str, section: str) -> None:
+def create_alias(
+    py: bool,
+    js: bool,
+    package: str,
+    alias: str,
+    section: str,
+    path: Path | None = None,
+) -> None:
+    path = path or BASH_ALIAS_PATH
     if [py, js].count(True) != 1:
         cmd = alias
         error(ERRORS["package-forbidden"], package != "")
@@ -26,7 +34,7 @@ def create_alias(py: bool, js: bool, package: str, alias: str, section: str) -> 
         raise RuntimeError("Invalid combination of options")
 
     alias_cmd = f"alias {alias}='{cmd}'\n"
-    lines = BASH_ALIAS_PATH.read_text().splitlines(keepends=True)
+    lines = path.read_text().splitlines(keepends=True) if path.exists() else []
     if lines and not lines[-1].endswith("\n"):
         lines[-1] += "\n"
 
@@ -45,22 +53,23 @@ def create_alias(py: bool, js: bool, package: str, alias: str, section: str) -> 
     if start_aliases is None:
         lines.append(f"\n# {section or 'Other'}\n")
         if section:
-            warn(f"Created new section '{section}' in {BASH_ALIAS_PATH}")
+            warn(f"Created new section '{section}' in {path}")
         lines.append(alias_cmd)
     elif start_aliases == len(lines):
         lines.append(alias_cmd)
     else:
         lines.insert(start_aliases, alias_cmd)
 
-    BASH_ALIAS_PATH.write_text("".join(lines))
-    rich.print(f"[b green]success[/]: Added alias '{alias}' to {BASH_ALIAS_PATH}")
+    path.write_text("".join(lines))
+    rich.print(f"[b green]success[/]: Added alias '{alias}' to {path}")
 
 
-def parse_sections() -> dict[str, list[tuple[str, str]]]:
-    if not BASH_ALIAS_PATH.exists():
+def parse_sections(path: Path | None = None) -> dict[str, list[tuple[str, str]]]:
+    path = path or BASH_ALIAS_PATH
+    if not path.exists():
         return {}
 
-    lines = BASH_ALIAS_PATH.read_text().splitlines()
+    lines = path.read_text().splitlines()
     aliases: list[tuple[str, str]] = []
     sections = {"": aliases}
 

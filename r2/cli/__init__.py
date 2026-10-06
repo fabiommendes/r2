@@ -28,6 +28,6 @@ def main(argv: list[str] | None = None) -> None:
     if not args:
         run_tui()
         return
-    from r2.cli.app import app
+    from r2.cli.app import build_app
 
-    app(args=args, prog_name="r2")
+    build_app()(args=args, prog_name="r2")

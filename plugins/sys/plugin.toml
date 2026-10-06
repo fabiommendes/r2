@@ -1,0 +1,12 @@
+[plugin]
+name = "sys"
+help = "Helpers for a very opinionated Linux setup (hard drive offload, shell aliases)."
+
+[commands.hd]
+help = "Move a path to the hard drive and leave a symlink in its place."
+destructive = true
+hidden = true
+
+[commands.alias]
+help = "Add a shell alias to ~/.bash_aliases."
+hidden = true

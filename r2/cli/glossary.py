@@ -8,6 +8,7 @@ import typer
 
 from r2.core.glossary import Glossary, Term, parse
 from r2.core.messages import error, success
+from r2.core.mode import mode
 
 app = typer.Typer(help="Manage a GLOSSARY.md file.")
 
@@ -42,6 +43,9 @@ def add(
     error("The term name cannot be empty.", not name)
 
     if not definition:
+        error(
+            'In agent mode, give the definition inline: "name: definition".', mode.agent
+        )
         definition = typer.prompt(f"Definition for {name!r}").strip()
         error("The definition cannot be empty.", not definition)
 
