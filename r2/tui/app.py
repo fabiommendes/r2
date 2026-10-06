@@ -15,7 +15,6 @@ from textual.screen import Screen
 from textual.widgets import Footer, Static, TabbedContent, TabPane
 
 from r2.core import git
-from r2.core.config import Config
 from r2.core.editor import (
     editor_command,
     ide_command,
@@ -25,6 +24,7 @@ from r2.core.editor import (
 )
 from r2.core.links import Link
 from r2.core.project import ProjectContext, Projects
+from r2.core.state import UIState
 from r2.integrations import herdr
 from r2.integrations.claude.events import event_links, tail
 from r2.integrations.claude.notify import events_path
@@ -109,7 +109,7 @@ class R2App(App[None]):
         theme.install()
         super().__init__()
         self.projects = Projects()
-        self.config = Config.load()
+        self.ui_state = UIState.load()
         if plugin_panes is None:
             plugin_panes, found = load_panes()
             problems = [*(problems or []), *map(str, found)]
@@ -135,11 +135,11 @@ class R2App(App[None]):
         yield Footer()
 
     def on_mount(self) -> None:
-        if self.config.theme in self.available_themes:
-            self.theme = self.config.theme
+        if self.ui_state.theme in self.available_themes:
+            self.theme = self.ui_state.theme
         self.theme_changed_signal.subscribe(self, self._on_theme_changed)
         for splitter in self.query(Splitter):
-            splitter.target.styles.width = self.config.drawer_width(splitter.key)
+            splitter.target.styles.width = self.ui_state.drawer_width(splitter.key)
         self.context = self.projects.get(Path.cwd())
         self._focus_entry(self._active_view())
         for problem in self.problems:
@@ -149,11 +149,11 @@ class R2App(App[None]):
         self.run_worker(self._poll_git(), group="git-poll")
 
     def on_splitter_resized(self, event: Splitter.Resized) -> None:
-        self.config.drawer_widths[event.splitter.key] = event.width
+        self.ui_state.drawer_widths[event.splitter.key] = event.width
         try:
-            self.config.save()
+            self.ui_state.save()
         except OSError:
-            self.notify("Could not save the config", severity="warning")
+            self.notify("Could not save the UI state", severity="warning")
 
     def watch_context(self, context: ProjectContext | None) -> None:
         if context is None:
@@ -190,12 +190,12 @@ class R2App(App[None]):
         self.query_one(TopBar).update(theme.powerline(*segments))
 
     def _on_theme_changed(self, _: object) -> None:
-        if self.theme != self.config.theme:
-            self.config.theme = self.theme
+        if self.theme != self.ui_state.theme:
+            self.ui_state.theme = self.theme
             try:
-                self.config.save()
+                self.ui_state.save()
             except OSError:
-                self.notify("Could not save the config", severity="warning")
+                self.notify("Could not save the UI state", severity="warning")
         self._update_subtitle()
 
     def refresh_git(self) -> None:

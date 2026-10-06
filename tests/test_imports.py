@@ -39,6 +39,6 @@ def test_notify_hook_imports_only_the_stdlib() -> None:
     assert not imported("r2.integrations.claude.notify") & HEAVY_MODULES
 
 
-@pytest.mark.parametrize("module", ["r2", "r2.core.config", "r2.core.links"])
+@pytest.mark.parametrize("module", ["r2", "r2.core.state", "r2.core.links"])
 def test_core_does_not_import_the_tui(module: str) -> None:
     assert not imported(module) & TUI_MODULES

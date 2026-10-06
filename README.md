@@ -42,8 +42,8 @@ feeds the TUI.
 R2 used to be called robin. `robin-notify` still works as an alias of
 `r2-notify`, so existing hook settings keep working, but point them to
 `r2-notify` when you can. The first run of the TUI copies
-`~/.config/robin/config.json` to the new config path if there is no r2 config
-yet. `ROBIN_EDITOR` and `ROBIN_IDE` are now `R2_EDITOR` and `R2_IDE`.
+`~/.config/robin/config.json` to `~/.local/state/r2/tui.json` if there is no
+r2 state yet. `ROBIN_EDITOR` and `ROBIN_IDE` are now `R2_EDITOR` and `R2_IDE`.
 
 ## Commands
 
@@ -146,10 +146,13 @@ from pathlib import Path
 from pydantic import BaseModel
 from r2.plugin import Plugin
 
+
 class SysConfig(BaseModel):
     hd: Path = Path("~/hd")
 
+
 plugin = Plugin("sys", config=SysConfig)
+
 
 @plugin.command()
 def hd(path: Path) -> None:
@@ -181,7 +184,8 @@ title = "Aliases"       # tab label; defaults to the pane name
 from textual.widgets import DataTable
 from r2.tui import PaneCommand, PluginPane
 
-@plugin.pane()          # name from the class: AliasesPane -> "aliases"
+
+@plugin.pane()  # name from the class: AliasesPane -> "aliases"
 class AliasesPane(PluginPane):
     GLOBAL_COMMANDS = [PaneCommand("reload", "Reload aliases", key="ctrl+r")]
     LOCAL_COMMANDS = [PaneCommand("add", "Add alias", key="a")]
@@ -315,8 +319,9 @@ R2 picks the programs it launches from the environment:
 - `t` runs `$SHELL`.
 
 R2 saves the theme and the width of each drawer in
-`$XDG_CONFIG_HOME/r2/config.json` (`~/.config/r2/config.json` by
-default):
+`$XDG_STATE_HOME/r2/tui.json` (`~/.local/state/r2/tui.json` by default).
+It is state, not configuration, so you should not need to edit it; the
+first run copies an older `~/.config/r2/config.json` there:
 
 ```json
 {
