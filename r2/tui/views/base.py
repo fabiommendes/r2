@@ -171,7 +171,10 @@ class View(Widget):
         panes = list(tabs.query(TabPane))
         index = [pane.id for pane in panes].index(tabs.active) + step
         if 0 <= index < len(panes):
-            panes[index].query_one(View).entry_focus = entry
+            for view in panes[index].query(View):
+                view.entry_focus = entry
+            # Plugin panes read the arrow that brought the user in.
+            self.app.entry_direction = "right" if step > 0 else "left"  # type: ignore[attr-defined]
             tabs.active = panes[index].id or ""
 
 

@@ -2,14 +2,16 @@
 
 import asyncio
 import subprocess
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
 from textual import events
-from textual.app import App, ComposeResult, SuspendNotSupported
+from textual.app import App, ComposeResult, SuspendNotSupported, SystemCommand
 from textual.binding import Binding
 from textual.css.query import NoMatches
 from textual.reactive import reactive
+from textual.screen import Screen
 from textual.widgets import Footer, Static, TabbedContent, TabPane
 
 from r2.core import git
@@ -27,6 +29,8 @@ from r2.integrations import herdr
 from r2.integrations.claude.events import event_links, tail
 from r2.integrations.claude.notify import events_path
 from r2.tui import theme
+from r2.tui.pane import Direction, PaneCommand, PluginPane
+from r2.tui.plugins import PaneEntry, load_panes
 from r2.tui.views import VIEWS, View
 from r2.tui.widgets.preview import FilePreview
 from r2.tui.widgets.splitter import Splitter
@@ -44,6 +48,9 @@ WORKTREE_COLORS = {
     git.Worktree.CLEAN: "panel-lighten-2",
 }
 
+
+#: Keys that plugin global commands cannot take, besides the app's own.
+RESERVED_KEYS = {"left", "right", "alt+left", "alt+right", "ctrl+q", "ctrl+p"}
 
 PALETTE_ICON = "⭘"
 PALETTE_COLOR = "secondary"
@@ -94,11 +101,24 @@ class R2App(App[None]):
     pinned: reactive[bool] = reactive(False)
     """Stay on the current project instead of following herdr focus."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        plugin_panes: list[PaneEntry] | None = None,
+        problems: list[str] | None = None,
+    ) -> None:
         theme.install()
         super().__init__()
         self.projects = Projects()
         self.config = Config.load()
+        if plugin_panes is None:
+            plugin_panes, found = load_panes()
+            problems = [*(problems or []), *map(str, found)]
+        self.plugin_panes = plugin_panes
+        #: Plugin load problems, shown as notifications once the app is up.
+        self.problems = list(problems or [])
+        #: Arrow that led to the tab being activated, for `PluginPane.enter`.
+        self.entry_direction: Direction | None = None
+        self.bind_global_commands()
 
     def compose(self) -> ComposeResult:
         yield TopBar(id="topbar")
@@ -106,6 +126,12 @@ class R2App(App[None]):
             for number, view in enumerate(VIEWS, start=1):
                 with TabPane(f"{number} {view.TITLE}", id=view.ID):
                     yield view()
+            for entry in self.plugin_panes:
+                with TabPane(entry.title, id=entry.id):
+                    pane = entry.cls()
+                    pane.pane_id = entry.id
+                    pane.title = entry.title
+                    yield pane
         yield Footer()
 
     def on_mount(self) -> None:
@@ -115,7 +141,9 @@ class R2App(App[None]):
         for splitter in self.query(Splitter):
             splitter.target.styles.width = self.config.drawer_width(splitter.key)
         self.context = self.projects.get(Path.cwd())
-        self._active_view().focus_drawer()
+        self._focus_entry(self._active_view())
+        for problem in self.problems:
+            self.notify(problem, title="plugin skipped", severity="warning", timeout=10)
         self.run_worker(self._follow_herdr(), exclusive=True, group="herdr")
         self.run_worker(self._follow_events(), group="events")
         self.run_worker(self._poll_git(), group="git-poll")
@@ -191,15 +219,81 @@ class R2App(App[None]):
     def action_show_view(self, view_id: str) -> None:
         self.query_one(TabbedContent).active = view_id
 
-    def _active_view(self) -> View:
+    def _active_view(self) -> View | PluginPane:
         tabs = self.query_one(TabbedContent)
-        return tabs.query_one(f"#{tabs.active} View", View)
+        pane = tabs.get_pane(tabs.active)
+        for widget in pane.children:
+            if isinstance(widget, View | PluginPane):
+                return widget
+        raise NoMatches(f"no view in tab {tabs.active!r}")
+
+    def _focus_entry(self, view: View | PluginPane) -> None:
+        if isinstance(view, View):
+            view.focus_entry()
+        else:
+            view.enter(self.entry_direction)
+        self.entry_direction = None
 
     def on_tabbed_content_tab_activated(
         self, event: TabbedContent.TabActivated
     ) -> None:
-        event.pane.query_one(View).focus_entry()
+        self._focus_entry(self._active_view())
         self.refresh_bindings()
+
+    #
+    # Plugin panes
+    #
+    def plugin_pane(self, pane_id: str) -> PluginPane:
+        return self.query_one(f"#{pane_id}", TabPane).query_one(PluginPane)
+
+    def bind_global_commands(self) -> None:
+        """
+        Bind every plugin pane's global command keys on the app. A key that
+        is reserved or already taken is skipped and reported; the command
+        stays in the palette.
+        """
+        taken = RESERVED_KEYS | {
+            key for key, _ in self._bindings.key_to_bindings.items()
+        }
+        for entry in self.plugin_panes:
+            for cmd in entry.cls.GLOBAL_COMMANDS:
+                if cmd.key is None:
+                    continue
+                if cmd.key in taken:
+                    self.problems.append(
+                        f"{entry.id}: key {cmd.key!r} for {cmd.title!r} is taken"
+                    )
+                    continue
+                taken.add(cmd.key)
+                self.bind(
+                    cmd.key,
+                    f"pane_run({entry.id!r}, {cmd.action!r})",
+                    description=cmd.title,
+                    show=cmd.show,
+                )
+
+    async def action_pane_run(self, pane_id: str, action: str) -> None:
+        """Run a plugin global command on its pane."""
+        await self.plugin_pane(pane_id).run_action(action)
+
+    def get_system_commands(self, screen: Screen[Any]) -> Iterable[SystemCommand]:
+        yield from super().get_system_commands(screen)
+        try:
+            active = self._active_view()
+        except NoMatches:
+            return
+        for pane in self.query(PluginPane):
+            for cmd in pane.GLOBAL_COMMANDS:
+                yield self._system_command(pane, cmd)
+            if pane is active:
+                for cmd in pane.LOCAL_COMMANDS:
+                    yield self._system_command(pane, cmd)
+
+    def _system_command(self, pane: PluginPane, cmd: PaneCommand) -> SystemCommand:
+        async def run() -> None:
+            await pane.run_action(cmd.action)
+
+        return SystemCommand(f"{pane.title}: {cmd.title}", cmd.help, run)
 
     def _hand_over(self, command: list[str], cwd: Path | None = None) -> None:
         """Give the terminal to command and take it back when it exits."""

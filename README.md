@@ -7,8 +7,10 @@ R2 is a personal computer assistant with two faces:
 
 - a **TUI**, a sidekick for Claude Code. Run `r2` with no arguments in a
   terminal split next to [herdr](https://herdr.dev);
-- a **command line** of small chores: `r2 hd`, `r2 alias`, `r2 glossary` and
-  the project commands `r2 test`, `r2 build` and `r2 docs`.
+- a **command line** for humans and coding agents: `r2 glossary`, the project
+  commands `r2 test`, `r2 build` and `r2 docs`, and whatever plugins add. An
+  agent mode keeps the output short and refuses destructive commands without
+  an explicit go-ahead.
 
 I assume this project is not useful for anyone else but me, but feel free to
 fork it if you want to use it as inspiration. The command line assumes some
@@ -48,37 +50,11 @@ yet. `ROBIN_EDITOR` and `ROBIN_IDE` are now `R2_EDITOR` and `R2_IDE`.
 `r2` with no arguments opens the TUI. With arguments, it runs one of these
 commands.
 
-**`r2 hd <PATH>`**
+**`r2 help`**
 
-Move a file or directory to the hard drive path and leave a symlink behind.
-My setup has a hard drive mounted at `~/hd`, and I use this command to move
-files there when I want to free up space on my main SSD drive. The path comes
-from `~/.config/r2/config.toml`, which r2 creates on first use:
-
-```toml
-[hd]
-path = "~/hd"
-```
-
-**`r2 alias <ALIAS> <COMMAND>`**
-
-Create a shell alias. This is useful for creating shortcuts for commands I use
-often. The setup assumes the existence of a file `~/.bash_aliases` where these
-aliases are stored. It also assumes the file has a specific format, with a
-section for R2 aliases that looks like this:
-
-```sh
-# R2 Aliases
-alias ll='ls -la'
-alias gs='git status'
-```
-
-`r2 alias` will add a new alias to some specific section (or the fallback
-"other", if not given). It will also check for duplicates before adding a new
-alias. It also has special support for aliasing Python packages (using uv,
-with `--py`) or Javascript packages (using npx, with `--js`). Use `--list` or
-`--sections` to see what is there, and `--edit` to open the file in your
-editor.
+List every available command as plain text, one per line, with tags such as
+`[project]`, `[global]`, `[destructive]` for commands that come from plugins.
+`--all` includes hidden commands. `r2 --help` is the usual Typer help.
 
 **`r2 glossary sort|add|remove`**
 
@@ -94,6 +70,161 @@ current directory (or the one given with `--path`). For a `pyproject.toml`
 project, r2 runs the matching [taskipy](https://github.com/taskipy/taskipy)
 task through `uv run task`, and falls back to `pytest`, `uv build` or
 `doc-zero build` when the task does not exist.
+
+## Agent mode
+
+`r2 --agent <command>` (or `R2_AGENT=1` in the environment) turns on the
+conventions meant for coding agents, for every command:
+
+- No interactive prompts. A command that would ask a question exits with an
+  error that says how to pass the answer inline.
+- Subprocesses run with stdin closed, unless a project command is marked
+  `interactive`.
+- Output of project commands is reduced to a summary: one `ok: <name>` line
+  on success; exit code plus the last 30 lines of output on failure.
+  `r2 --agent --full <command>` disables the reduction.
+- Commands marked `destructive` refuse to run without `r2 --yes`.
+
+## Plugins
+
+There are two tiers. Builtin commands always win a name collision, then
+project commands, then global plugin commands. `r2 plugins list` shows what
+was found and what was shadowed; `r2 plugins doctor` imports every global
+plugin and checks it against its manifest.
+
+### Project commands
+
+Put an `r2.toml` at the project root (or a `[tool.r2]` table in
+`pyproject.toml`; `r2.toml` wins when both exist). It is found walking up
+from the current directory.
+
+```toml
+[commands.db-reset]
+run = "uv run python scripts/db.py reset"   # a shell command, run from the project root
+help = "Drop and recreate the dev database."
+destructive = true      # needs `r2 --yes` in agent mode
+args = "passthrough"    # or "none"; extra arguments are appended to `run`
+cwd = "."               # relative to the project root
+env = { APP_ENV = "dev" }
+timeout = 300           # seconds; exit code 124 on expiry
+interactive = false     # true keeps stdin open
+output = "summary"      # or "passthrough": never reduced, even in agent mode
+
+[config.sys]            # overrides a global plugin's settings for this project
+hd = "~/hd2"
+```
+
+Project commands are plain shell commands, so they run in the project's own
+environment, not in r2's. Nothing Python is imported from the project.
+
+### Global plugins
+
+A global plugin is a folder under `$R2_CONFIG_DIR/plugins/` (default
+`~/.config/r2/plugins/`) with a manifest and a Python package:
+
+```
+~/.config/r2/plugins/sys/
+├── plugin.toml
+└── __init__.py
+```
+
+```toml
+# plugin.toml
+[plugin]
+name = "sys"
+help = "Machine-specific helpers."
+
+[commands.hd]
+help = "Move a path to the hard drive and leave a symlink in its place."
+destructive = true
+hidden = true           # left out of `r2 help` (see `r2 help --all`)
+```
+
+```python
+# __init__.py
+from pathlib import Path
+from pydantic import BaseModel
+from r2.plugin import Plugin
+
+class SysConfig(BaseModel):
+    hd: Path = Path("~/hd")
+
+plugin = Plugin("sys", config=SysConfig)
+
+@plugin.command()
+def hd(path: Path) -> None:
+    """Move PATH to the hard drive."""
+    target = plugin.settings.hd.expanduser()
+    ...
+```
+
+Command functions are ordinary Typer commands. Only `plugin.toml` is read at
+startup; the package is imported when one of its commands runs, so a broken
+plugin costs nothing until used and `r2 plugins doctor` finds it.
+
+Settings come from `[plugins.<name>]` in `$R2_CONFIG_DIR/config.toml`, with
+`[config.<name>]` from the project manifest layered on top, validated by the
+plugin's pydantic model.
+
+### TUI panes
+
+A global plugin can also add tabs to the TUI, after r2's own views. It
+declares them in `plugin.toml` and registers a `r2.tui.PluginPane` subclass
+for each one:
+
+```toml
+[panes.aliases]
+title = "Aliases"       # tab label; defaults to the pane name
+```
+
+```python
+from textual.widgets import DataTable
+from r2.tui import PaneCommand, PluginPane
+
+@plugin.pane()          # name from the class: AliasesPane -> "aliases"
+class AliasesPane(PluginPane):
+    GLOBAL_COMMANDS = [PaneCommand("reload", "Reload aliases", key="ctrl+r")]
+    LOCAL_COMMANDS = [PaneCommand("add", "Add alias", key="a")]
+
+    def compose(self):
+        yield DataTable()
+
+    def action_reload(self) -> None: ...
+    def action_add(self) -> None: ...
+```
+
+A pane is a regular Textual widget with three extra contracts:
+
+- **Commands.** `GLOBAL_COMMANDS` are bound on the whole app and run on
+  their pane even when another tab is active (call `self.activate()` to
+  bring it forward). `LOCAL_COMMANDS` are bound only while focus is inside
+  the pane. Both appear in the command palette; local ones only while their
+  pane is active. A global key that r2 or another plugin already uses is
+  skipped and reported as a notification; the palette entry stays.
+- **Navigation.** `←` / `→` move to the neighbor tab when
+  `should_leave(direction)` returns true; otherwise the key reaches the
+  focused widget. The default knows `Input`, `TextArea` and `DataTable`
+  (leave only when the cursor is at the edge) and keeps the key for any
+  other widget that binds it. `alt+←` / `alt+→` always move.
+- **Entering.** `enter(direction)` runs when the tab becomes active and
+  focuses the pane or its first focusable widget by default. Override
+  `current_link()` to make `e` and `o` work on the pane, and `reload()` for
+  `F5`.
+
+### The `sys` plugin
+
+`plugins/sys` in this repository holds the commands tied to my machine:
+`r2 hd PATH` moves a path to a hard drive mounted under `$HOME` and leaves a
+symlink; `r2 alias` adds entries to `~/.bash_aliases`, with shortcuts for
+`uvx` (`--py`) and `npx` (`--js`) wrappers, and lists them with `--list` or
+`--sections`. Install it by copying or symlinking the folder into
+`~/.config/r2/plugins/sys`, and configure it in `~/.config/r2/config.toml`:
+
+```toml
+[plugins.sys]
+hd = "~/hd"
+aliases = "~/.bash_aliases"
+```
 
 ## The TUI
 
