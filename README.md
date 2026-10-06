@@ -215,20 +215,30 @@ A pane is a regular Textual widget with three extra contracts:
   `current_link()` to make `e` and `o` work on the pane, and `reload()` for
   `F5`.
 
-### The `sys` plugin
+### Builtin plugins
 
-`plugins/sys` in this repository holds the commands tied to my machine:
-`r2 hd PATH` moves a path to a hard drive mounted under `$HOME` and leaves a
-symlink; `r2 alias` adds entries to `~/.bash_aliases`, with shortcuts for
-`uvx` (`--py`) and `npx` (`--js`) wrappers, and lists them with `--list` or
-`--sections`. Install it by copying or symlinking the folder into
-`~/.config/r2/plugins/sys`, and configure it in `~/.config/r2/config.toml`:
+Some plugins ship with r2. `[r2] builtins` in `~/.config/r2/config.toml`
+picks which ones load, and in which order their tabs appear:
 
 ```toml
-[plugins.sys]
-hd = "~/hd"
-aliases = "~/.bash_aliases"
+[r2]
+builtins = ["sys"]
 ```
+
+`r2 plugins list` shows the builtins that are off. A plugin in
+`~/.config/r2/plugins/` with the name of a builtin replaces it.
+
+- **`sys`** holds the commands tied to my machine: `r2 hd PATH` moves a path
+  to a hard drive mounted under `$HOME` and leaves a symlink; `r2 alias` adds
+  entries to `~/.bash_aliases`, with shortcuts for `uvx` (`--py`) and `npx`
+  (`--js`) wrappers, and lists them with `--list` or `--sections`. Off by
+  default. Its settings:
+
+  ```toml
+  [plugins.sys]
+  hd = "~/hd"
+  aliases = "~/.bash_aliases"
+  ```
 
 ## The TUI
 

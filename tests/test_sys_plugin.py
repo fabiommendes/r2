@@ -1,6 +1,6 @@
 """
-Tests for the bundled `sys` plugin (plugins/sys), installed into a private
-config dir exactly as a user would do it.
+Tests for the builtin `sys` plugin, enabled through `[r2] builtins` in a
+private config dir exactly as a user would do it.
 """
 
 from __future__ import annotations
@@ -13,7 +13,6 @@ from typer.testing import CliRunner
 from r2.cli.app import build_app
 from r2.core.conf import Config
 from r2.core.plugins import loader
-from tests.support import REPO_ROOT
 
 runner = CliRunner()
 
@@ -23,8 +22,9 @@ def home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     home = tmp_path / "home"
     config = home / ".config" / "r2"
     (config / "plugins").mkdir(parents=True)
-    (config / "plugins" / "sys").symlink_to(REPO_ROOT / "plugins" / "sys")
-    (config / "config.toml").write_text(f'[plugins.sys]\nhd = "{home / "disk"}"\n')
+    (config / "config.toml").write_text(
+        f'[r2]\nbuiltins = ["sys"]\n\n[plugins.sys]\nhd = "{home / "disk"}"\n'
+    )
 
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("R2_CONFIG_DIR", str(config))
@@ -41,7 +41,7 @@ def run(*args: str):
 
 def test_sys_plugin_is_discovered_and_healthy(home: Path) -> None:
     out = run("plugins", "list").output
-    assert "global   sys" in out and "hd, alias" in out
+    assert "builtin  sys" in out and "hd, alias" in out
     assert run("plugins", "doctor").exit_code == 0
 
 
@@ -80,3 +80,35 @@ def test_alias_adds_to_section_and_rejects_duplicates(home: Path) -> None:
 
     out = run("alias", "--list").output
     assert "Tools" in out and "ruff" in out and "Other" in out
+
+
+def test_sys_is_off_unless_listed(home: Path) -> None:
+    config = home / ".config" / "r2" / "config.toml"
+    config.write_text("[r2]\nbuiltins = []\n")
+    Config.reset()
+    result = run("hd", "x")
+    assert result.exit_code == 2
+    out = run("plugins", "list").output
+    assert "off      sys" in out
+
+
+def test_user_plugin_replaces_a_builtin_of_the_same_name(home: Path) -> None:
+    user = home / ".config" / "r2" / "plugins" / "sys"
+    user.mkdir()
+    (user / "plugin.toml").write_text('[plugin]\nname = "sys"\n[commands.mine]\n')
+    (user / "__init__.py").write_text(
+        "from r2.plugin import Plugin\n"
+        "plugin = Plugin('sys')\n"
+        "@plugin.command()\n"
+        "def mine() -> None:\n"
+        "    print('mine')\n"
+    )
+    assert "mine" in run("mine").output
+    assert run("hd", "x").exit_code == 2
+
+
+def test_unknown_builtin_is_reported(home: Path) -> None:
+    config = home / ".config" / "r2" / "config.toml"
+    config.write_text('[r2]\nbuiltins = ["nope"]\n')
+    Config.reset()
+    assert "unknown builtin plugin 'nope'" in run("plugins", "list").output

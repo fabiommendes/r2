@@ -3,7 +3,9 @@ Find plugins without importing any plugin code.
 
 Two tiers:
 
-- Global: every folder under `plugins_dir()` holding a `plugin.toml`.
+- Global: the builtins selected in the config (`r2.builtins`), then every
+  folder under `plugins_dir()` holding a `plugin.toml`. A user plugin with
+  the name of a builtin replaces it.
 - Project: the first `r2.toml` found walking up from the start directory;
   failing that, a `[tool.r2]` table in `pyproject.toml`.
 """
@@ -59,6 +61,8 @@ class GlobalPlugin:
     root: Path
     commands: dict[str, CommandSpec] = field(default_factory=dict)
     panes: dict[str, PaneSpec] = field(default_factory=dict)
+    #: Shipped with r2, importable as `r2.builtins.<name>`.
+    builtin: bool = False
 
     @property
     def manifest(self) -> Path:
@@ -75,11 +79,64 @@ class ProjectPlugin:
 
 def discover_global(
     directory: Path | None = None,
+    builtins: list[str] | None = None,
+) -> tuple[list[GlobalPlugin], list[Problem]]:
+    """
+    The global plugins to load, in order: the selected builtins, then the
+    remaining user plugins sorted by folder name.
+
+    `builtins` defaults to `[r2] builtins` from the config, or
+    `DEFAULT_BUILTINS` when the config has no such key.
+    """
+    from r2.builtins import DEFAULT_BUILTINS, builtins_dir
+
+    if builtins is None:
+        from r2.core.conf import Config
+
+        builtins = Config().builtins
+        if builtins is None:
+            builtins = DEFAULT_BUILTINS
+
+    shipped, problems = scan(builtins_dir(), builtin=True)
+    user, user_problems = scan(directory or plugins_dir())
+    problems += user_problems
+    available = {p.name: p for p in shipped}
+    mine = {p.name: p for p in user}
+
+    plugins: list[GlobalPlugin] = []
+    for name in dict.fromkeys(builtins):
+        if name in mine:
+            plugins.append(mine.pop(name))
+        elif name in available:
+            plugins.append(available[name])
+        else:
+            msg = f"unknown builtin plugin {name!r} in [r2] builtins"
+            problems.append(Problem(config_file(), msg))
+    plugins += mine.values()
+    return plugins, problems
+
+
+def available_builtins() -> list[GlobalPlugin]:
+    """
+    Every plugin shipped with r2, selected or not.
+    """
+    from r2.builtins import builtins_dir
+
+    return scan(builtins_dir(), builtin=True)[0]
+
+
+def config_file() -> Path:
+    from r2.core.conf import config_path
+
+    return config_path()
+
+
+def scan(
+    directory: Path, builtin: bool = False
 ) -> tuple[list[GlobalPlugin], list[Problem]]:
     """
     Read every `<dir>/*/plugin.toml`, sorted by folder name.
     """
-    directory = directory or plugins_dir()
     plugins: list[GlobalPlugin] = []
     problems: list[Problem] = []
 
@@ -105,6 +162,7 @@ def discover_global(
                 root=root,
                 commands=manifest.commands,
                 panes=manifest.panes,
+                builtin=builtin,
             )
         )
 

@@ -4,8 +4,10 @@ Import a global plugin package on first use.
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import sys
+from types import ModuleType
 
 from r2.core.plugins.discovery import GlobalPlugin
 from r2.plugin import Plugin
@@ -25,11 +27,24 @@ class PluginError(Exception):
 
 def load_plugin(plugin: GlobalPlugin) -> Plugin:
     """
-    Import `<root>/__init__.py` as the package `r2_plugins.<name>` and return
-    its `plugin` object. Raises PluginError with a message pointing at the file.
+    Import a plugin and return its `plugin` object: `r2.builtins.<name>` for
+    builtins, otherwise `<root>/__init__.py` as the package
+    `r2_plugins.<name>`. Raises PluginError with a message pointing at the
+    file.
     """
     if plugin.name in _loaded:
         return _loaded[plugin.name]
+
+    if plugin.builtin:
+        module_name = f"r2.builtins.{plugin.root.name}"
+        try:
+            module = importlib.import_module(module_name)
+        except Exception as exc:
+            error = f"{type(exc).__name__}: {exc}"
+            raise PluginError(
+                f"builtin plugin {plugin.name!r} failed: {error}"
+            ) from exc
+        return _register(plugin, module)
 
     module_name = f"{PACKAGE_PREFIX}.{plugin.name}"
     init = plugin.root / "__init__.py"
@@ -49,10 +64,14 @@ def load_plugin(plugin: GlobalPlugin) -> Plugin:
         msg = f"plugin {plugin.name!r} failed to import ({init}): {error}"
         raise PluginError(msg) from exc
 
+    return _register(plugin, module)
+
+
+def _register(plugin: GlobalPlugin, module: ModuleType) -> Plugin:
     obj = getattr(module, "plugin", None)
     if not isinstance(obj, Plugin):
         expected = "plugin = r2.plugin.Plugin(...)"
-        msg = f"plugin {plugin.name!r} must define `{expected}` in {init}"
+        msg = f"plugin {plugin.name!r} must define `{expected}` in {plugin.root}"
         raise PluginError(msg)
 
     _loaded[plugin.name] = obj

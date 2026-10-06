@@ -21,6 +21,9 @@ DEFAULT_CONFIG = """
 [r2]
 name = "{name}"
 
+# Builtin plugins to load, in tab order. Leave it out for the defaults.
+# builtins = ["project", "docs", "issues", "live", "sys"]
+
 # Plugin settings go under [plugins.<name>], e.g.
 #
 # [plugins.sys]
@@ -28,7 +31,14 @@ name = "{name}"
 """
 
 
+class ConfigR2(BaseModel):
+    name: str = ""
+    #: Builtin plugins to load, in order. None means `DEFAULT_BUILTINS`.
+    builtins: list[str] | None = None
+
+
 class ConfigData(BaseModel):
+    r2: ConfigR2 = Field(default_factory=ConfigR2)
     plugins: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
@@ -62,6 +72,10 @@ class Config:
     @property
     def plugins(self) -> dict[str, dict[str, Any]]:
         return self._data.plugins
+
+    @property
+    def builtins(self) -> list[str] | None:
+        return self._data.r2.builtins
 
     def __new__(cls, *args: object, **kwargs: object) -> Config:
         if cls._instance is None:

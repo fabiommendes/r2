@@ -8,6 +8,7 @@ import typer
 from r2.cli.registry import registry
 from r2.core import console
 from r2.core.messages import error, success
+from r2.core.plugins.discovery import available_builtins
 from r2.core.plugins.loader import PluginError, load_plugin
 
 app = typer.Typer(help="Inspect installed plugins.")
@@ -25,10 +26,15 @@ def list_() -> None:
         out.print(f"project  {registry.project.source}  commands: {names}")
     for plugin in registry.globals:
         names = ", ".join(plugin.commands) or "-"
-        line = f"global   {plugin.name:<12} {plugin.root}  commands: {names}"
+        kind = "builtin" if plugin.builtin else "global "
+        line = f"{kind}  {plugin.name:<12} {plugin.root}  commands: {names}"
         if plugin.panes:
             line += f"  panes: {', '.join(plugin.panes)}"
         out.print(line)
+    loaded = {plugin.name for plugin in registry.globals}
+    for plugin in available_builtins():
+        if plugin.name not in loaded:
+            out.print(f"off      {plugin.name:<12} (add it to [r2] builtins)")
     for name, kind, reason in registry.shadowed:
         out.print(f"shadowed {kind} command {name!r} (taken by {reason})")
     for problem in registry.problems:
