@@ -10,8 +10,9 @@ from pathlib import Path
 
 import pytest
 from textual.pilot import Pilot
-from textual.widgets import TabbedContent, Tree
+from textual.widgets import Input, TabbedContent, Tree
 
+from r2.core.issues import Issue
 from r2.tui.app import R2App
 from r2.tui.widgets.issue_form import Cycle, IssueForm
 from r2.tui.widgets.markdown import MarkdownBrowser
@@ -168,3 +169,27 @@ def test_issue_form_steps_through_values_with_the_arrows(
         assert priority.value == "high"
 
     drive(test, monkeypatch)
+
+
+def test_issue_form_moves_with_up_down_and_creates_on_enter(
+    config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    created: list[Issue | None] = []
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        form = IssueForm()
+        await app.push_screen(form, created.append)
+        await pilot.pause()
+        form.query_one("#title", Input).focus()
+        await pilot.press(*"Crash", "down", "down")
+        assert form.focused is form.query_one("#priority", Cycle)
+        await pilot.press("right", "up", "up", "down")
+        assert form.focused is form.query_one("#kind", Cycle)
+        await pilot.press("enter")
+        await pilot.pause()
+
+    drive(test, monkeypatch)
+    [issue] = created
+    assert issue is not None
+    assert issue.title == "Crash"
+    assert issue.meta["priority"] == "high"

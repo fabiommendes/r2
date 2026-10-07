@@ -7,6 +7,7 @@ from textual import events
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Grid, Horizontal
+from textual.content import Content
 from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, Static
@@ -20,6 +21,21 @@ TEMPLATES = {
     "task": ["Context", "Done when"],
 }
 DEFAULT_TEMPLATE = ["Context", "Done when"]
+
+# Style of each kind, priority and severity value; missing values use the
+# default text color.
+STYLES = {
+    "defect": "$text-error",
+    "enhancement": "$text-success",
+    "task": "$text-accent",
+    "low": "$text-muted",
+    "high": "$text-warning",
+    "urgent": "bold $text-error",
+    "trivial": "$text-muted",
+    "minor": "$text-success",
+    "major": "$text-warning",
+    "critical": "bold $text-error",
+}
 
 
 def template(kind: str | None) -> str:
@@ -65,8 +81,10 @@ class Cycle(Static, can_focus=True):
     def value(self) -> str | None:
         return self.values[self.index]
 
-    def render(self) -> str:
-        return f"[dim]‹[/] {self.value or '—'} [dim]›[/]"
+    def render(self) -> Content:
+        value = self.value
+        label = Content.styled(value, STYLES.get(value, "")) if value else "—"
+        return Content.assemble(("‹ ", "dim"), label, (" ›", "dim"))
 
     def action_step(self, delta: int) -> None:
         self.index = (self.index + delta) % len(self.values)
@@ -81,6 +99,9 @@ class IssueForm(ModalScreen[Issue | None]):
     BINDINGS = [
         Binding("escape", "cancel", "Cancel"),
         Binding("ctrl+s", "create", "Create"),
+        Binding("enter", "create", "Create", show=False),
+        Binding("up", "app.focus_previous", "Previous field", show=False),
+        Binding("down", "app.focus_next", "Next field", show=False),
     ]
 
     DEFAULT_CSS = """
