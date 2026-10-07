@@ -12,17 +12,37 @@ def test_split_frontmatter() -> None:
     assert split_frontmatter("---\n[x\n---\n") == (None, "---\n[x\n---\n")
 
 
-def test_render_meta_skips_normal_values_and_groups_links() -> None:
+def test_render_meta_shows_one_key_per_line_and_skips_normal_values() -> None:
     meta = {
         "type": "issue",
         "status": "in_progress",
         "priority": "normal",
         "kind": "defect",
         "created": datetime.date(2026, 10, 2),
-        "tags": ["a", "b"],
-        "relatedTo": ["x"],
+        "empty": [],
     }
     lines = render_meta(meta, COLORS).plain.splitlines()
-    assert "in progress" in lines[0] and lines[0].endswith("issue")
-    assert lines[1] == "kind defect  created 2026-10-02"
-    assert lines[2] == "#a #b  → x"
+    assert lines[0] == "type     issue"
+    assert lines[1].startswith("status    in progress")
+    assert lines[2:] == ["kind     defect", "created  2026-10-02"]
+
+
+def test_lists_of_scalars_join_with_a_dim_separator() -> None:
+    text = render_meta({"tags": ["a", "b", 3]}, COLORS)
+    assert text.plain == "tags  a; b; 3"
+    dim = [
+        text.plain[span.start : span.end] for span in text.spans if span.style == "dim"
+    ]
+    assert dim == ["tags  ", "; ", "; "]
+
+
+def test_nested_values_show_as_yaml_under_the_key() -> None:
+    meta = {"id": "x", "owner": {"name": "ana", "teams": ["a", "b"]}}
+    assert render_meta(meta, COLORS).plain.splitlines() == [
+        "id     x",
+        "owner  ",
+        "       name: ana",
+        "       teams:",
+        "       - a",
+        "       - b",
+    ]

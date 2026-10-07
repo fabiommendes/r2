@@ -1,8 +1,9 @@
-"""Frontmatter shown as a compact bar above a Markdown document."""
+"""Frontmatter shown as a list of keys above a Markdown document."""
 
 import datetime
 from typing import Any
 
+import yaml
 from rich.text import Text
 from textual.widgets import Static
 
@@ -22,58 +23,67 @@ STATUS_COLORS = {
 }
 OTHER_STATUS_COLOR = "secondary"
 
-# Keys shown in their own way; any other key is listed as "key: value".
-SPECIAL_KEYS = {"type", "status", "tags", "relatedTo"}
 # Keys whose "normal" value is left out, as in the issue files.
 NORMAL_KEYS = {"priority", "severity"}
 
+SEPARATOR = "; "
 
-def _value(value: Any) -> str:
-    if isinstance(value, list):
-        return ", ".join(_value(item) for item in value)
+Scalar = str | int | float | bool | datetime.date
+
+
+def _scalar(value: Scalar) -> str:
     if isinstance(value, datetime.date):
         return value.isoformat()
     return str(value)
 
 
-def render_meta(meta: dict[str, Any], colors: dict[str, str]) -> Text:
-    """Render frontmatter as a status pill, tags, links and the other keys.
+def render_value(value: Any) -> Text:
+    """Render a frontmatter value.
 
-    Colors are the app's theme variables.
+    Scalars show as they are and lists of scalars joined by a dim
+    separator. Anything else shows as YAML, starting on its own line.
     """
-    head = Text()
-    if status := meta.get("status"):
-        color = colors[STATUS_COLORS.get(str(status), OTHER_STATUS_COLOR)]
-        head.append_text(theme.powerline((str(status).replace("_", " "), color)))
-        head.append(" ")
-    if kind := meta.get("type"):
-        head.append(str(kind), style="dim")
-    lines = [head] if head else []
+    if isinstance(value, Scalar):
+        return Text(_scalar(value))
+    if isinstance(value, list) and all(isinstance(item, Scalar) for item in value):
+        text = Text()
+        for index, item in enumerate(value):
+            if index:
+                text.append(SEPARATOR, style="dim")
+            text.append(_scalar(item))
+        return text
+    dumped = yaml.safe_dump(
+        value, sort_keys=False, allow_unicode=True, default_flow_style=False
+    )
+    return Text("\n" + dumped.rstrip("\n"))
 
-    details = Text()
-    for key, value in meta.items():
-        if key in SPECIAL_KEYS or value in (None, "", []):
-            continue
-        if key in NORMAL_KEYS and value == "normal":
-            continue
-        if details:
-            details.append("  ")
-        details.append(f"{key} ", style="dim")
-        details.append(_value(value))
-    if details:
-        lines.append(details)
 
-    links = Text()
-    if tags := meta.get("tags"):
-        items = tags if isinstance(tags, list) else [tags]
-        links.append(" ".join(f"#{tag}" for tag in items), style="italic")
-    if related := meta.get("relatedTo"):
-        if links:
-            links.append("  ")
-        links.append("→ ", style="dim")
-        links.append(_value(related))
-    if links:
-        lines.append(links)
+def render_meta(meta: dict[str, Any], colors: dict[str, str]) -> Text:
+    """Render frontmatter with one key per line, values lined up.
+
+    The status shows as a pill colored from the app's theme variables.
+    """
+    shown = {
+        key: value
+        for key, value in meta.items()
+        if value not in (None, "", [], {})
+        and not (key in NORMAL_KEYS and value == "normal")
+    }
+    width = max(map(len, shown), default=0)
+    indent = " " * (width + 2)
+    lines: list[Text] = []
+    for key, value in shown.items():
+        line = Text()
+        line.append(f"{key:<{width}}  ", style="dim")
+        if key == "status":
+            color = colors[STATUS_COLORS.get(str(value), OTHER_STATUS_COLOR)]
+            line.append_text(theme.powerline((str(value).replace("_", " "), color)))
+        else:
+            rendered = render_value(value)
+            # Continuation lines start under the value column.
+            parts = rendered.split("\n", allow_blank=True)
+            line.append_text(Text(f"\n{indent}").join(parts))
+        lines.append(line)
     return Text("\n").join(lines)
 
 
