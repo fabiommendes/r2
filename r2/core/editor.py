@@ -10,6 +10,9 @@ from r2.core.links import Link
 
 DEFAULT_EDITOR = "micro"
 
+# Editors that take "--goto PATH:LINE" instead of "+LINE PATH".
+GOTO_EDITORS = {"code", "code-insiders", "codium", "cursor", "windsurf"}
+
 
 def editor_command(link: Link) -> list[str]:
     """Build the command that opens link in a terminal editor.
@@ -19,7 +22,8 @@ def editor_command(link: Link) -> list[str]:
     editor, which would return at once instead of taking over the terminal.
 
     Most terminal editors (micro, vim, nvim, nano, emacs) accept "+LINE" to
-    jump to a line.
+    jump to a line. VS Code and its forks read "+LINE" as a file name, so
+    they get "--goto PATH:LINE" instead.
     """
     editor = (
         os.environ.get("R2_EDITOR")
@@ -28,9 +32,11 @@ def editor_command(link: Link) -> list[str]:
         or DEFAULT_EDITOR
     )
     command = shlex.split(editor)
-    if link.start is not None:
-        command.append(f"+{link.start}")
-    return [*command, str(link.path)]
+    if link.start is None:
+        return [*command, str(link.path)]
+    if Path(command[0]).name in GOTO_EDITORS:
+        return [*command, "--goto", f"{link.path}:{link.start}"]
+    return [*command, f"+{link.start}", str(link.path)]
 
 
 def edit_file(path: Path) -> None:

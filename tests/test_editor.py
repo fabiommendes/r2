@@ -15,7 +15,9 @@ def test_editor_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("R2_EDITOR")
     assert editor_command(link) == ["nano", "+10", "/a.py"]
     monkeypatch.delenv("EDITOR")
-    assert editor_command(link) == ["code", "+10", "/a.py"]
+    assert editor_command(link) == ["code", "--goto", "/a.py:10"]
+    monkeypatch.setenv("VISUAL", "/usr/bin/codium -w")
+    assert editor_command(link) == ["/usr/bin/codium", "-w", "--goto", "/a.py:10"]
     monkeypatch.delenv("VISUAL")
     assert editor_command(Link(Path("/a.py"))) == ["micro", "/a.py"]
 
