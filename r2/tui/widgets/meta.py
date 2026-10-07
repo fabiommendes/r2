@@ -45,9 +45,12 @@ def render_value(value: Any) -> Text:
     return Text("\n" + dumped.rstrip("\n"))
 
 
-def clickable(text: Text, key: str) -> Text:
-    """Make a click on text post MetaBar.FieldClicked for key."""
-    text.apply_meta({"@click": f"field({key!r})"})
+def clickable(text: Text, key: str, value: str = "") -> Text:
+    """Make a click on text post MetaBar.FieldClicked for key and value.
+
+    Value tells apart the items of a list, for instance.
+    """
+    text.apply_meta({"@click": f"field({key!r}, {value!r})"})
     return text
 
 
@@ -99,9 +102,10 @@ class MetaBar(Static):
     class FieldClicked(Message):
         """A clickable field was clicked."""
 
-        def __init__(self, key: str) -> None:
+        def __init__(self, key: str, value: str) -> None:
             super().__init__()
             self.key = key
+            self.value = value
 
     def __init__(self, fields: Mapping[str, FieldRenderer] | None = None) -> None:
         """Fields map keys to their own renderers, as in render_meta."""
@@ -123,5 +127,5 @@ class MetaBar(Static):
     def link_style_hover(self) -> Style:
         return Style(underline=True)
 
-    def action_field(self, key: str) -> None:
-        self.post_message(self.FieldClicked(key))
+    def action_field(self, key: str, value: str = "") -> None:
+        self.post_message(self.FieldClicked(key, value))

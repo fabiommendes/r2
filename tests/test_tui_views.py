@@ -92,3 +92,26 @@ def test_clicking_the_status_pill_opens_the_status_menu(
         assert isinstance(app.screen, StatusMenu)
 
     drive(test, monkeypatch)
+
+
+def test_clicking_a_related_issue_opens_it(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    issues = tmp_path / "dev" / "issues"
+    issues.mkdir(parents=True)
+    (issues / "old.md").write_text("---\ntype: issue\nstatus: todo\n---\n\n# Old\n")
+    issue = issues / "new.md"
+    issue.write_text("---\ntype: issue\nstatus: todo\nrelatedTo: [old]\n---\n\n# New\n")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        app.query_one(TabbedContent).active = "issues"
+        await pilot.pause()
+        browser = app.query_one("#issues MarkdownBrowser", MarkdownBrowser)
+        await browser.open(issue)
+        await pilot.pause()
+        # Padding, then the "relatedTo" key column, on the third line.
+        await pilot.click("#issues MetaBar", offset=(13, 2))
+        await pilot.pause()
+        assert browser.current == issues / "old.md"
+
+    drive(test, monkeypatch)

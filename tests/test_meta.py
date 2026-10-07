@@ -1,10 +1,13 @@
 import datetime
+from pathlib import Path
 
 from r2.core.issues import split_frontmatter
-from r2.tui.views.issues import ISSUE_FIELDS, STATUS_COLORS
+from r2.tui.views.issues import STATUS_COLORS, issue_fields
 from r2.tui.widgets.meta import render_meta
 
-COLORS = {name: "#808080" for name in [*STATUS_COLORS.values(), "secondary"]}
+COLORS = {
+    name: "#808080" for name in [*STATUS_COLORS.values(), "secondary", "text-accent"]
+}
 
 
 def test_split_frontmatter() -> None:
@@ -35,7 +38,7 @@ def test_issue_fields_pill_the_status_and_skip_normal_values() -> None:
         "created": datetime.date(2026, 10, 2),
         "empty": [],
     }
-    lines = render_meta(meta, COLORS, ISSUE_FIELDS).plain.splitlines()
+    lines = render_meta(meta, COLORS, issue_fields(lambda: None)).plain.splitlines()
     assert lines[0] == "type     issue"
     assert lines[1] == "status   \ue0b6in progress\ue0b4"
     assert lines[2:] == ["kind     defect", "created  2026-10-02"]
@@ -59,4 +62,22 @@ def test_nested_values_show_as_yaml_under_the_key() -> None:
         "       teams:",
         "       - a",
         "       - b",
+    ]
+
+
+def test_related_entries_link_to_existing_files_only(tmp_path: Path) -> None:
+    (tmp_path / "dev" / "issues").mkdir(parents=True)
+    (tmp_path / "dev" / "issues" / "old-issue.md").write_text("")
+    (tmp_path / "spec.md").write_text("")
+    meta = {"relatedTo": ["old-issue", "gone", "spec.md"]}
+    text = render_meta(meta, COLORS, issue_fields(lambda: tmp_path))
+    assert text.plain == "relatedTo  old-issue ↗; gone; spec.md ↗"
+    clicks = [
+        span.style.meta["@click"]
+        for span in text.spans
+        if not isinstance(span.style, str) and "@click" in span.style.meta
+    ]
+    assert clicks == [
+        "field('relatedTo', 'old-issue')",
+        "field('relatedTo', 'spec.md')",
     ]

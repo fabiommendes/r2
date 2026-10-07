@@ -2,7 +2,7 @@
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any
 from urllib.parse import urlparse
 
 from textual.app import ComposeResult
@@ -384,9 +384,6 @@ class MarkdownBrowser(Horizontal):
     }
     """
 
-    META_FIELDS: ClassVar[Mapping[str, FieldRenderer]] = {}
-    """Frontmatter keys the document pane renders its own way."""
-
     def __init__(self, key: str, sections: dict[str, str]) -> None:
         """Sections map titles to directories relative to the project root.
 
@@ -402,7 +399,11 @@ class MarkdownBrowser(Horizontal):
     def compose(self) -> ComposeResult:
         yield from self.compose_drawer()
         yield Splitter(self.key)
-        yield MarkdownPane(self.META_FIELDS)
+        yield MarkdownPane(self.meta_fields())
+
+    def meta_fields(self) -> Mapping[str, FieldRenderer]:
+        """Frontmatter keys the document pane renders its own way."""
+        return {}
 
     def compose_drawer(self) -> ComposeResult:
         """The left side; its first focusable widget must be the tree."""

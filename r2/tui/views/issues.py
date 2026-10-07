@@ -1,5 +1,6 @@
 """Issues kept as markdown files in the project."""
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -30,7 +31,13 @@ from r2.tui import theme
 from r2.tui.views.base import View
 from r2.tui.widgets.issue_form import IssueForm
 from r2.tui.widgets.markdown import MarkdownBrowser
-from r2.tui.widgets.meta import FieldRenderer, MetaBar, clickable, render_value
+from r2.tui.widgets.meta import (
+    SEPARATOR,
+    FieldRenderer,
+    MetaBar,
+    clickable,
+    render_value,
+)
 from r2.tui.widgets.status_menu import StatusMenu
 
 # Theme variable that colors the status pill, by status.
@@ -59,13 +66,55 @@ def unless_normal(value: Any, colors: dict[str, str]) -> Text | None:
     return None if value == "normal" else render_value(value)
 
 
-ISSUE_FIELDS: dict[str, FieldRenderer] = {
-    "status": status_pill,
-    "priority": unless_normal,
-    "severity": unless_normal,
-}
-
 ISSUES_DIR = "dev/issues"
+
+LINK_MARK = " ↗"
+
+
+def resolve_related(root: Path, ref: str) -> Path | None:
+    """The Markdown file a relatedTo entry names, if it exists.
+
+    An entry is either an issue slug or a path relative to the project root.
+    """
+    path = root / ref if ref.endswith(".md") else root / ISSUES_DIR / f"{ref}.md"
+    return path if path.is_file() else None
+
+
+def related_links(project_root: Callable[[], Path | None]) -> FieldRenderer:
+    """Render relatedTo entries as links to the files they name.
+
+    Entries resolve in the project that project_root returns when the
+    frontmatter renders. Entries without a file show dim.
+    """
+
+    def render(value: Any, colors: dict[str, str]) -> Text:
+        root = project_root()
+        refs = value if isinstance(value, list) else [value]
+        text = Text()
+        for index, ref in enumerate(map(str, refs)):
+            if index:
+                text.append(SEPARATOR, style="dim")
+            if root is None or resolve_related(root, ref) is None:
+                text.append(ref, style="dim")
+                continue
+            link = Text(ref, style=f"underline {colors['text-accent']}")
+            link.append(LINK_MARK, style=colors["text-accent"])
+            text.append_text(clickable(link, "relatedTo", ref))
+        return text
+
+    return render
+
+
+def issue_fields(project_root: Callable[[], Path | None]) -> dict[str, FieldRenderer]:
+    """How the issue browser renders the frontmatter of issues."""
+    return {
+        "status": status_pill,
+        "priority": unless_normal,
+        "severity": unless_normal,
+        "relatedTo": related_links(project_root),
+    }
+
+
 SECTIONS = {"Issues": ISSUES_DIR}
 
 
@@ -91,8 +140,6 @@ def first_section_line(text: str) -> int:
 class IssueBrowser(MarkdownBrowser):
     """Issues grouped by status, with a filter under the tree."""
 
-    META_FIELDS = ISSUE_FIELDS
-
     DEFAULT_CSS = """
     IssueBrowser > #drawer {
         height: 1fr;
@@ -107,6 +154,9 @@ class IssueBrowser(MarkdownBrowser):
         self.expanded: dict[str, bool] = {}
         """Groups the user opened or closed, by status."""
         self._groups: dict[TreeNode[Path], str] = {}
+
+    def meta_fields(self) -> dict[str, FieldRenderer]:
+        return issue_fields(lambda: self.root)
 
     def compose_drawer(self) -> ComposeResult:
         tree: Tree[Path] = Tree("issues")
@@ -216,10 +266,14 @@ class IssuesView(View):
         self._stub = (path, stub)
         self.post_message(self.EditFile(Link(path, len(text.splitlines()) + 1)))
 
-    def on_meta_bar_field_clicked(self, event: MetaBar.FieldClicked) -> None:
+    async def on_meta_bar_field_clicked(self, event: MetaBar.FieldClicked) -> None:
         if event.key == "status":
             event.stop()
             self.action_status()
+        elif event.key == "relatedTo" and self.context is not None:
+            event.stop()
+            if path := resolve_related(self.context.root, event.value):
+                await self.query_one(MarkdownBrowser).open(path)
 
     def action_status(self) -> None:
         path = self.query_one(MarkdownBrowser).current
