@@ -2,20 +2,19 @@
 
 from pathlib import Path
 
-from rich.markup import escape
 from rich.style import Style
 from rich.text import Text
-from textual import events
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.message import Message
 from textual.reactive import reactive
 from textual.strip import Strip
-from textual.widgets import Input, Static, TextArea
+from textual.widgets import Static, TextArea
 from textual.widgets.text_area import Selection
 
 from r2.core.links import Link, is_binary
+from r2.tui.widgets.search import Match, SearchBar, describe, find_matches
 
 # Importing the widget queries the terminal for its graphics protocol, which
 # must happen before Textual takes over the terminal.
@@ -70,29 +69,6 @@ def faded_rows(first: int, last: int, start: int, end: int, total: int) -> set[i
     if last < total:
         rows.update(range(end + CONTEXT_LINES - first + 1, last - first + 1))
     return rows
-
-
-Match = tuple[int, int, int]
-"""A search match as row, start column and end column."""
-
-
-def find_matches(lines: list[str], pattern: str) -> list[Match]:
-    """Find every occurrence of pattern in lines, in document order.
-
-    The search ignores case unless pattern has an uppercase letter.
-    """
-    if not pattern:
-        return []
-    fold = pattern == pattern.lower()
-    needle = pattern.lower() if fold else pattern
-    matches: list[Match] = []
-    for row, line in enumerate(lines):
-        haystack = line.lower() if fold else line
-        start = haystack.find(needle)
-        while start >= 0:
-            matches.append((row, start, start + len(needle)))
-            start = haystack.find(needle, start + len(needle))
-    return matches
 
 
 class ExcerptArea(TextArea):
@@ -238,9 +214,6 @@ class FilePreview(Vertical):
     FilePreview.-excerpt > #above, FilePreview.-excerpt > #rest {
         display: block;
     }
-    FilePreview > #search {
-        display: none;
-    }
     FilePreview > Image {
         width: auto;
         height: auto;
@@ -268,7 +241,7 @@ class FilePreview(Vertical):
         yield ExcerptArea()
         yield Static(id="rest")
         yield Image()
-        yield Input(id="search", placeholder="/ search", compact=True)
+        yield SearchBar(id="search")
 
     def show(self, link: Link | None, label: str = "") -> None:
         """Display link, using label as the title."""
@@ -326,13 +299,8 @@ class FilePreview(Vertical):
         """Show the heading with the search state after it."""
         area = self.query_one(ExcerptArea)
         markup = self._heading
-        if area.pattern:
-            pattern = escape(area.pattern)
-            if area.matches:
-                state = f"{area.current + 1}/{len(area.matches)}"
-                markup += f"  [dim]/{pattern} {state}, ↑↓ to move, esc to clear[/]"
-            else:
-                markup += f"  [dim]/{pattern} not found[/]"
+        if state := describe(area.pattern, area.current, len(area.matches)):
+            markup += f"  [dim]{state}[/]"
         self.query_one("#heading", Static).update(markup)
 
     def on_excerpt_area_match_changed(self, event: ExcerptArea.MatchChanged) -> None:
@@ -345,12 +313,9 @@ class FilePreview(Vertical):
         return True
 
     def action_search(self) -> None:
-        search = self.query_one("#search", Input)
-        search.value = ""
-        search.display = True
-        search.focus()
+        self.query_one(SearchBar).open()
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:
+    def on_input_submitted(self, event: SearchBar.Submitted) -> None:
         event.stop()
         self._close_search()
         if not event.value:
@@ -360,13 +325,12 @@ class FilePreview(Vertical):
             self.full = True
         self.query_one(ExcerptArea).search(event.value)
 
-    def on_key(self, event: events.Key) -> None:
-        if event.key == "escape" and self.query_one("#search", Input).has_focus:
-            event.stop()
-            self._close_search()
+    def on_search_bar_cancelled(self, event: SearchBar.Cancelled) -> None:
+        event.stop()
+        self.query_one(ExcerptArea).focus()
 
     def _close_search(self) -> None:
-        self.query_one("#search", Input).display = False
+        self.query_one(SearchBar).close()
         self.query_one(ExcerptArea).focus()
 
     def _update(self) -> None:

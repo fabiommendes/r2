@@ -6,7 +6,8 @@ from textual.widgets import Input
 from textual.widgets.text_area import Selection
 
 from r2.core.links import Link
-from r2.tui.widgets.preview import ExcerptArea, FilePreview, faded_rows, find_matches
+from r2.tui.widgets.preview import ExcerptArea, FilePreview, faded_rows
+from r2.tui.widgets.search import find_matches
 
 
 def test_fades_both_sides_inside_a_long_file() -> None:

@@ -312,7 +312,10 @@ left to open the command palette, where you can also change the theme.
 | `n` | Create an issue (Issues view) |
 | `c` | Comment on the issue on display (Issues view) |
 | `s` | Change the status of the issue on display (Issues view) |
-| `/` | Filter the issues (Issues view) |
+| `/` | Search the file or document on display; in the Issues tree, filter the issues |
+| `↑` `↓` | During a search, go to the previous or next match |
+| `Esc` | Clear the search |
+| `ctrl+shift+c` | Copy the selection in a file preview, where the terminal passes the key on |
 | `F5` | Read the file on display and the git status again |
 | `q` | Quit |
 
