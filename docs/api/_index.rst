@@ -28,6 +28,7 @@ Modules
    r2.tui.views.live
    r2.tui.views.project
    r2.tui.widgets
+   r2.tui.widgets.command_box
    r2.tui.widgets.issue_form
    r2.tui.widgets.markdown
    r2.tui.widgets.meta

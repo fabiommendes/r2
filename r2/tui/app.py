@@ -32,6 +32,7 @@ from r2.tui import theme
 from r2.tui.pane import Direction, PaneCommand, PluginPane
 from r2.tui.plugins import PaneEntry, load_panes
 from r2.tui.views import VIEWS, View
+from r2.tui.widgets.command_box import CommandBox
 from r2.tui.widgets.splitter import Splitter
 
 MAX_RECONNECT_DELAY = 30.0
@@ -90,6 +91,7 @@ class R2App(App[None]):
         Binding("o", "open", "Open"),
         Binding("i", "ide", "IDE"),
         Binding("t", "shell", "Shell"),
+        Binding("dollar_sign", "run_command", "Run"),
         Binding("f5", "refresh", "Refresh", show=False),
         *(
             Binding(str(number), f"show_view('{view.ID}')", view.TITLE, show=False)
@@ -346,6 +348,11 @@ class R2App(App[None]):
         root = self.context.root if self.context else Path.cwd()
         self._hand_over(shell_command(), cwd=root, banner=SHELL_BANNER)
         self._active_view().reload()
+
+    def action_run_command(self) -> None:
+        """Run shell commands in the project root and show their output."""
+        root = self.context.root if self.context else Path.cwd()
+        self.push_screen(CommandBox(root), lambda _: self.action_refresh())
 
     def action_refresh(self) -> None:
         """Read the files on screen and the git status again."""

@@ -10,10 +10,11 @@ from pathlib import Path
 
 import pytest
 from textual.pilot import Pilot
-from textual.widgets import Input, TabbedContent, Tree
+from textual.widgets import Input, RichLog, TabbedContent, Tree
 
 from r2.core.issues import Issue
 from r2.tui.app import R2App
+from r2.tui.widgets.command_box import CommandBox
 from r2.tui.widgets.issue_form import Cycle, IssueForm
 from r2.tui.widgets.markdown import MarkdownBrowser
 from r2.tui.widgets.status_menu import StatusMenu
@@ -193,3 +194,45 @@ def test_issue_form_moves_with_up_down_and_creates_on_enter(
     assert issue is not None
     assert issue.title == "Crash"
     assert issue.meta["priority"] == "high"
+
+
+def test_run_command_shows_the_output_of_a_command_run_in_the_project(
+    config: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("SHELL", "/bin/sh")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        await pilot.press("dollar_sign")
+        await pilot.pause()
+        box = app.screen
+        assert isinstance(box, CommandBox)
+        await pilot.press(*"pwd; echo hi; false", "enter")
+        assert box._run is not None
+        await box._run.wait()
+        await pilot.pause()
+        lines = [strip.text for strip in box.query_one(RichLog).lines]
+        assert lines[:4] == ["$ pwd; echo hi; false", str(tmp_path), "hi", "exit 1"]
+        await pilot.press("escape")
+        assert not isinstance(app.screen, CommandBox)
+
+    drive(test, monkeypatch)
+
+
+def test_closing_the_command_box_kills_the_running_command(
+    config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("SHELL", "/bin/sh")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        await pilot.press("dollar_sign")
+        await pilot.pause()
+        box = app.screen
+        assert isinstance(box, CommandBox)
+        await pilot.press(*"sleep 30", "enter")
+        await pilot.pause(0.2)
+        process = box._process
+        assert process is not None
+        await pilot.press("escape")
+        assert await asyncio.wait_for(process.wait(), 5) != 0
+
+    drive(test, monkeypatch)

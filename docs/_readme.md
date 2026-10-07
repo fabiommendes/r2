@@ -158,6 +158,7 @@ left to open the command palette, where you can also change the theme.
 | `o` | Open the current file in its default application |
 | `i` | Open the project in the GUI editor |
 | `t` | Open a shell in the project root |
+| `$` | Run a shell command in the project root and show its output |
 | `p` | Pin the current project instead of following herdr focus |
 | `n` | Create an issue (Issues view) |
 | `c` | Comment on the issue on display (Issues view) |

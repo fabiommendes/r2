@@ -1,0 +1,5 @@
+r2.tui.widgets.command_box
+==========================
+
+.. automodule:: r2.tui.widgets.command_box
+   :members:
