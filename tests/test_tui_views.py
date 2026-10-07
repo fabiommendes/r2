@@ -13,6 +13,7 @@ from textual.pilot import Pilot
 from textual.widgets import TabbedContent, Tree
 
 from r2.tui.app import R2App
+from r2.tui.widgets.issue_form import Cycle, IssueForm
 from r2.tui.widgets.markdown import MarkdownBrowser
 from r2.tui.widgets.status_menu import StatusMenu
 
@@ -143,5 +144,27 @@ def test_a_related_spec_opens_in_the_docs_view(
         assert docs.current == spec
         cursor = docs.query_one(Tree).cursor_node
         assert cursor is not None and cursor.data == spec
+
+    drive(test, monkeypatch)
+
+
+def test_issue_form_steps_through_values_with_the_arrows(
+    config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        form = IssueForm()
+        await app.push_screen(form)
+        await pilot.pause()
+        kind = form.query_one("#kind", Cycle)
+        priority = form.query_one("#priority", Cycle)
+        assert kind.value is None
+        kind.focus()
+        await pilot.press("right")
+        assert kind.value == "defect"
+        await pilot.press("left", "left")
+        assert kind.value == "task"
+        priority.focus()
+        await pilot.press("right")
+        assert priority.value == "high"
 
     drive(test, monkeypatch)

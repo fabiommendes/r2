@@ -1,12 +1,15 @@
 """Modal form that collects the metadata of a new issue."""
 
+from collections.abc import Sequence
 from typing import Any
 
+from textual import events
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Grid, Horizontal
+from textual.reactive import reactive
 from textual.screen import ModalScreen
-from textual.widgets import Button, Input, Label, Select
+from textual.widgets import Button, Input, Label, Static
 
 from r2.core.issues import KINDS, PRIORITIES, SEVERITIES, Issue, new_issue
 
@@ -26,6 +29,50 @@ def template(kind: str | None) -> str:
 
 def split_list(text: str) -> list[str]:
     return [item.strip() for item in text.split(",") if item.strip()]
+
+
+class Cycle(Static, can_focus=True):
+    """Pick one of a few values by stepping through them with the arrow keys.
+
+    None stands for an unset value and is shown as a dash.
+    """
+
+    BINDINGS = [
+        Binding("left", "step(-1)", "Previous", show=False),
+        Binding("right", "step(1)", "Next", show=False),
+    ]
+
+    DEFAULT_CSS = """
+    Cycle {
+        width: 1fr;
+        height: 1;
+    }
+    Cycle:focus {
+        background: $primary-muted;
+    }
+    """
+
+    index: reactive[int] = reactive(0)
+
+    def __init__(
+        self, values: Sequence[str | None], value: str | None, id: str
+    ) -> None:
+        super().__init__(id=id)
+        self.values = values
+        self.set_reactive(Cycle.index, values.index(value))
+
+    @property
+    def value(self) -> str | None:
+        return self.values[self.index]
+
+    def render(self) -> str:
+        return f"[dim]‹[/] {self.value or '—'} [dim]›[/]"
+
+    def action_step(self, delta: int) -> None:
+        self.index = (self.index + delta) % len(self.values)
+
+    def on_click(self, event: events.Click) -> None:
+        self.action_step(-1 if event.x < 2 else 1)
 
 
 class IssueForm(ModalScreen[Issue | None]):
@@ -55,10 +102,10 @@ class IssueForm(ModalScreen[Issue | None]):
     IssueForm Label {
         color: $text-muted;
     }
-    IssueForm Input, IssueForm SelectCurrent {
+    IssueForm Input {
         background: $surface-lighten-1;
     }
-    IssueForm Input:focus, IssueForm Select:focus > SelectCurrent {
+    IssueForm Input:focus {
         background: $primary-muted;
     }
     IssueForm #buttons {
@@ -75,9 +122,9 @@ class IssueForm(ModalScreen[Issue | None]):
             yield Input(
                 id="title", placeholder="What is wrong or missing", compact=True
             )
-            yield from self._select("Kind", "kind", KINDS, None)
-            yield from self._select("Priority", "priority", PRIORITIES, "normal")
-            yield from self._select("Severity", "severity", SEVERITIES, "normal")
+            yield from self._cycle("Kind", "kind", [None, *KINDS], None)
+            yield from self._cycle("Priority", "priority", PRIORITIES, "normal")
+            yield from self._cycle("Severity", "severity", SEVERITIES, "normal")
             yield from self._input("Tags", "tags", "comma separated")
             yield from self._input("Related to", "relatedTo", "entity slugs or paths")
             yield from self._input("Milestone", "milestone", "only for one milestone")
@@ -89,17 +136,11 @@ class IssueForm(ModalScreen[Issue | None]):
         yield Label(label)
         yield Input(id=id, placeholder=placeholder, compact=True)
 
-    def _select(
-        self, label: str, id: str, values: list[str], value: str | None
+    def _cycle(
+        self, label: str, id: str, values: Sequence[str | None], value: str | None
     ) -> ComposeResult:
         yield Label(label)
-        yield Select(
-            [(item, item) for item in values],
-            id=id,
-            value=value if value is not None else Select.NULL,
-            allow_blank=value is None,
-            compact=True,
-        )
+        yield Cycle(values, value, id=id)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "create":
@@ -125,8 +166,7 @@ class IssueForm(ModalScreen[Issue | None]):
             "milestone": self.query_one("#milestone", Input).value.strip() or None,
         }
         for key in ("kind", "priority", "severity"):
-            value = self.query_one(f"#{key}", Select).value
-            meta[key] = value if isinstance(value, str) else None
+            meta[key] = self.query_one(f"#{key}", Cycle).value
         issue = new_issue(title, **meta)
         issue.description = template(meta["kind"])
         self.dismiss(issue)
