@@ -320,6 +320,20 @@ class R2App(App[None]):
         if link is not None:
             self._edit(link)
 
+    async def on_view_open_file(self, message: View.OpenFile) -> None:
+        views = list(self.query(View))
+        view = next((v for v in views if v.shows(message.path)), None) or next(
+            (v for v in views if v.SHOWS_ANY_FILE), None
+        )
+        if view is None:
+            return
+        # Hiding the focused widget moves the focus to a sibling in the same
+        # tab, which would switch the tabs back. Activating the tab focuses
+        # the new view anyway.
+        self.screen.set_focus(None)
+        self.query_one(TabbedContent).active = view.ID
+        await view.show_file(message.path)
+
     def on_view_edit_file(self, message: View.EditFile) -> None:
         self._edit(message.link)
 

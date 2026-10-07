@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 from textual.pilot import Pilot
-from textual.widgets import TabbedContent
+from textual.widgets import TabbedContent, Tree
 
 from r2.tui.app import R2App
 from r2.tui.widgets.markdown import MarkdownBrowser
@@ -113,5 +113,35 @@ def test_clicking_a_related_issue_opens_it(
         await pilot.click("#issues MetaBar", offset=(13, 2))
         await pilot.pause()
         assert browser.current == issues / "old.md"
+        cursor = browser.query_one(Tree).cursor_node
+        assert cursor is not None and cursor.data == issues / "old.md"
+
+    drive(test, monkeypatch)
+
+
+def test_a_related_spec_opens_in_the_docs_view(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    spec = tmp_path / "dev" / "spec" / "format.md"
+    spec.parent.mkdir(parents=True)
+    spec.write_text("# Format\n")
+    issue = tmp_path / "dev" / "issues" / "new.md"
+    issue.parent.mkdir(parents=True)
+    issue.write_text(
+        "---\ntype: issue\nstatus: todo\nrelatedTo: [dev/spec/format.md]\n---\n"
+    )
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        app.query_one(TabbedContent).active = "issues"
+        await pilot.pause()
+        await app.query_one("#issues MarkdownBrowser", MarkdownBrowser).open(issue)
+        await pilot.pause()
+        await pilot.click("#issues MetaBar", offset=(13, 2))
+        await pilot.pause()
+        assert app.query_one(TabbedContent).active == "docs"
+        docs = app.query_one("#docs MarkdownBrowser", MarkdownBrowser)
+        assert docs.current == spec
+        cursor = docs.query_one(Tree).cursor_node
+        assert cursor is not None and cursor.data == spec
 
     drive(test, monkeypatch)

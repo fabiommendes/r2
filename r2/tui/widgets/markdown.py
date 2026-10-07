@@ -427,9 +427,33 @@ class MarkdownBrowser(Horizontal):
             for path in sorted(folder.rglob("*.md")) if folder.is_dir() else []:
                 section.add_leaf(str(path.relative_to(folder)), data=path)
 
+    def contains(self, path: Path) -> bool:
+        """Whether path is a Markdown file in one of the sections."""
+        if self.root is None or path.suffix.lower() != ".md":
+            return False
+        folders = [self.root / directory for directory in self.sections.values()]
+        return any(path.is_relative_to(folder) for folder in folders)
+
     async def open(self, path: Path) -> None:
         self.current = path
+        self.reveal(path)
         await self.query_one(MarkdownPane).open(path)
+
+    def reveal(self, path: Path) -> None:
+        """Move the tree cursor to the leaf of path, unfolding its section."""
+        tree: Tree[Path] = self.query_one(Tree)
+        nodes = list(tree.root.children)
+        while nodes:
+            node = nodes.pop(0)
+            if node.data == path:
+                parent = node.parent
+                while parent is not None and parent is not tree.root:
+                    parent.expand()
+                    parent = parent.parent
+                # The cursor can only land once the unfolded nodes are laid out.
+                tree.call_after_refresh(tree.move_cursor, node)
+                return
+            nodes.extend(node.children)
 
     async def reload(self, root: Path) -> None:
         """List the files again and show the current document as it is now."""

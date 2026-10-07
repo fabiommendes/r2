@@ -1,5 +1,6 @@
 """Base class for r2's views."""
 
+from pathlib import Path
 from typing import ClassVar, Literal
 
 from textual.binding import Binding
@@ -40,8 +41,18 @@ class View(Widget):
             super().__init__()
             self.link = link
 
+    class OpenFile(Message):
+        """Ask the app to show path in the view that suits it best."""
+
+        def __init__(self, path: Path) -> None:
+            super().__init__()
+            self.path = path
+
     ID: ClassVar[str]
     TITLE: ClassVar[str]
+
+    SHOWS_ANY_FILE: ClassVar[bool] = False
+    """Whether the view takes files no other view claims with shows()."""
 
     DEFAULT_CSS = """
     View {
@@ -69,6 +80,17 @@ class View(Widget):
     def current_link(self) -> Link | None:
         """The file the view is showing, used to open it in an editor."""
         return None
+
+    def shows(self, path: Path) -> bool:
+        """Whether path belongs to this view, as an issue to the issues view."""
+        for browser in self.query(MarkdownBrowser):
+            return browser.contains(path)
+        return False
+
+    async def show_file(self, path: Path) -> None:
+        """Display path, which shows() accepted or SHOWS_ANY_FILE allows."""
+        for browser in self.query(MarkdownBrowser):
+            await browser.open(path)
 
     def reload(self) -> None:
         """Read the files on screen again, for instance after an edit."""

@@ -60,6 +60,7 @@ class ProjectTree(DirectoryTree):
 class ProjectView(View):
     ID = "project"
     TITLE = "Project"
+    SHOWS_ANY_FILE = True
 
     DEFAULT_CSS = """
     ProjectView > ProjectTree {
@@ -83,6 +84,11 @@ class ProjectView(View):
         super().set_context(context)
         self.query_one(ProjectTree).path = context.root
         self._show(context.view_state.get(self.ID))
+
+    async def show_file(self, path: Path) -> None:
+        if self.context is not None:
+            self.context.view_state[self.ID] = path
+        self._show(path)
 
     def current_link(self) -> Link | None:
         if self.context is None:

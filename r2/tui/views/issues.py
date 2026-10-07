@@ -266,14 +266,14 @@ class IssuesView(View):
         self._stub = (path, stub)
         self.post_message(self.EditFile(Link(path, len(text.splitlines()) + 1)))
 
-    async def on_meta_bar_field_clicked(self, event: MetaBar.FieldClicked) -> None:
+    def on_meta_bar_field_clicked(self, event: MetaBar.FieldClicked) -> None:
         if event.key == "status":
             event.stop()
             self.action_status()
         elif event.key == "relatedTo" and self.context is not None:
             event.stop()
             if path := resolve_related(self.context.root, event.value):
-                await self.query_one(MarkdownBrowser).open(path)
+                self.post_message(self.OpenFile(path))
 
     def action_status(self) -> None:
         path = self.query_one(MarkdownBrowser).current
