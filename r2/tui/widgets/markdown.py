@@ -25,24 +25,46 @@ from r2.tui.widgets.splitter import Splitter
 # Comments of an issue shown open; older ones start collapsed.
 OPEN_COMMENTS = 3
 
-BlockMatch = tuple[MarkdownBlock, int, int]
-"""A search match as the block and the span in its rendered text."""
+# Widgets with text to search: the blocks, and the table cells, which are
+# plain Statics the table builds from its row blocks without mounting them.
+SEARCHED = "MarkdownBlock, MarkdownTableContent > Static"
+
+TextMatch = tuple[Widget, int, int]
+"""A search match as a block or cell and the span in its text."""
 
 
-def rendered_text(block: MarkdownBlock) -> Content:
-    """The text a block shows, before any search highlight."""
+def shown_text(widget: Widget) -> Content:
+    """The text a block or table cell shows now."""
+    if isinstance(widget, MarkdownBlock):
+        return widget._content
+    assert isinstance(widget, Static)
+    content = widget.content
+    return content if isinstance(content, Content) else Content(str(content))
+
+
+def rendered_text(widget: Widget) -> Content:
+    """The text a block or table cell shows, before any search highlight."""
     # A fence keeps its text in a label, and _content is empty until a
     # theme change sets it.
-    if isinstance(block, MarkdownFence):
-        return block._highlighted_code
-    return block._content
+    if isinstance(widget, MarkdownFence):
+        return widget._highlighted_code
+    return shown_text(widget)
 
 
-def text_widget(block: MarkdownBlock) -> Widget:
-    """The widget that draws the text of block."""
-    if isinstance(block, MarkdownFence):
-        return block.query_one(Label)
-    return block
+def show_text(widget: Widget, content: Content) -> None:
+    """Make a block or table cell show content."""
+    if isinstance(widget, MarkdownBlock):
+        widget.set_content(content)
+    else:
+        assert isinstance(widget, Static)
+        widget.update(content)
+
+
+def text_widget(widget: Widget) -> Widget:
+    """The widget that draws the text of a block or table cell."""
+    if isinstance(widget, MarkdownFence):
+        return widget.query_one(Label)
+    return widget
 
 
 def match_row(content: Content, width: int, start: int, wrap: bool) -> int:
@@ -169,7 +191,8 @@ class MarkdownPane(Vertical):
     """A rendered Markdown document under a bar with its frontmatter.
 
     / searches the text as shown, not the Markdown source, so markup and
-    link targets do not match. Tables are not searched yet.
+    link targets do not match. A match cut off by the ellipsis of a narrow
+    table cell counts but stays hidden.
     """
 
     COMPONENT_CLASSES = {"markdown-pane--match", "markdown-pane--current"}
@@ -209,11 +232,11 @@ class MarkdownPane(Vertical):
     def __init__(self) -> None:
         super().__init__()
         self.pattern = ""
-        self.matches: list[BlockMatch] = []
+        self.matches: list[TextMatch] = []
         self.match_index = -1
         """Index of the selected match, or -1 before the first one."""
-        self._painted: dict[MarkdownBlock, tuple[Content, Content]] = {}
-        """Blocks with highlights, mapped to their text before and after."""
+        self._painted: dict[Widget, tuple[Content, Content]] = {}
+        """Blocks and cells with highlights, mapped to their text before and after."""
 
     def compose(self) -> ComposeResult:
         yield MetaBar()
@@ -248,10 +271,10 @@ class MarkdownPane(Vertical):
         self.action_clear_search()
         self.pattern = pattern
         viewer = self.query_one(DocumentViewer)
-        for block in viewer.query(MarkdownBlock):
-            text = rendered_text(block).plain
+        for widget in viewer.query(SEARCHED):
+            text = rendered_text(widget).plain
             for start, end in find_spans(text, pattern):
-                self.matches.append((block, start, end))
+                self.matches.append((widget, start, end))
         if self.matches:
             self._select(0)
         else:
@@ -262,10 +285,10 @@ class MarkdownPane(Vertical):
         self._select((self.match_index + step) % len(self.matches))
 
     def action_clear_search(self) -> None:
-        for block, (before, after) in self._painted.items():
+        for widget, (before, after) in self._painted.items():
             # Skip blocks the document dropped or rendered again since.
-            if block.is_attached and block._content is after:
-                block.set_content(before)
+            if widget.is_attached and shown_text(widget) is after:
+                show_text(widget, before)
         self._painted.clear()
         self.pattern = ""
         self.matches = []
@@ -290,25 +313,23 @@ class MarkdownPane(Vertical):
         """Highlight every match, the current one apart."""
         match_style = self.get_visual_style("markdown-pane--match")
         current_style = self.get_visual_style("markdown-pane--current")
-        styled: dict[MarkdownBlock, Content] = {}
-        for index, (block, start, end) in enumerate(self.matches):
-            if block not in styled:
-                styled[block] = self._painted.get(block, (rendered_text(block), None))[
-                    0
-                ]
+        styled: dict[Widget, Content] = {}
+        for index, (widget, start, end) in enumerate(self.matches):
+            if widget not in styled:
+                styled[widget] = self._original(widget)
             style = current_style if index == self.match_index else match_style
-            styled[block] = styled[block].stylize(style, start, end)
-        for block, after in styled.items():
-            before = self._original(block)
-            block.set_content(after)
+            styled[widget] = styled[widget].stylize(style, start, end)
+        for widget, after in styled.items():
+            before = self._original(widget)
+            show_text(widget, after)
             # Blocks may change the content they are given, so keep theirs.
-            self._painted[block] = (before, block._content)
+            self._painted[widget] = (before, shown_text(widget))
 
-    def _original(self, block: MarkdownBlock) -> Content:
-        """The text of block without the highlights painted on it."""
-        if block in self._painted:
-            return self._painted[block][0]
-        return rendered_text(block)
+    def _original(self, widget: Widget) -> Content:
+        """The text of a block or cell without the highlights painted on it."""
+        if widget in self._painted:
+            return self._painted[widget][0]
+        return rendered_text(widget)
 
     def _scroll_to_current(self) -> None:
         if not self.matches:

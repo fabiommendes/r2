@@ -6,9 +6,9 @@ from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.content import Content
 from textual.widgets import Collapsible, MarkdownViewer
-from textual.widgets._markdown import MarkdownFence
+from textual.widgets._markdown import MarkdownFence, MarkdownParagraph
 
-from r2.tui.widgets.markdown import MarkdownPane, match_row
+from r2.tui.widgets.markdown import MarkdownPane, match_row, shown_text
 from r2.tui.widgets.search import SearchBar
 
 FILLER = "\n\n".join(f"Paragraph {n} of filler text." for n in range(40))
@@ -114,5 +114,28 @@ def test_opens_the_collapsed_comment_with_the_match(tmp_path: Path) -> None:
         await pilot.press("slash", *"needle", "enter")
         await pilot.pause()
         assert not first.collapsed
+
+    run(path, test)
+
+
+def test_searches_table_headers_and_cells(tmp_path: Path) -> None:
+    path = tmp_path / "table.md"
+    path.write_text(
+        f"Intro.\n\n{FILLER}\n\n| Name | Needle |\n| --- | --- |\n| a | b |\n"
+        "| c | the needle |\n\nAfter needle.\n"
+    )
+
+    async def test(app: PaneApp, pilot) -> None:  # type: ignore[no-untyped-def]
+        pane = app.query_one(MarkdownPane)
+        viewer = app.query_one(MarkdownViewer)
+        await pilot.press("slash", *"needle", "enter")
+        await pilot.pause()
+        cells = [w for w, _, _ in pane.matches[:2]]
+        assert [w.has_class("header") for w in cells] == [True, False]
+        assert isinstance(pane.matches[2][0], MarkdownParagraph)
+        assert viewer.scroll_offset.y > 0
+        assert cells[0].region.overlaps(viewer.content_region)
+        await pilot.press("escape")
+        assert all(shown_text(w).spans == [] for w in cells)
 
     run(path, test)
