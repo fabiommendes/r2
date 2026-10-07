@@ -10,11 +10,11 @@ from pathlib import Path
 
 import pytest
 from textual.pilot import Pilot
-from textual.widgets import Input, RichLog, TabbedContent, Tree
+from textual.widgets import Input, Label, RichLog, TabbedContent, Tree
 
 from r2.core.issues import Issue
 from r2.tui.app import R2App
-from r2.tui.widgets.command_box import CommandBox
+from r2.tui.widgets.command_box import CommandBox, CommandRun
 from r2.tui.widgets.issue_form import Cycle, IssueForm
 from r2.tui.widgets.markdown import MarkdownBrowser
 from r2.tui.widgets.status_menu import StatusMenu
@@ -210,15 +210,20 @@ def test_run_command_shows_the_output_of_a_command_run_in_the_project(
         assert box._run is not None
         await box._run.wait()
         await pilot.pause()
-        lines = [strip.text for strip in box.query_one(RichLog).lines]
-        assert lines[:4] == ["$ pwd; echo hi; false", str(tmp_path), "hi", "exit 1"]
+        run = box.query_one(CommandRun)
+        lines = [strip.text for strip in run.query_one(RichLog).lines]
+        assert lines == [str(tmp_path), "hi"]
+        assert str(run.query_one("#status", Label).content) == "exit 1"
+        await pilot.press("ctrl+l")
+        await pilot.pause()
+        assert not box.query(CommandRun)
         await pilot.press("escape")
         assert not isinstance(app.screen, CommandBox)
 
     drive(test, monkeypatch)
 
 
-def test_closing_the_command_box_kills_the_running_command(
+def test_clearing_a_running_command_kills_it(
     config: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("SHELL", "/bin/sh")
@@ -232,7 +237,9 @@ def test_closing_the_command_box_kills_the_running_command(
         await pilot.pause(0.2)
         process = box._process
         assert process is not None
-        await pilot.press("escape")
+        await pilot.click("#clear")
         assert await asyncio.wait_for(process.wait(), 5) != 0
+        await pilot.pause()
+        assert not box.query(CommandRun)
 
     drive(test, monkeypatch)
