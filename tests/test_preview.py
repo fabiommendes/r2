@@ -93,3 +93,16 @@ def test_escape_closes_the_search_bar_without_searching(tmp_path: Path) -> None:
             assert app.query_one(ExcerptArea).matches == []
 
     asyncio.run(main())
+
+
+def test_ctrl_shift_c_copies_the_selection(tmp_path: Path) -> None:
+    path = tmp_path / "notes.txt"
+    path.write_text("one\ntwo\n")
+
+    async def main() -> None:
+        app = PreviewApp(Link(path, 2))
+        async with app.run_test() as pilot:
+            await pilot.press("ctrl+shift+c")
+            assert app.clipboard == "two"
+
+    asyncio.run(main())

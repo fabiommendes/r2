@@ -108,6 +108,8 @@ class ExcerptArea(TextArea):
 
     BINDINGS = [
         Binding("escape", "clear_search", "Clear search"),
+        # Terminals that pass the key through (kitty protocol) send this.
+        Binding("ctrl+shift+c", "copy", show=False),
     ]
 
     class MatchChanged(Message):
