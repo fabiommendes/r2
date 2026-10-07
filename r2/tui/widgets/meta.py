@@ -1,34 +1,19 @@
 """Frontmatter shown as a list of keys above a Markdown document."""
 
 import datetime
+from collections.abc import Callable, Mapping
 from typing import Any
 
 import yaml
 from rich.text import Text
 from textual.widgets import Static
 
-from r2.tui import theme
-
-# Theme variable that colors the status pill, by status.
-STATUS_COLORS = {
-    "backlog": "panel-lighten-2",
-    "todo": "primary",
-    "in_progress": "warning",
-    "blocked": "error",
-    "deferred": "panel-lighten-2",
-    "in_review": "accent",
-    "completed": "success",
-    "wont_fix": "panel",
-    "deprecated": "panel",
-}
-OTHER_STATUS_COLOR = "secondary"
-
-# Keys whose "normal" value is left out, as in the issue files.
-NORMAL_KEYS = {"priority", "severity"}
-
 SEPARATOR = "; "
 
 Scalar = str | int | float | bool | datetime.date
+
+FieldRenderer = Callable[[Any, dict[str, str]], Text | None]
+"""Render the value of one key given the theme variables, or hide it with None."""
 
 
 def _scalar(value: Scalar) -> str:
@@ -58,31 +43,35 @@ def render_value(value: Any) -> Text:
     return Text("\n" + dumped.rstrip("\n"))
 
 
-def render_meta(meta: dict[str, Any], colors: dict[str, str]) -> Text:
+def render_meta(
+    meta: dict[str, Any],
+    colors: dict[str, str],
+    fields: Mapping[str, FieldRenderer] | None = None,
+) -> Text:
     """Render frontmatter with one key per line, values lined up.
 
-    The status shows as a pill colored from the app's theme variables.
+    Fields map keys to renderers that replace render_value for them; colors
+    are the app's theme variables, handed to those renderers. Empty values
+    are left out.
     """
-    shown = {
-        key: value
-        for key, value in meta.items()
-        if value not in (None, "", [], {})
-        and not (key in NORMAL_KEYS and value == "normal")
-    }
+    fields = fields or {}
+    shown: dict[str, Text] = {}
+    for key, value in meta.items():
+        if value in (None, "", [], {}):
+            continue
+        renderer = fields.get(key)
+        rendered = renderer(value, colors) if renderer else render_value(value)
+        if rendered is not None:
+            shown[key] = rendered
     width = max(map(len, shown), default=0)
     indent = " " * (width + 2)
     lines: list[Text] = []
-    for key, value in shown.items():
+    for key, rendered in shown.items():
         line = Text()
         line.append(f"{key:<{width}}  ", style="dim")
-        if key == "status":
-            color = colors[STATUS_COLORS.get(str(value), OTHER_STATUS_COLOR)]
-            line.append_text(theme.powerline((str(value).replace("_", " "), color)))
-        else:
-            rendered = render_value(value)
-            # Continuation lines start under the value column.
-            parts = rendered.split("\n", allow_blank=True)
-            line.append_text(Text(f"\n{indent}").join(parts))
+        # Continuation lines start under the value column.
+        parts = rendered.split("\n", allow_blank=True)
+        line.append_text(Text(f"\n{indent}").join(parts))
         lines.append(line)
     return Text("\n").join(lines)
 
@@ -99,6 +88,12 @@ class MetaBar(Static):
     }
     """
 
+    def __init__(self, fields: Mapping[str, FieldRenderer] | None = None) -> None:
+        """Fields map keys to their own renderers, as in render_meta."""
+        super().__init__()
+        self.fields = fields
+
     def show(self, meta: dict[str, Any] | None) -> None:
         self.display = bool(meta)
-        self.update(render_meta(meta, self.app.get_css_variables()) if meta else "")
+        colors = self.app.get_css_variables()
+        self.update(render_meta(meta, colors, self.fields) if meta else "")

@@ -1,7 +1,8 @@
 """Browse markdown files grouped in sections."""
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 from urllib.parse import urlparse
 
 from textual.app import ComposeResult
@@ -18,7 +19,7 @@ from textual.widgets.markdown import MarkdownTableOfContents
 
 from r2.core.issues import Comment, parse, split_frontmatter
 from r2.tui import theme
-from r2.tui.widgets.meta import MetaBar
+from r2.tui.widgets.meta import FieldRenderer, MetaBar
 from r2.tui.widgets.search import SearchBar, describe, find_spans
 from r2.tui.widgets.splitter import Splitter
 
@@ -229,8 +230,10 @@ class MarkdownPane(Vertical):
     current: Path | None = None
     """The document on display."""
 
-    def __init__(self) -> None:
+    def __init__(self, meta_fields: Mapping[str, FieldRenderer] | None = None) -> None:
+        """Meta fields render chosen frontmatter keys their own way."""
         super().__init__()
+        self.meta_fields = meta_fields
         self.pattern = ""
         self.matches: list[TextMatch] = []
         self.match_index = -1
@@ -239,7 +242,7 @@ class MarkdownPane(Vertical):
         """Blocks and cells with highlights, mapped to their text before and after."""
 
     def compose(self) -> ComposeResult:
-        yield MetaBar()
+        yield MetaBar(self.meta_fields)
         yield DocumentViewer(show_table_of_contents=False, open_links=False)
         yield Static(id="search-state")
         yield SearchBar()
@@ -381,6 +384,9 @@ class MarkdownBrowser(Horizontal):
     }
     """
 
+    META_FIELDS: ClassVar[Mapping[str, FieldRenderer]] = {}
+    """Frontmatter keys the document pane renders its own way."""
+
     def __init__(self, key: str, sections: dict[str, str]) -> None:
         """Sections map titles to directories relative to the project root.
 
@@ -396,7 +402,7 @@ class MarkdownBrowser(Horizontal):
     def compose(self) -> ComposeResult:
         yield from self.compose_drawer()
         yield Splitter(self.key)
-        yield MarkdownPane()
+        yield MarkdownPane(self.META_FIELDS)
 
     def compose_drawer(self) -> ComposeResult:
         """The left side; its first focusable widget must be the tree."""

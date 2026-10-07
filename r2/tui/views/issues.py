@@ -1,7 +1,9 @@
 """Issues kept as markdown files in the project."""
 
 from pathlib import Path
+from typing import Any
 
+from rich.text import Text
 from textual import events
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -28,7 +30,39 @@ from r2.tui import theme
 from r2.tui.views.base import View
 from r2.tui.widgets.issue_form import IssueForm
 from r2.tui.widgets.markdown import MarkdownBrowser
+from r2.tui.widgets.meta import FieldRenderer, render_value
 from r2.tui.widgets.status_menu import StatusMenu
+
+# Theme variable that colors the status pill, by status.
+STATUS_COLORS = {
+    "backlog": "panel-lighten-2",
+    "todo": "primary",
+    "in_progress": "warning",
+    "blocked": "error",
+    "deferred": "panel-lighten-2",
+    "in_review": "accent",
+    "completed": "success",
+    "wont_fix": "panel",
+    "deprecated": "panel",
+}
+OTHER_STATUS_COLOR = "secondary"
+
+
+def status_pill(value: Any, colors: dict[str, str]) -> Text:
+    color = colors[STATUS_COLORS.get(str(value), OTHER_STATUS_COLOR)]
+    return theme.pill(str(value).replace("_", " "), color)
+
+
+def unless_normal(value: Any, colors: dict[str, str]) -> Text | None:
+    """Leave out the "normal" value, as the issue files do."""
+    return None if value == "normal" else render_value(value)
+
+
+ISSUE_FIELDS: dict[str, FieldRenderer] = {
+    "status": status_pill,
+    "priority": unless_normal,
+    "severity": unless_normal,
+}
 
 ISSUES_DIR = "dev/issues"
 SECTIONS = {"Issues": ISSUES_DIR}
@@ -55,6 +89,8 @@ def first_section_line(text: str) -> int:
 
 class IssueBrowser(MarkdownBrowser):
     """Issues grouped by status, with a filter under the tree."""
+
+    META_FIELDS = ISSUE_FIELDS
 
     DEFAULT_CSS = """
     IssueBrowser > #drawer {

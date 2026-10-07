@@ -98,9 +98,28 @@ Button:focus {
 """
 
 
-# Nerd Font glyphs: powerline arrow and the git branch symbol.
+# Nerd Font glyphs: powerline arrow, rounded caps and the git branch symbol.
 ARROW = "\ue0b0"
+LEFT_CAP = "\ue0b6"
+RIGHT_CAP = "\ue0b4"
 BRANCH_SYMBOL = "\ue0a0"
+
+
+def pill(label: str, color: str) -> Text:
+    """Render label on a background of color with rounded ends.
+
+    Color is a CSS color value, such as one of the app's theme variables.
+    The label takes the contrasting color.
+    """
+    background = TextualColor.parse(color)
+    foreground = background + background.get_contrast_text()
+    cap = Style(color=background.rich_color)
+    text = Text(LEFT_CAP, style=cap)
+    text.append(
+        label, style=Style(color=foreground.rich_color, bgcolor=background.rich_color)
+    )
+    text.append(RIGHT_CAP, style=cap)
+    return text
 
 
 def powerline(*segments: tuple[str, str]) -> Text:

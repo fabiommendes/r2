@@ -1,7 +1,8 @@
 import datetime
 
 from r2.core.issues import split_frontmatter
-from r2.tui.widgets.meta import STATUS_COLORS, render_meta
+from r2.tui.views.issues import ISSUE_FIELDS, STATUS_COLORS
+from r2.tui.widgets.meta import render_meta
 
 COLORS = {name: "#808080" for name in [*STATUS_COLORS.values(), "secondary"]}
 
@@ -12,7 +13,20 @@ def test_split_frontmatter() -> None:
     assert split_frontmatter("---\n[x\n---\n") == (None, "---\n[x\n---\n")
 
 
-def test_render_meta_shows_one_key_per_line_and_skips_normal_values() -> None:
+def test_render_meta_shows_one_key_per_line_and_skips_empty_values() -> None:
+    meta: dict[str, object] = {
+        "type": "note",
+        "priority": "normal",
+        "empty": [],
+        "none": None,
+    }
+    assert render_meta(meta, COLORS).plain.splitlines() == [
+        "type      note",
+        "priority  normal",
+    ]
+
+
+def test_issue_fields_pill_the_status_and_skip_normal_values() -> None:
     meta = {
         "type": "issue",
         "status": "in_progress",
@@ -21,9 +35,9 @@ def test_render_meta_shows_one_key_per_line_and_skips_normal_values() -> None:
         "created": datetime.date(2026, 10, 2),
         "empty": [],
     }
-    lines = render_meta(meta, COLORS).plain.splitlines()
+    lines = render_meta(meta, COLORS, ISSUE_FIELDS).plain.splitlines()
     assert lines[0] == "type     issue"
-    assert lines[1].startswith("status    in progress")
+    assert lines[1] == "status   \ue0b6in progress\ue0b4"
     assert lines[2:] == ["kind     defect", "created  2026-10-02"]
 
 
