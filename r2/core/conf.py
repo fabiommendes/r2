@@ -24,6 +24,9 @@ name = "{name}"
 # Builtin plugins to load, in tab order. Leave it out for the defaults.
 # builtins = ["project", "docs", "issues", "live", "sys"]
 
+# Terminal editor, used before $EDITOR. $R2_EDITOR still wins over it.
+# editor = "nvim"
+
 # Plugin settings go under [plugins.<name>], e.g.
 #
 # [plugins.sys]
@@ -35,6 +38,8 @@ class ConfigR2(BaseModel):
     name: str = ""
     #: Builtin plugins to load, in order. None means `DEFAULT_BUILTINS`.
     builtins: list[str] | None = None
+    #: Terminal editor command, used before $EDITOR and $VISUAL.
+    editor: str | None = None
 
 
 class ConfigData(BaseModel):
@@ -76,6 +81,10 @@ class Config:
     @property
     def builtins(self) -> list[str] | None:
         return self._data.r2.builtins
+
+    @property
+    def editor(self) -> str | None:
+        return self._data.r2.editor
 
     def __new__(cls, *args: object, **kwargs: object) -> Config:
         if cls._instance is None:

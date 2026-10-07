@@ -326,7 +326,8 @@ folds an open node or goes up to its parent before leaving the tree.
 
 R2 picks the programs it launches from the environment:
 
-- `e` runs `$R2_EDITOR`, `$EDITOR` or `$VISUAL`, falling back to `micro`.
+- `e` runs `$R2_EDITOR`, `editor` under `[r2]` in `~/.config/r2/config.toml`,
+  `$EDITOR` or `$VISUAL`, falling back to `micro`.
   It passes `+LINE` to jump to the reference.
 - `i` runs `$R2_IDE` or `$VISUAL`, falling back to `code`.
 - `t` runs `$SHELL`.

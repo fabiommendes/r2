@@ -6,6 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from r2.core.conf import Config
 from r2.core.links import Link
 
 DEFAULT_EDITOR = "micro"
@@ -17,9 +18,10 @@ GOTO_EDITORS = {"code", "code-insiders", "codium", "cursor", "windsurf"}
 def editor_command(link: Link) -> list[str]:
     """Build the command that opens link in a terminal editor.
 
-    The editor comes from $R2_EDITOR, $EDITOR, $VISUAL or defaults to
-    micro. $EDITOR goes before $VISUAL because $VISUAL often names a GUI
-    editor, which would return at once instead of taking over the terminal.
+    The editor comes from $R2_EDITOR, `[r2] editor` in the global config,
+    $EDITOR, $VISUAL or defaults to micro. $EDITOR goes before $VISUAL
+    because $VISUAL often names a GUI editor, which would return at once
+    instead of taking over the terminal.
 
     Most terminal editors (micro, vim, nvim, nano, emacs) accept "+LINE" to
     jump to a line. VS Code and its forks read "+LINE" as a file name, so
@@ -27,6 +29,7 @@ def editor_command(link: Link) -> list[str]:
     """
     editor = (
         os.environ.get("R2_EDITOR")
+        or Config().editor
         or os.environ.get("EDITOR")
         or os.environ.get("VISUAL")
         or DEFAULT_EDITOR
