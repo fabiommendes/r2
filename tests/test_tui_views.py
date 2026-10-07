@@ -241,5 +241,6 @@ def test_clearing_a_running_command_kills_it(
         assert await asyncio.wait_for(process.wait(), 5) != 0
         await pilot.pause()
         assert not box.query(CommandRun)
+        assert box.focused is box.query_one("#command", Input)
 
     drive(test, monkeypatch)

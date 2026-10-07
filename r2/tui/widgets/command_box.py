@@ -190,12 +190,16 @@ class CommandBox(ModalScreen[None]):
             self._clear(runs[-1])
 
     def _clear(self, run: CommandRun) -> None:
-        """Remove run, killing its command if it is still going."""
+        """Remove run, killing its command if it is still going.
+
+        The focus goes back to the command line, ready for the next one.
+        """
         if run is self._current:
             self._current = None
             if self.running and self._process is not None:
                 self._process.kill()
         run.remove()
+        self.query_one("#command", Input).focus()
 
     def action_close(self) -> None:
         if self.running and self._process is not None:
