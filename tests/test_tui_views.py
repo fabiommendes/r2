@@ -14,6 +14,7 @@ from textual.widgets import TabbedContent
 
 from r2.tui.app import R2App
 from r2.tui.widgets.markdown import MarkdownBrowser
+from r2.tui.widgets.status_menu import StatusMenu
 
 
 def drive(
@@ -71,3 +72,23 @@ def test_edit_opens_the_document_of_the_docs_view(
         await pilot.press("e")
 
     assert drive(test, monkeypatch) == [["my-editor", str(doc)]]
+
+
+def test_clicking_the_status_pill_opens_the_status_menu(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    issue = tmp_path / "dev" / "issues" / "bug.md"
+    issue.parent.mkdir(parents=True)
+    issue.write_text("---\ntype: issue\nstatus: todo\n---\n\n# Bug\n\nIt breaks.\n")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        app.query_one(TabbedContent).active = "issues"
+        await pilot.pause()
+        await app.query_one("#issues MarkdownBrowser", MarkdownBrowser).open(issue)
+        await pilot.pause()
+        # Padding, then "status" padded to the "status" key width, then the pill.
+        await pilot.click("#issues MetaBar", offset=(10, 1))
+        await pilot.pause()
+        assert isinstance(app.screen, StatusMenu)
+
+    drive(test, monkeypatch)

@@ -5,7 +5,9 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 import yaml
+from rich.style import Style
 from rich.text import Text
+from textual.message import Message
 from textual.widgets import Static
 
 SEPARATOR = "; "
@@ -41,6 +43,12 @@ def render_value(value: Any) -> Text:
         value, sort_keys=False, allow_unicode=True, default_flow_style=False
     )
     return Text("\n" + dumped.rstrip("\n"))
+
+
+def clickable(text: Text, key: str) -> Text:
+    """Make a click on text post MetaBar.FieldClicked for key."""
+    text.apply_meta({"@click": f"field({key!r})"})
+    return text
 
 
 def render_meta(
@@ -88,6 +96,13 @@ class MetaBar(Static):
     }
     """
 
+    class FieldClicked(Message):
+        """A clickable field was clicked."""
+
+        def __init__(self, key: str) -> None:
+            super().__init__()
+            self.key = key
+
     def __init__(self, fields: Mapping[str, FieldRenderer] | None = None) -> None:
         """Fields map keys to their own renderers, as in render_meta."""
         super().__init__()
@@ -97,3 +112,16 @@ class MetaBar(Static):
         self.display = bool(meta)
         colors = self.app.get_css_variables()
         self.update(render_meta(meta, colors, self.fields) if meta else "")
+
+    @property
+    def link_style(self) -> Style:
+        # Textual paints clickable text in the link color, which would undo
+        # the colors renderers chose, like the ends of a pill.
+        return Style()
+
+    @property
+    def link_style_hover(self) -> Style:
+        return Style(underline=True)
+
+    def action_field(self, key: str) -> None:
+        self.post_message(self.FieldClicked(key))

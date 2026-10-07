@@ -30,7 +30,7 @@ from r2.tui import theme
 from r2.tui.views.base import View
 from r2.tui.widgets.issue_form import IssueForm
 from r2.tui.widgets.markdown import MarkdownBrowser
-from r2.tui.widgets.meta import FieldRenderer, render_value
+from r2.tui.widgets.meta import FieldRenderer, MetaBar, clickable, render_value
 from r2.tui.widgets.status_menu import StatusMenu
 
 # Theme variable that colors the status pill, by status.
@@ -50,7 +50,8 @@ OTHER_STATUS_COLOR = "secondary"
 
 def status_pill(value: Any, colors: dict[str, str]) -> Text:
     color = colors[STATUS_COLORS.get(str(value), OTHER_STATUS_COLOR)]
-    return theme.pill(str(value).replace("_", " "), color)
+    # A click opens the status menu.
+    return clickable(theme.pill(str(value).replace("_", " "), color), "status")
 
 
 def unless_normal(value: Any, colors: dict[str, str]) -> Text | None:
@@ -214,6 +215,11 @@ class IssuesView(View):
             return
         self._stub = (path, stub)
         self.post_message(self.EditFile(Link(path, len(text.splitlines()) + 1)))
+
+    def on_meta_bar_field_clicked(self, event: MetaBar.FieldClicked) -> None:
+        if event.key == "status":
+            event.stop()
+            self.action_status()
 
     def action_status(self) -> None:
         path = self.query_one(MarkdownBrowser).current
