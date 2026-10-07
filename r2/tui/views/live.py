@@ -4,6 +4,7 @@ from pathlib import Path
 
 from rich.text import Text
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.widgets import OptionList
 
 from r2.core.links import Link
@@ -27,6 +28,17 @@ class LiveView(View):
         width: 1fr;
     }
     """
+
+    BINDINGS = [Binding("f", "toggle_full", "Excerpt/full")]
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        # None shows the binding dimmed in the footer instead of hiding it.
+        if action == "toggle_full":
+            return self.query_one(FilePreview).can_toggle or None
+        return super().check_action(action, parameters)
+
+    def action_toggle_full(self) -> None:
+        self.query_one(FilePreview).toggle_full()
 
     def compose(self) -> ComposeResult:
         yield OptionList()

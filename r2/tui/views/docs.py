@@ -2,6 +2,7 @@
 
 from textual.app import ComposeResult
 
+from r2.core.links import Link
 from r2.core.project import ProjectContext
 from r2.tui.views.base import View
 from r2.tui.widgets.markdown import MarkdownBrowser
@@ -23,3 +24,7 @@ class DocsView(View):
     def set_context(self, context: ProjectContext) -> None:
         super().set_context(context)
         self.query_one(MarkdownBrowser).load(context.root)
+
+    def current_link(self) -> Link | None:
+        path = self.query_one(MarkdownBrowser).current
+        return Link(path) if path else None

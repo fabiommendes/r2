@@ -55,7 +55,7 @@ class View(Widget):
     entry_focus: Literal["drawer", "content"] = "drawer"
     """Where the focus goes the next time the view's tab is activated."""
 
-    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool:
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
         # Leave the arrows to text inputs, to move their cursor.
         return not (action == "navigate" and isinstance(self.app.focused, Input))
 

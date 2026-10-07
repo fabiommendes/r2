@@ -153,7 +153,7 @@ left to open the command palette, where you can also change the theme.
 | --- | --- |
 | `1` to `4` | Switch to a view |
 | `←` `→` | Move between drawer and content, then to the previous or next view |
-| `f` | Toggle excerpt and whole file |
+| `f` | Toggle excerpt and whole file (Live view) |
 | `e` | Edit the current file in the terminal editor |
 | `o` | Open the current file in its default application |
 | `i` | Open the project in the GUI editor |

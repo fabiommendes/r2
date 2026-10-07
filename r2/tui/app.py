@@ -32,12 +32,14 @@ from r2.tui import theme
 from r2.tui.pane import Direction, PaneCommand, PluginPane
 from r2.tui.plugins import PaneEntry, load_panes
 from r2.tui.views import VIEWS, View
-from r2.tui.widgets.preview import FilePreview
 from r2.tui.widgets.splitter import Splitter
 
 MAX_RECONNECT_DELAY = 30.0
 
 GIT_POLL_INTERVAL = 5.0
+
+CLEAR_SCREEN = "\x1b[2J\x1b[H"
+SHELL_BANNER = "r2 is waiting. Type exit or press Ctrl+D to go back to it."
 
 # Theme variables that color the top bar segments.
 PROJECT_COLOR = "accent"
@@ -84,7 +86,6 @@ class R2App(App[None]):
     BINDINGS = [
         Binding("q", "quit", "Quit"),
         Binding("p", "toggle_pin", "Pin project"),
-        Binding("f", "toggle_full", "Excerpt/full"),
         Binding("e", "edit", "Edit"),
         Binding("o", "open", "Open"),
         Binding("i", "ide", "IDE"),
@@ -295,10 +296,17 @@ class R2App(App[None]):
 
         return SystemCommand(f"{pane.title}: {cmd.title}", cmd.help, run)
 
-    def _hand_over(self, command: list[str], cwd: Path | None = None) -> None:
-        """Give the terminal to command and take it back when it exits."""
+    def _hand_over(
+        self, command: list[str], cwd: Path | None = None, banner: str = ""
+    ) -> None:
+        """Give the terminal to command and take it back when it exits.
+
+        A banner, if given, is shown on a clear screen before command runs.
+        """
         try:
             with self.suspend():
+                if banner:
+                    print(f"{CLEAR_SCREEN}{banner}\n", flush=True)
                 subprocess.run(command, cwd=cwd, check=False)
         except OSError as error:
             self.notify(f"Could not run {command[0]}: {error}", severity="error")
@@ -322,7 +330,7 @@ class R2App(App[None]):
     def action_shell(self) -> None:
         """Run an interactive shell in the project root; exiting it returns here."""
         root = self.context.root if self.context else Path.cwd()
-        self._hand_over(shell_command(), cwd=root)
+        self._hand_over(shell_command(), cwd=root, banner=SHELL_BANNER)
         self._active_view().reload()
 
     def action_refresh(self) -> None:
@@ -348,24 +356,6 @@ class R2App(App[None]):
             launch_detached(command)
         except OSError as error:
             self.notify(f"Could not run {command[0]}: {error}", severity="error")
-
-    def _active_previews(self) -> list[FilePreview]:
-        try:
-            tabs = self.query_one(TabbedContent)
-        except NoMatches:
-            return []
-        return list(tabs.query(f"#{tabs.active} FilePreview").results(FilePreview))
-
-    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
-        # None shows the binding dimmed in the footer instead of hiding it.
-        if action == "toggle_full":
-            return any(p.can_toggle for p in self._active_previews()) or None
-        return True
-
-    def action_toggle_full(self) -> None:
-        """Toggle the file preview of the active view, if it has one."""
-        for preview in self._active_previews():
-            preview.toggle_full()
 
     async def action_toggle_pin(self) -> None:
         self.pinned = not self.pinned

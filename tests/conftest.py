@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from r2.core.conf import Config
+from r2.core.plugins import loader
 from tests.support import EXAMPLES_ROOT, ExampleProjectFactory
 
 
@@ -58,3 +60,20 @@ def example_project() -> Iterator[ExampleProjectFactory]:
 
     for temp_dir in made:
         shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@pytest.fixture
+def config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Run r2 against a private config dir, state dir and herdr socket."""
+    config = tmp_path / "config"
+    (config / "plugins").mkdir(parents=True)
+    (config / "config.toml").write_text("")
+    monkeypatch.setenv("R2_CONFIG_DIR", str(config))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
+    monkeypatch.setenv("HERDR_SOCKET_PATH", str(tmp_path / "no-herdr.sock"))
+    monkeypatch.delenv("R2_AGENT", raising=False)
+    monkeypatch.chdir(tmp_path)
+    Config.reset()
+    loader.reset()
+    return config

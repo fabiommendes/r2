@@ -16,14 +16,11 @@ import textwrap
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
-import pytest
 from textual.pilot import Pilot
 from textual.widgets import Input, TabbedContent
 from typer.testing import CliRunner
 
 from r2.cli.app import build_app
-from r2.core.conf import Config
-from r2.core.plugins import loader
 from r2.tui.app import R2App
 from r2.tui.pane import PluginPane
 from r2.tui.plugins import load_panes
@@ -84,22 +81,6 @@ class LastPane(PluginPane, can_focus=True):
     def compose(self):
         yield Static("last")
 """
-
-
-@pytest.fixture
-def config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    config = tmp_path / "config"
-    (config / "plugins").mkdir(parents=True)
-    (config / "config.toml").write_text("")
-    monkeypatch.setenv("R2_CONFIG_DIR", str(config))
-    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
-    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "xdg-state"))
-    monkeypatch.setenv("HERDR_SOCKET_PATH", str(tmp_path / "no-herdr.sock"))
-    monkeypatch.delenv("R2_AGENT", raising=False)
-    monkeypatch.chdir(tmp_path)
-    Config.reset()
-    loader.reset()
-    return config
 
 
 def write_plugin(name: str, manifest: str, init: str) -> None:
