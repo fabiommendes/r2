@@ -27,6 +27,10 @@ name = "{name}"
 # Terminal editor, used before $EDITOR. $R2_EDITOR still wins over it.
 # editor = "nvim"
 
+# GUI editor that opens the project, used before $VISUAL. $R2_IDE still
+# wins over it.
+# ide = "zed"
+
 # Plugin settings go under [plugins.<name>], e.g.
 #
 # [plugins.sys]
@@ -40,6 +44,8 @@ class ConfigR2(BaseModel):
     builtins: list[str] | None = None
     #: Terminal editor command, used before $EDITOR and $VISUAL.
     editor: str | None = None
+    #: GUI editor command, used before $VISUAL.
+    ide: str | None = None
 
 
 class ConfigData(BaseModel):
@@ -85,6 +91,10 @@ class Config:
     @property
     def editor(self) -> str | None:
         return self._data.r2.editor
+
+    @property
+    def ide(self) -> str | None:
+        return self._data.r2.ide
 
     def __new__(cls, *args: object, **kwargs: object) -> Config:
         if cls._instance is None:

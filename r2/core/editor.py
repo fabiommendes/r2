@@ -58,9 +58,15 @@ DEFAULT_IDE = "code"
 def ide_command(root: Path) -> list[str]:
     """Build the command that opens the project at root in a GUI editor.
 
-    The IDE comes from $R2_IDE, $VISUAL or defaults to VS Code.
+    The IDE comes from $R2_IDE, `[r2] ide` in the global config, $VISUAL or
+    defaults to VS Code.
     """
-    ide = os.environ.get("R2_IDE") or os.environ.get("VISUAL") or DEFAULT_IDE
+    ide = (
+        os.environ.get("R2_IDE")
+        or Config().ide
+        or os.environ.get("VISUAL")
+        or DEFAULT_IDE
+    )
     return [*shlex.split(ide), str(root)]
 
 

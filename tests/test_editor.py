@@ -27,13 +27,17 @@ def test_editor_precedence(config: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     assert editor_command(Link(Path("/a.py"))) == ["micro", "/a.py"]
 
 
-def test_ide_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_ide_precedence(config: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from r2.core.editor import ide_command
 
+    (config / "config.toml").write_text('[r2]\nide = "subl"\n')
     monkeypatch.setenv("R2_IDE", "zed --new")
     monkeypatch.setenv("VISUAL", "code")
     assert ide_command(Path("/p")) == ["zed", "--new", "/p"]
     monkeypatch.delenv("R2_IDE")
+    assert ide_command(Path("/p")) == ["subl", "/p"]
+    (config / "config.toml").write_text("")
+    Config.reset()
     assert ide_command(Path("/p")) == ["code", "/p"]
     monkeypatch.delenv("VISUAL")
     assert ide_command(Path("/p")) == ["code", "/p"]
