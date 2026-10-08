@@ -107,3 +107,25 @@ def test_ctrl_shift_c_copies_the_selection(tmp_path: Path) -> None:
             assert app.clipboard == "two"
 
     asyncio.run(main())
+
+
+def test_showing_the_same_unchanged_file_again_does_not_reload(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "a.py"
+    path.write_text("x = 1\n")
+    link = Link(path)
+
+    async def run() -> list[str]:
+        async with PreviewApp(link).run_test() as pilot:
+            preview = pilot.app.query_one(FilePreview)
+            area = pilot.app.query_one(ExcerptArea)
+            area.load_text("sentinel")
+            preview.show(link)
+            texts = [area.text]
+            path.write_text("x = 2\n")
+            preview.show(link)
+            texts.append(area.text)
+            return texts
+
+    assert asyncio.run(run()) == ["sentinel", "x = 2"]

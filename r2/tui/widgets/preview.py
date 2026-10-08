@@ -231,6 +231,8 @@ class FilePreview(Vertical):
         super().__init__(id=id)
         self._link: Link | None = None
         self._label = ""
+        self._shown: tuple[Link | None, str, int | None] | None = None
+        """What show() last displayed, with the file's modification time."""
         self._heading = ""
         self.can_toggle = False
         """Whether the shown text has a range, so excerpt and full differ."""
@@ -244,9 +246,17 @@ class FilePreview(Vertical):
         yield SearchBar(id="search")
 
     def show(self, link: Link | None, label: str = "") -> None:
-        """Display link, using label as the title."""
-        self._link = link
-        self._label = label or (str(link.path) if link else "")
+        """Display link, using label as the title.
+
+        Showing again what is on display, unchanged on disk, does nothing:
+        each load costs a syntax highlighting pass.
+        """
+        label = label or (str(link.path) if link else "")
+        shown = (link, label, modified(link))
+        if shown == self._shown:
+            return
+        self._link, self._label = link, label
+        self._shown = shown if self.is_mounted else None
         self._update()
         # Dims or enables the excerpt toggle in the footer.
         self.app.refresh_bindings()
@@ -396,3 +406,11 @@ class FilePreview(Vertical):
             self.call_after_refresh(area.scroll_cursor_visible, center=True)
         else:
             area.scroll_home(animate=False)
+
+
+def modified(link: Link | None) -> int | None:
+    """The modification time of the linked file, or None."""
+    try:
+        return link.path.stat().st_mtime_ns if link else None
+    except OSError:
+        return None

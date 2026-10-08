@@ -199,7 +199,10 @@ class R2App(App[None]):
                     yield pane
         yield Footer()
 
-    def on_mount(self) -> None:
+    async def on_mount(self) -> None:
+        # Links from recent events are in place before the views first show
+        # them, so the Live preview loads one file, not two.
+        position = await self._replay_events()
         if self.ui_state.theme in self.available_themes:
             self.theme = self.ui_state.theme
         self.theme_changed_signal.subscribe(self, self._on_theme_changed)
@@ -210,7 +213,7 @@ class R2App(App[None]):
         for problem in self.problems:
             self.notify(problem, title="plugin skipped", severity="warning", timeout=10)
         self.run_worker(self._follow_herdr(), exclusive=True, group="herdr")
-        self.run_worker(self._follow_events(), group="events")
+        self.run_worker(self._follow_events(position), group="events")
         self.run_worker(self._poll_git(), group="git-poll")
 
     def on_splitter_resized(self, event: Splitter.Resized) -> None:
@@ -543,16 +546,15 @@ class R2App(App[None]):
             await asyncio.sleep(delay)
             delay = min(delay * 2, MAX_RECONNECT_DELAY)
 
-    async def _follow_events(self) -> None:
-        path = events_path()
-        backlog, position = recent_events(path)
-        # Replayed events only collect links; the views redraw once at the end.
-        changed = False
+    async def _replay_events(self) -> int:
+        """Collect the links of recent events; return the log offset after them."""
+        backlog, position = recent_events(events_path())
         for event in backlog:
-            changed |= await self._handle_event(event, replay=True)
-        if changed:
-            self._links_changed()
-        async for event in tail(path, position=position):
+            await self._handle_event(event, replay=True)
+        return position
+
+    async def _follow_events(self, position: int) -> None:
+        async for event in tail(events_path(), position=position):
             await self._handle_event(event)
 
     async def _handle_event(self, event: dict[str, Any], replay: bool = False) -> bool:
