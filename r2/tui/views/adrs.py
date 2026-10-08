@@ -6,7 +6,14 @@ from typing import Any
 from rich.markup import escape
 from textual.binding import Binding
 
-from r2.core.adrs import FORMAT, Adr, load, new_adr, next_stem, render, supersede
+from r2.core.adrs import (
+    FORMAT,
+    Adr,
+    add_supersedes,
+    mark_superseded,
+    new_adr,
+    next_stem,
+)
 from r2.core.threads import Thread
 from r2.tui.views.threads import ThreadsView
 from r2.tui.widgets.commands import Command
@@ -58,13 +65,13 @@ class AdrsView(ThreadsView):
             if picked is None:
                 return
             old_path = Path(picked)
+            # The new ADR first: its supersedes is what counts when the
+            # two disagree, so a failure between the writes is reconciled.
             try:
-                old = load(old_path)
-                supersede(adr, path.stem, old, old_path.stem)
-                old_path.write_text(render(old))
+                FORMAT.edit(path, lambda new: add_supersedes(new, old_path.stem))
+                FORMAT.edit(old_path, lambda old: mark_superseded(old, path.stem))
             except OSError as error:
                 self.notify(f"Could not supersede: {error}", severity="error")
-                return
-            self.save(adr, path)
+            self.reload()
 
         self.app.push_screen(Pick("Supersedes", options), apply)

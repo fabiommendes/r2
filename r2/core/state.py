@@ -14,6 +14,8 @@ import shutil
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from r2.core.files import atomic_write
+
 DEFAULT_DRAWER_WIDTH = 30
 
 
@@ -83,9 +85,7 @@ class UIState:
         """Write the file atomically, so a crash never leaves it half written."""
         path = path or state_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = path.with_suffix(".tmp")
-        temporary.write_text(json.dumps(asdict(self), indent=2) + "\n")
-        temporary.replace(path)
+        atomic_write(path, json.dumps(asdict(self), indent=2) + "\n")
 
     def drawer_width(self, key: str) -> int:
         return self.drawer_widths.get(key, DEFAULT_DRAWER_WIDTH)

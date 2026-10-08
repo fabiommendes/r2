@@ -119,9 +119,21 @@ def supersede(
     today: datetime.date | None = None,
 ) -> None:
     """Record on both ADRs that new replaces old."""
+    add_supersedes(new, old_stem)
+    mark_superseded(old, new_stem, today)
+
+
+def add_supersedes(new: Adr, old_stem: str) -> None:
+    """Record on new that it replaces the ADR old_stem."""
     supersedes = list(new.meta.get("supersedes") or [])
     if old_stem not in supersedes:
         new.meta["supersedes"] = [*supersedes, old_stem]
+
+
+def mark_superseded(
+    old: Adr, new_stem: str, today: datetime.date | None = None
+) -> None:
+    """Record on old that the ADR new_stem replaces it."""
     set_status(old, "superseded", today)
     old.meta["supersededBy"] = new_stem
 
@@ -154,6 +166,7 @@ FORMAT = threads.Format(
     closed=CLOSED_STATUSES,
     next_status=NEXT_STATUS,
     load=load,
+    parse=parse,
     render=render,
     set_status=set_status,
     reconcile=reconcile,

@@ -16,6 +16,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from r2.core.files import atomic_write
+
 CONFIG_DIR_ENV = "R2_CONFIG_DIR"
 DEFAULT_CONFIG = """
 [r2]
@@ -106,7 +108,9 @@ class Config:
             path = config_path()
             if not path.exists():
                 path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text(DEFAULT_CONFIG.format(name=name or infer_user_name()))
+                atomic_write(
+                    path, DEFAULT_CONFIG.format(name=name or infer_user_name())
+                )
             with path.open("rb") as f:
                 data = tomllib.load(f)
 

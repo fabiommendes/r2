@@ -12,6 +12,7 @@ from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Input, Markdown, Static, Tree
 from textual.widgets.tree import TreeNode
 
+from r2.core.files import update
 from r2.core.glossary import FILE, Glossary, Term, parse, term_line
 from r2.core.links import Link
 from r2.core.project import ProjectContext
@@ -267,16 +268,26 @@ class GlossaryView(View):
         name = (name or "").strip()
         if path is None or not name:
             return
-        if self.glossary.find(name) is not None:
-            self.notify(f"{name!r} is already in the glossary", severity="warning")
-            self.select(name)
-            return
-        self.glossary.terms.append(Term(name))
-        text = self.glossary.sorted().to_markdown()
+        exists = False
+
+        def add(text: str) -> str:
+            nonlocal exists
+            glossary = parse(text)
+            if glossary.find(name) is not None:
+                exists = True
+                return text
+            glossary.terms.append(Term(name))
+            return glossary.sorted().to_markdown()
+
         try:
-            path.write_text(text)
+            text = update(path, add)
         except OSError as error:
             self.notify(f"Could not write {FILE}: {error}", severity="error")
+            return
+        if exists:
+            self.notify(f"{name!r} is already in the glossary", severity="warning")
+            self.reload()
+            self.select(name)
             return
         self.reload()
         self.select(name)

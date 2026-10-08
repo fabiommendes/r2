@@ -117,6 +117,7 @@ FORMAT = threads.Format(
     closed=CLOSED_STATUSES,
     next_status=NEXT_STATUS,
     load=load,
+    parse=parse,
     render=render,
     set_status=set_status,
 )

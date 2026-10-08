@@ -13,6 +13,8 @@ from typing import Any
 
 import yaml
 
+from r2.core.files import update
+
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?\n)?---\n?", re.DOTALL)
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 BY_RE = re.compile(r"^by:\s*(.*?)\s*$")
@@ -53,6 +55,8 @@ class Format[T: Thread]:
     next_status: dict[str, str]
     """The status the next step of the workflow moves a thread to."""
     load: Callable[[Path], T]
+    parse: Callable[[str, str], T]
+    """Read a thread from its text and its file stem."""
     render: Callable[[T], str]
     set_status: Callable[[T, str], None]
     reconcile: Callable[[Mapping[str, T]], None] = _keep
@@ -60,6 +64,22 @@ class Format[T: Thread]:
 
     def status_order(self, status: str) -> tuple[int, str]:
         return status_order(status, self.statuses)
+
+    def edit(self, path: Path, change: Callable[[T], None]) -> T:
+        """Apply change to the thread in path and save it, under a lock.
+
+        change gets the thread as it is on disk, not a copy read earlier.
+        """
+        edited: list[T] = []
+
+        def apply(text: str) -> str:
+            thread = self.parse(text, path.stem)
+            change(thread)
+            edited.append(thread)
+            return self.render(thread)
+
+        update(path, apply)
+        return edited[0]
 
 
 def slugify(title: str, fallback: str) -> str:

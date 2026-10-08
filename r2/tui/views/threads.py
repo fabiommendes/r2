@@ -1,5 +1,6 @@
 """Views of threads (issues, ADRs) kept as markdown files in the project."""
 
+import contextlib
 from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
@@ -15,6 +16,7 @@ from textual.widgets.tree import TreeNode
 
 from r2.core import adrs, git, issues
 from r2.core.editor import uses_gui_editor
+from r2.core.files import create, update
 from r2.core.links import Link
 from r2.core.project import ProjectContext
 from r2.core.threads import Format, Thread, append_stub, comment_stub, matches
@@ -318,8 +320,7 @@ class ThreadsView(View):
             return
         stub = comment_stub(git.user_name(self.context.root))
         try:
-            text = append_stub(path.read_text(), stub)
-            path.write_text(text)
+            text = update(path, lambda text: append_stub(text, stub))
         except OSError as error:
             self.notify(f"Could not comment: {error}", severity="error")
             return
@@ -349,9 +350,10 @@ class ThreadsView(View):
             self.notify(f"Could not read the file: {error}", severity="error")
             return None
 
-    def save(self, thread: Thread, path: Path) -> bool:
+    def save(self, path: Path, change: Callable[[Any], None]) -> bool:
+        """Apply change to the thread in path as it is on disk, and save it."""
         try:
-            path.write_text(self.FORMAT.render(thread))
+            self.FORMAT.edit(path, change)
         except OSError as error:
             self.notify(f"Could not save the file: {error}", severity="error")
             return False
@@ -361,8 +363,7 @@ class ThreadsView(View):
     def _move(self, thread: Thread, path: Path, status: str | None) -> None:
         if status is None or status == thread.status:
             return
-        self.FORMAT.set_status(thread, status)
-        self.save(thread, path)
+        self.save(path, lambda fresh: self.FORMAT.set_status(fresh, status))
 
     def action_status(self) -> None:
         if current := self.current_thread():
@@ -389,8 +390,8 @@ class ThreadsView(View):
     def _edit_tags(self, thread: Thread, path: Path) -> None:
         def apply(answer: str | None) -> None:
             if answer is not None:
-                thread.meta["tags"] = split_list(answer)
-                self.save(thread, path)
+                tags = split_list(answer)
+                self.save(path, lambda fresh: fresh.meta.__setitem__("tags", tags))
 
         tags = tag_list(thread)
         box = Ask(
@@ -419,12 +420,14 @@ class ThreadsView(View):
             return
         path, stub = self._stub
         self._stub = None
-        try:
-            text = path.read_text()
+
+        def drop(text: str) -> str:
             if text.endswith(stub):
-                path.write_text(text.removesuffix(stub).rstrip("\n") + "\n")
-        except OSError:
-            pass
+                return text.removesuffix(stub).rstrip("\n") + "\n"
+            return text
+
+        with contextlib.suppress(OSError):
+            update(path, drop)
 
     def reload(self) -> None:
         self._drop_empty_stub()
@@ -437,9 +440,7 @@ class ThreadsView(View):
         folder = self.context.root / self.FORMAT.folder
         text = self.FORMAT.render(thread)
         try:
-            folder.mkdir(parents=True, exist_ok=True)
-            target = path(folder)
-            target.write_text(text)
+            target = create(folder, path, text)
         except OSError as error:
             self.notify(f"Could not create the file: {error}", severity="error")
             return

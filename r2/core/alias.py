@@ -2,6 +2,7 @@ from pathlib import Path
 
 import rich
 
+from r2.core.files import atomic_write
 from r2.core.messages import error, warn
 
 ERRORS = {
@@ -60,7 +61,7 @@ def create_alias(
     else:
         lines.insert(start_aliases, alias_cmd)
 
-    path.write_text("".join(lines))
+    atomic_write(path, "".join(lines))
     rich.print(f"[b green]success[/]: Added alias '{alias}' to {path}")
 
 
