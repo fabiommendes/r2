@@ -340,3 +340,19 @@ def test_to_markdown_writes_markdown_headings() -> None:
 def test_to_markdown_is_idempotent(glossary: Glossary) -> None:
     once = glossary.to_markdown()
     assert parse(once).to_markdown() == once
+
+
+def test_term_matches_the_start_of_words_in_any_part() -> None:
+    [term] = parse(FIELDS_SAMPLE).terms
+    assert term.matches("")
+    assert term.matches("tick")
+    assert term.matches("ISSUE work")
+    assert not term.matches("orange")
+
+
+def test_term_line_finds_the_heading() -> None:
+    from r2.core.glossary import term_line
+
+    text = "# Glossary\n\n---\n\n## Alpha\n\na\n\n## Beta\n"
+    assert term_line(text, "beta") == 9
+    assert term_line(text, "gamma") is None

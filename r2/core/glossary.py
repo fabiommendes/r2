@@ -38,7 +38,10 @@ from typing import Any
 
 from r2.core.threads import FENCE_RE, split_frontmatter, yaml_value
 
-__all__ = ["Glossary", "Term", "parse"]
+__all__ = ["FILE", "Glossary", "Term", "parse", "term_line"]
+
+FILE = "GLOSSARY.md"
+"""Where a project keeps its glossary, relative to its root."""
 
 DEFAULT_TITLE = "Glossary"
 
@@ -78,6 +81,16 @@ class Term:
     def languages(self) -> dict[str, str]:
         """The term in other languages, by ISO 639-1 code."""
         return {key: value for key, value in self.fields.items() if _is_language(key)}
+
+    def matches(self, query: str) -> bool:
+        """Whether each word of query starts a word of the term.
+
+        The name, the definition and every field count, so searching for a
+        word to avoid finds the term to use instead.
+        """
+        text = " ".join([self.name, self.definition, *self.fields.values()])
+        words = _words(text)
+        return all(any(w.startswith(q) for w in words) for q in _words(query))
 
     def to_markdown(self) -> str:
         """The term as a level 2 section, without a trailing newline."""
@@ -214,6 +227,19 @@ def _term(lines: list[str]) -> Term:
             blocks = blocks[:-1]
     definition = "\n\n".join(blocks).strip("\n")
     return Term(name=name, definition=definition, fields=fields)
+
+
+def _words(text: str) -> list[str]:
+    return re.findall(r"\w+", text.lower())
+
+
+def term_line(text: str, name: str) -> int | None:
+    """The 1-based line of the heading of the term called name in text."""
+    target = name.strip().lower()
+    for number, line in enumerate(text.splitlines(), start=1):
+        if line.startswith("## ") and line[3:].strip().lower() == target:
+            return number
+    return None
 
 
 def _is_language(key: str) -> bool:

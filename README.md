@@ -273,7 +273,7 @@ the project of the directory it was started in.
 
 ### Views
 
-R2 has five tabs. Each one has a drawer on the left and content on the
+R2 has six tabs. Each one has a drawer on the left and content on the
 right. Drag the bar between them to resize the drawer.
 
 1. **Live**: the files Claude read and the references it wrote in its last
@@ -299,6 +299,13 @@ right. Drag the bar between them to resize the drawer.
    accepted and rejected, edit its tags, record which older ADR it supersedes
    (both files are updated) or delete it. `relatedTo`, `supersedes` and
    `supersededBy` entries open the files they name.
+6. **Glossary**: the terms of `GLOSSARY.md`, grouped by their `tags`. `/`
+   filters the terms by any word of their name, definition or fields, so
+   typing a word to avoid finds the term to use instead. A term shows its
+   definition under a bar with its fields; `related` entries jump to the
+   terms they name. Press `n` to add a term, which opens the file in the
+   editor on it, and `e` to edit the term on display. The format is
+   described in `dev/spec/glossary.md`.
 
 When a reference has a line range, the preview shows an excerpt around it.
 Press `f` to switch between the excerpt and the whole file. Images are shown
@@ -326,10 +333,10 @@ project has its own history, and an arrow dims when it has nowhere to go.
 | `t` | Open a shell in the project root |
 | `$` | Run a shell command in the project root and show its output |
 | `p` | Pin the current project instead of following herdr focus |
-| `n` | Create an issue or an ADR (Issues and ADRs views) |
+| `n` | Create an issue, an ADR or a glossary term |
 | `c` | Comment on the issue or ADR on display (Issues and ADRs views) |
 | `s` | Change the status of the issue or ADR on display (Issues and ADRs views) |
-| `/` | Search the file or document on display; in the Issues and ADRs trees, filter them |
+| `/` | Search the file or document on display; in the Issues, ADRs and Glossary trees, filter them |
 | `↑` `↓` | During a search, go to the previous or next match |
 | `Esc` | Clear the search |
 | `ctrl+shift+c` | Copy the selection in a file preview, where the terminal passes the key on |

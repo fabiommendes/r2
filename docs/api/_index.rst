@@ -41,6 +41,7 @@ Modules
    r2.tui.views.adrs
    r2.tui.views.base
    r2.tui.views.docs
+   r2.tui.views.glossary
    r2.tui.views.issues
    r2.tui.views.live
    r2.tui.views.project

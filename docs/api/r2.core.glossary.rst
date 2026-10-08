@@ -3,6 +3,8 @@ r2.core.glossary
 
 .. automodule:: r2.core.glossary
 
+.. autodata:: r2.core.glossary.FILE
+
 .. autoclass:: r2.core.glossary.Glossary
    :members:
    :member-order: bysource
@@ -12,3 +14,5 @@ r2.core.glossary
    :member-order: bysource
 
 .. autofunction:: r2.core.glossary.parse
+
+.. autofunction:: r2.core.glossary.term_line

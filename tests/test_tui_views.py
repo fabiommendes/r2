@@ -14,8 +14,10 @@ from textual.pilot import Pilot
 from textual.widgets import Button, Input, Label, RichLog, TabbedContent, Tree
 
 from r2.core.adrs import load as load_adr
+from r2.core.glossary import parse as parse_glossary
 from r2.core.issues import Issue, load
 from r2.tui.app import R2App
+from r2.tui.views.glossary import GlossaryView
 from r2.tui.widgets.command_box import CommandBox, CommandRun
 from r2.tui.widgets.issue_form import Cycle, IssueForm
 from r2.tui.widgets.markdown import FrontmatterMarkdown, MarkdownBrowser
@@ -625,3 +627,102 @@ def test_empty_comments_are_not_shown(
         assert len(app.query("#issues CommentThread Collapsible")) == 1
 
     drive(test, monkeypatch)
+
+
+GLOSSARY = """\
+# Glossary
+
+Words of this project.
+
+---
+
+## Comment
+
+A reply in a thread.
+
+- tags: process
+
+## Issue
+
+A unit of work.
+
+- tags: process, files
+- avoid: ticket
+- related: Comment, Nothing
+
+## Loose
+
+No tags.
+"""
+
+
+async def show_glossary(app: R2App, pilot: Pilot[None]) -> GlossaryView:
+    app.query_one(TabbedContent).active = "glossary"
+    await pilot.pause()
+    return app.query_one(GlossaryView)
+
+
+def tree_groups(view: GlossaryView) -> dict[str, list[str]]:
+    return {
+        str(node.label).split()[0]: [str(leaf.label) for leaf in node.children]
+        for node in view.query_one(Tree).root.children
+    }
+
+
+def test_glossary_groups_terms_by_tag_and_filters_by_avoided_words(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    (tmp_path / "GLOSSARY.md").write_text(GLOSSARY)
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        view = await show_glossary(app, pilot)
+        assert tree_groups(view) == {
+            "files": ["Issue"],
+            "process": ["Comment", "Issue"],
+            "untagged": ["Loose"],
+        }
+        view.query_one("#filter", Input).value = "ticket"
+        await pilot.pause()
+        assert tree_groups(view) == {"files": ["Issue"], "process": ["Issue"]}
+
+    drive(test, monkeypatch)
+
+
+def test_clicking_a_related_term_shows_it_and_edit_opens_its_line(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("R2_EDITOR", "my-editor")
+    path = tmp_path / "GLOSSARY.md"
+    path.write_text(GLOSSARY)
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        view = await show_glossary(app, pilot)
+        view.select("Issue")
+        await pilot.pause()
+        # Padding, then the "related" key column, on the third line.
+        await pilot.click("#glossary MetaBar", offset=(12, 2))
+        await pilot.pause()
+        assert view.current is not None and view.current.name == "Comment"
+        await pilot.press("e")
+
+    assert drive(test, monkeypatch) == [["my-editor", "+7", str(path)]]
+
+
+def test_new_term_is_added_sorted_and_opened_in_the_editor(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("R2_EDITOR", "my-editor")
+    path = tmp_path / "GLOSSARY.md"
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        view = await show_glossary(app, pilot)
+        await pilot.press("n")
+        await pilot.pause()
+        assert isinstance(app.screen, Ask)
+        await pilot.press(*"Thread", "enter")
+        await pilot.pause()
+        assert view.current is not None and view.current.name == "Thread"
+
+    commands = drive(test, monkeypatch)
+    assert [t.name for t in parse_glossary(path.read_text()).terms] == ["Thread"]
+    assert commands == [["my-editor", "+12", str(path)]]
