@@ -30,7 +30,7 @@ from r2.core.links import Link
 from r2.core.project import ProjectContext, Projects
 from r2.core.state import UIState
 from r2.integrations import herdr
-from r2.integrations.claude.events import event_links, tail
+from r2.integrations.claude.events import event_links, recent_events, tail
 from r2.integrations.claude.notify import events_path
 from r2.tui import theme
 from r2.tui.pane import Direction, PaneCommand, PluginPane
@@ -544,23 +544,40 @@ class R2App(App[None]):
             delay = min(delay * 2, MAX_RECONNECT_DELAY)
 
     async def _follow_events(self) -> None:
-        async for event in tail(events_path()):
-            try:
-                await self._handle_event(event)
-            except (OSError, ValueError, KeyError, TypeError):
-                continue
+        path = events_path()
+        backlog, position = recent_events(path)
+        # Replayed events only collect links; the views redraw once at the end.
+        changed = False
+        for event in backlog:
+            changed |= await self._handle_event(event, replay=True)
+        if changed:
+            self._links_changed()
+        async for event in tail(path, position=position):
+            await self._handle_event(event)
 
-    async def _handle_event(self, event: dict[str, Any]) -> None:
-        context = self.projects.get(Path(event["cwd"]))
-        if context is self.context and event.get("hook_event_name") == "Stop":
-            self.refresh_git()
-        links = await event_links(event, context.root)
+    async def _handle_event(self, event: dict[str, Any], replay: bool = False) -> bool:
+        """Collect the links an event brings; return whether the current
+        project got any. Live events also refresh the views."""
+        try:
+            context = self.projects.get(Path(event["cwd"]))
+            is_stop = event.get("hook_event_name") == "Stop"
+            if not replay and context is self.context and is_stop:
+                self.refresh_git()
+            links = await event_links(event, context.root)
+        except (OSError, ValueError, KeyError, TypeError):
+            return False
         if not links:
-            return
+            return False
         context.add_links(links)
-        if context is self.context:
-            for view in self.query(View):
-                view.links_changed()
+        if context is not self.context:
+            return False
+        if not replay:
+            self._links_changed()
+        return True
+
+    def _links_changed(self) -> None:
+        for view in self.query(View):
+            view.links_changed()
 
 
 def main() -> None:

@@ -14,13 +14,41 @@ from r2.integrations.claude.transcript import last_turn_text
 TRANSCRIPT_SETTLE_DELAY = 0.5
 
 
-async def tail(path: Path, poll: float = 0.25) -> AsyncIterator[dict[str, Any]]:
-    """Yield every event in the log, then keep yielding new ones as they arrive.
+# r2 replays, when it starts, the events of the last REPLAY_AGE seconds,
+# and at most REPLAY_COUNT of them; older links are not worth the wait.
+REPLAY_AGE = 48 * 3600
+REPLAY_COUNT = 50
+
+
+def recent_events(
+    path: Path, now: float | None = None
+) -> tuple[list[dict[str, Any]], int]:
+    """The events worth replaying at startup, and the log offset after them."""
+    try:
+        data = path.read_bytes()
+    except FileNotFoundError:
+        return [], 0
+    end = data.rfind(b"\n") + 1
+    cutoff = (now if now is not None else time.time()) - REPLAY_AGE
+    events: list[dict[str, Any]] = []
+    for line in data[:end].splitlines()[-REPLAY_COUNT:]:
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(event, dict) and event.get("r2_time", 0) >= cutoff:
+            events.append(event)
+    return events, end
+
+
+async def tail(
+    path: Path, poll: float = 0.25, position: int = 0
+) -> AsyncIterator[dict[str, Any]]:
+    """Yield the events in the log after position, then new ones as they arrive.
 
     The log may not exist yet, and it may be truncated or replaced while
     r2 runs. Lines that are not valid JSON are skipped.
     """
-    position = 0
     pending = b""
     while True:
         try:

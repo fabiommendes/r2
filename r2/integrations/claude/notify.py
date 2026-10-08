@@ -16,6 +16,9 @@ import sys
 import time
 from pathlib import Path
 
+# Past this size the log is rotated; r2 only replays its last events anyway.
+MAX_LOG_SIZE = 1024 * 1024
+
 
 def events_path() -> Path:
     """Return the path of the JSONL file that collects hook events."""
@@ -30,12 +33,26 @@ def append_event(event: dict[str, object], path: Path) -> None:
     write() to a file opened with O_APPEND keeps lines from interleaving.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
+    rotate(path)
     line = (json.dumps(event, ensure_ascii=False) + "\n").encode()
     fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
     try:
         os.write(fd, line)
     finally:
         os.close(fd)
+
+
+def rotate(path: Path, max_size: int = MAX_LOG_SIZE) -> None:
+    """Move a log grown past max_size to <name>.1, replacing the previous one.
+
+    A concurrent writer may still append its event to the moved file; only
+    old events can end up there.
+    """
+    try:
+        if path.stat().st_size > max_size:
+            os.replace(path, path.with_name(path.name + ".1"))
+    except FileNotFoundError:
+        pass
 
 
 def main() -> None:
