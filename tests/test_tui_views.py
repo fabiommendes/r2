@@ -278,11 +278,11 @@ def test_advance_moves_the_issue_to_its_next_status(
 
     async def test(app: R2App, pilot: Pilot[None]) -> None:
         await show(app, pilot)
-        assert str(button(app, "advance").label) == "→ completed"
+        assert str(button(app, "advance").label) == "completed →"
         button(app, "advance").press()
         await pilot.pause(0.2)
         assert load(issue).status == "completed"
-        assert str(button(app, "advance").label) == "→ backlog"
+        assert str(button(app, "advance").label) == "backlog →"
 
     drive(test, monkeypatch)
 

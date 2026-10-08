@@ -125,10 +125,10 @@ def issue_commands(meta: dict[str, Any] | None) -> list[Command]:
         return []
     commands = []
     if target := NEXT_STATUS.get(str(meta.get("status"))):
-        label = f"→ {target.replace('_', ' ')}"
+        label = f"{target.replace('_', ' ')} →"
         commands.append(Command("advance", label, "primary"))
-    commands.append(Command("tags", "# Tags"))
-    commands.append(Command("delete", "🗑 Delete", "error"))
+    commands.append(Command("tags", "Tags #"))
+    commands.append(Command("delete", "Delete 🗑", "error"))
     return commands
 
 

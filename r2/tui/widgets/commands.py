@@ -39,10 +39,11 @@ class CommandBar(Horizontal):
         height: 1;
         padding: 0 1;
         background: $panel;
+        align-horizontal: right;
         display: none;
     }
     CommandBar > Button {
-        margin-right: 1;
+        margin-left: 1;
     }
     CommandBar > Button.neutral {
         background: $panel-lighten-2;
