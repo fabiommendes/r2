@@ -17,7 +17,8 @@ from textual.widgets import Collapsible, Label, Markdown, MarkdownViewer, Static
 from textual.widgets._markdown import MarkdownBlock, MarkdownFence, MarkdownH1
 from textual.widgets.markdown import MarkdownTableOfContents
 
-from r2.core.issues import Comment, parse, split_frontmatter
+from r2.core.issues import parse
+from r2.core.threads import Comment, split_frontmatter
 from r2.tui import theme
 from r2.tui.widgets.commands import CommandBar, CommandProvider
 from r2.tui.widgets.meta import FieldRenderer, MetaBar

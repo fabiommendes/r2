@@ -5,12 +5,11 @@ Markdown file passes as an issue; writing always produces the strict format.
 """
 
 import datetime
-import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import yaml
+from r2.core import threads
 
 OPEN_STATUSES = [
     "backlog",
@@ -55,26 +54,10 @@ DEFAULTS: dict[str, Any] = {
     "closed": None,
 }
 
-FRONTMATTER_RE = re.compile(r"\A---\n(.*?\n)?---\n?", re.DOTALL)
-FENCE_RE = re.compile(r"^\s*(```|~~~)")
-BY_RE = re.compile(r"^by:\s*(.*?)\s*$")
-TITLE_RE = re.compile(r"^#\s+(.*?)\s*#*\s*$")
-
 
 @dataclass
-class Comment:
-    text: str
-    author: str | None = None
-
-
-@dataclass
-class Issue:
-    title: str
+class Issue(threads.Thread):
     status: str = "backlog"
-    description: str = ""
-    comments: list[Comment] = field(default_factory=list)
-    meta: dict[str, Any] = field(default_factory=dict)
-    """Every frontmatter key but type and status, known or not."""
 
     @property
     def is_open(self) -> bool:
@@ -83,49 +66,12 @@ class Issue:
 
 def slugify(title: str) -> str:
     """Turn a title into a file name stem: lowercase words joined by dashes."""
-    words = re.findall(r"[a-z0-9]+", title.lower())
-    return "-".join(words) or "issue"
-
-
-def split_frontmatter(text: str) -> tuple[dict[str, Any] | None, str]:
-    """Split text into its YAML frontmatter and the Markdown after it.
-
-    Without a frontmatter, or with one that is not a YAML mapping, return
-    None and the text untouched.
-    """
-    match = FRONTMATTER_RE.match(text)
-    if not match:
-        return None, text
-    try:
-        loaded = yaml.safe_load(match.group(1) or "")
-    except yaml.YAMLError:
-        return None, text
-    if not isinstance(loaded, dict):
-        return None, text
-    return {str(key): value for key, value in loaded.items()}, text[match.end() :]
+    return threads.slugify(title, "issue")
 
 
 def parse(text: str, slug: str = "") -> Issue:
     """Read an issue, accepting any Markdown text."""
-    loaded, text = split_frontmatter(text)
-    meta = loaded or {}
-    broken = ""
-    if loaded is None and (match := FRONTMATTER_RE.match(text)):
-        # Keep a broken block as text, but never split it into comments.
-        broken = match.group(0).rstrip("\n")
-        text = text[match.end() :]
-    meta.pop("type", None)
-    status = str(meta.pop("status", None) or "backlog")
-
-    first, *rest = _sections(text)
-    title, description = _split_title(first)
-    return Issue(
-        title=title or slug.replace("-", " "),
-        status=status,
-        description="\n\n".join(part for part in (broken, description) if part),
-        comments=[_comment(section) for section in rest],
-        meta=meta,
-    )
+    return threads.parse(text, Issue, slug.replace("-", " "), "backlog")
 
 
 def load(path: Path) -> Issue:
@@ -134,24 +80,7 @@ def load(path: Path) -> Issue:
 
 def render(issue: Issue) -> str:
     """Write an issue in the strict format."""
-    lines = ["---", "type: issue", f"status: {issue.status}"]
-    for key, default in DEFAULTS.items():
-        value = issue.meta.get(key, default)
-        if value != default and value not in (None, "", []):
-            lines.append(f"{key}: {_yaml_value(value)}")
-    for key, value in issue.meta.items():
-        if key not in DEFAULTS:
-            lines.append(f"{key}: {_yaml_value(value)}")
-    lines += ["---", "", f"# {issue.title}", ""]
-    body = "\n".join(lines) + "\n"
-    if issue.description:
-        body += issue.description.strip("\n") + "\n"
-    for comment in issue.comments:
-        body += "\n---\n"
-        if comment.author:
-            body += f"by: {comment.author}\n"
-        body += "\n" + comment.text.strip("\n") + "\n"
-    return body
+    return threads.render(issue, "issue", DEFAULTS)
 
 
 def new_issue(
@@ -165,100 +94,9 @@ def new_issue(
     return Issue(title=title, meta={**meta, "created": created})
 
 
-def _sections(text: str) -> list[str]:
-    """Split the body on lines holding only ---, skipping fenced code."""
-    sections: list[list[str]] = [[]]
-    fence: str | None = None
-    for line in text.splitlines():
-        if match := FENCE_RE.match(line):
-            if fence is None:
-                fence = match.group(1)
-            elif match.group(1) == fence:
-                fence = None
-        if fence is None and line.strip() == "---":
-            sections.append([])
-        else:
-            sections[-1].append(line)
-    return ["\n".join(lines).strip("\n") for lines in sections]
-
-
-def _split_title(section: str) -> tuple[str, str]:
-    lines = section.splitlines()
-    for index, line in enumerate(lines):
-        if not line.strip():
-            continue
-        if match := TITLE_RE.match(line):
-            return match.group(1), "\n".join(lines[index + 1 :]).strip("\n")
-        break
-    return "", section
-
-
-def _comment(section: str) -> Comment:
-    first, _, rest = section.partition("\n")
-    if match := BY_RE.match(first):
-        return Comment(rest.strip("\n"), match.group(1) or None)
-    return Comment(section)
-
-
-def _yaml_value(value: Any) -> str:
-    """Dump a value on one line, quoting only what YAML needs quoted."""
-    dumped = yaml.safe_dump(value, default_flow_style=True, width=1 << 16)
-    return dumped.removesuffix("...\n").strip()
-
-
-# Short names accepted in "key:value" filter words.
-FILTER_ALIASES = {"tag": "tags", "related": "relatedto"}
-
-
-def _words(value: Any) -> list[str]:
-    if isinstance(value, list):
-        return [word for item in value for word in _words(item)]
-    return re.findall(r"[a-z0-9]+", str(value).lower())
-
-
-def _starts_words(query: str, words: list[str]) -> bool:
-    """Whether each word of query starts some word in words."""
-    return all(any(w.startswith(q) for w in words) for q in _words(query))
-
-
-def matches(issue: Issue, query: str, slug: str = "") -> bool:
-    """Whether the issue passes the filter query.
-
-    Each word of query must start a word of the title, the file name or the
-    metadata. A "key:value" word looks in that key only, as in "tag:ui" or
-    "kind:defect".
-    """
-    fields: dict[str, Any] = {
-        "title": issue.title,
-        "slug": slug,
-        "status": issue.status,
-        **{key.lower(): value for key, value in issue.meta.items()},
-    }
-    everything = _words(list(map(str, fields.values())))
-    for token in query.lower().split():
-        key, colon, value = token.partition(":")
-        if colon and key and value:
-            key = FILTER_ALIASES.get(key, key)
-            if not _starts_words(value, _words(fields.get(key, ""))):
-                return False
-        elif not _starts_words(token, everything):
-            return False
-    return True
-
-
 def status_order(status: str) -> tuple[int, str]:
     """Sort key that puts known statuses in lifecycle order, others last."""
-    return (STATUSES.index(status) if status in STATUSES else len(STATUSES), status)
-
-
-def comment_stub(author: str) -> str:
-    """Text to append to an issue file to start a new comment."""
-    return f"\n---\nby: {author}\n\n" if author else "\n---\n\n"
-
-
-def append_stub(text: str, stub: str) -> str:
-    """Append stub to the issue text, leaving one newline before it."""
-    return text.rstrip("\n") + "\n" + stub
+    return threads.status_order(status, STATUSES)
 
 
 def set_status(issue: Issue, status: str, today: datetime.date | None = None) -> None:

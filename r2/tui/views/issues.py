@@ -18,10 +18,7 @@ from r2.core.issues import (
     CLOSED_STATUSES,
     NEXT_STATUS,
     Issue,
-    append_stub,
-    comment_stub,
     load,
-    matches,
     render,
     set_status,
     slugify,
@@ -29,6 +26,7 @@ from r2.core.issues import (
 )
 from r2.core.links import Link
 from r2.core.project import ProjectContext
+from r2.core.threads import append_stub, comment_stub, matches
 from r2.tui import theme
 from r2.tui.views.base import View
 from r2.tui.widgets.commands import Command, CommandBar, CommandProvider

@@ -1,7 +1,7 @@
 import datetime
 from pathlib import Path
 
-from r2.core.issues import split_frontmatter
+from r2.core.threads import split_frontmatter
 from r2.tui.views.issues import STATUS_COLORS, issue_fields
 from r2.tui.widgets.meta import render_meta
 

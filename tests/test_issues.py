@@ -3,11 +3,7 @@ import datetime
 import yaml
 
 from r2.core.issues import (
-    Comment,
     Issue,
-    append_stub,
-    comment_stub,
-    matches,
     new_issue,
     parse,
     render,
@@ -15,6 +11,7 @@ from r2.core.issues import (
     slugify,
     status_order,
 )
+from r2.core.threads import Comment, append_stub, comment_stub, matches
 
 THREAD = """\
 ---
