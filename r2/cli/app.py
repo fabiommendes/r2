@@ -69,7 +69,23 @@ def root(
     """
     if directory is not None:
         os.chdir(directory)
-    configure(agent=agent, verbose=verbose, quiet=quiet, yes=yes, json=json)
+    if configure(agent=agent, verbose=verbose, quiet=quiet, yes=yes, json=json).agent:
+        use_plain_output()
+
+
+def use_plain_output() -> None:
+    """
+    Agent mode output: no colors, boxes or pretty tracebacks, for r2 and
+    for every Typer app it runs, plugins included.
+
+    `r2.cli.main` sets the same through the environment before Typer is
+    imported, which also covers --help, parsed before this callback runs.
+    """
+    import typer.core
+
+    typer.core.HAS_RICH = False
+    os.environ["TYPER_STANDARD_TRACEBACK"] = "1"
+    console.use_plain()
 
 
 app.callback()(root)

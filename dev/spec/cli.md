@@ -17,8 +17,11 @@ changes how r2 talks back, never what a command does.
    environment sets `R2_AGENT` to `1`, `true`, `yes` or `on`.
 2. In agent mode r2 never prompts. A command that would prompt fails with
    exit code 1 and says which argument to pass instead.
-3. Agent mode changes the default verbosity (see Verbosity) and nothing
-   else. Output format is chosen separately, with `--json`.
+3. Agent mode changes the default verbosity (see Verbosity) and prints
+   plain text: no colors or styles, plain Click help and usage errors
+   instead of Rich boxes, and standard tracebacks. This holds for every
+   command, plugins included, without code in the commands. Output format
+   is chosen separately, with `--json`.
 
 ## Global options
 

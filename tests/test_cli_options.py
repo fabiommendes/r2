@@ -111,3 +111,33 @@ def test_c_runs_r2_in_the_directory(
 
     assert exit.value.code == 0
     assert capfd.readouterr().out.strip() == str(sub)
+
+
+#
+# Plain output in agent mode
+#
+def styled(text: str) -> bool:
+    """Whether text holds ANSI escapes or Rich box drawing."""
+    return "\x1b[" in text or "╭" in text or "│" in text
+
+
+@pytest.mark.parametrize(
+    "args",
+    [["glossary", "--help"], ["glossary", "nope"], ["glossary", "show", "nope"]],
+)
+def test_agent_mode_prints_plain_text(
+    args: list[str], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tests.support import run_r2
+
+    (tmp_path / "GLOSSARY.md").write_text("---\ntype: glossary\n---\n")
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    monkeypatch.delenv("R2_AGENT", raising=False)
+
+    human = run_r2(*args, cwd=tmp_path)
+    assert styled(human.stdout + human.stderr)
+
+    for env, flag in [("1", []), ("", ["--agent"])]:
+        monkeypatch.setenv("R2_AGENT", env)
+        agent = run_r2(*flag, *args, cwd=tmp_path)
+        assert not styled(agent.stdout + agent.stderr), agent.stdout + agent.stderr

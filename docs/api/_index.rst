@@ -12,6 +12,7 @@ Modules
    r2.cli.registry
    r2.core.adrs
    r2.core.conf
+   r2.core.console
    r2.core.editor
    r2.core.files
    r2.core.git

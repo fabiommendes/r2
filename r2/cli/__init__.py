@@ -29,6 +29,11 @@ def main(argv: list[str] | None = None) -> None:
     if not args:
         run_tui()
         return
+    if wants_agent(args):
+        # Typer reads these when it is imported: plain Click help and
+        # errors, and standard tracebacks, with no colors or boxes.
+        os.environ["TYPER_USE_RICH"] = "0"
+        os.environ["TYPER_STANDARD_TRACEBACK"] = "1"
     from r2.cli.app import build_app, hoist_globals, take_directory
     from r2.cli.registry import registry
 
@@ -41,3 +46,11 @@ def main(argv: list[str] | None = None) -> None:
     app = build_app()
     args = hoist_globals(args, passthrough=registry.entries)
     app(args=args, prog_name="r2")
+
+
+def wants_agent(args: list[str]) -> bool:
+    """Whether the command line or the environment asks for agent mode."""
+    from r2.core.mode import AGENT_ENV, env_flag
+
+    head = args[: args.index("--")] if "--" in args else args
+    return "--agent" in head or env_flag(AGENT_ENV)

@@ -120,6 +120,9 @@ conventions meant for coding agents, for every command:
   on success; exit code plus the last 30 lines of output on failure.
   `r2 --agent -v <command>` disables the reduction.
 - Commands marked `destructive` refuse to run without `r2 --yes`.
+- Output is plain text, even on a terminal: no colors, no boxes in `--help`
+  and usage errors, and standard Python tracebacks. This covers plugin
+  commands too.
 
 ### Setting up Claude Code
 
