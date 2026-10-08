@@ -1,0 +1,5 @@
+r2.core.threads
+===============
+
+.. automodule:: r2.core.threads
+   :members:

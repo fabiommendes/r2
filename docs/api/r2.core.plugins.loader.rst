@@ -1,0 +1,10 @@
+r2.core.plugins.loader
+======================
+
+.. automodule:: r2.core.plugins.loader
+
+.. autoclass:: r2.core.plugins.loader.PluginError
+   :members:
+   :member-order: bysource
+
+.. autofunction:: r2.core.plugins.loader.load_plugin

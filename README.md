@@ -273,7 +273,7 @@ the project of the directory it was started in.
 
 ### Views
 
-R2 has four tabs. Each one has a drawer on the left and content on the
+R2 has five tabs. Each one has a drawer on the left and content on the
 right. Drag the bar between them to resize the drawer.
 
 1. **Live**: the files Claude read and the references it wrote in its last
@@ -291,6 +291,14 @@ right. Drag the bar between them to resize the drawer.
    Buttons under the issue move it to the next status of the workflow
    (backlog → todo → in progress → completed, blocked → deferred → wont fix,
    in review → completed, closed → backlog), edit its tags or delete it.
+5. **ADRs**: the architecture decision records in `dev/adr`, grouped by
+   status, with the same filter and comment thread as Issues. Press `n` to
+   name a new decision; r2 writes `NNNN-slug.md` with the next number and the
+   MADR sections, and opens it in the editor. The format is described in
+   `dev/spec/adrs.md`. Buttons under the ADR move it between proposed,
+   accepted and rejected, edit its tags, record which older ADR it supersedes
+   (both files are updated) or delete it. `relatedTo`, `supersedes` and
+   `supersededBy` entries open the files they name.
 
 When a reference has a line range, the preview shows an excerpt around it.
 Press `f` to switch between the excerpt and the whole file. Images are shown
@@ -318,10 +326,10 @@ project has its own history, and an arrow dims when it has nowhere to go.
 | `t` | Open a shell in the project root |
 | `$` | Run a shell command in the project root and show its output |
 | `p` | Pin the current project instead of following herdr focus |
-| `n` | Create an issue (Issues view) |
-| `c` | Comment on the issue on display (Issues view) |
-| `s` | Change the status of the issue on display (Issues view) |
-| `/` | Search the file or document on display; in the Issues tree, filter the issues |
+| `n` | Create an issue or an ADR (Issues and ADRs views) |
+| `c` | Comment on the issue or ADR on display (Issues and ADRs views) |
+| `s` | Change the status of the issue or ADR on display (Issues and ADRs views) |
+| `/` | Search the file or document on display; in the Issues and ADRs trees, filter them |
 | `↑` `↓` | During a search, go to the previous or next match |
 | `Esc` | Clear the search |
 | `ctrl+shift+c` | Copy the selection in a file preview, where the terminal passes the key on |

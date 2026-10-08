@@ -1,0 +1,8 @@
+r2.builtins
+===========
+
+.. automodule:: r2.builtins
+
+.. autodata:: r2.builtins.DEFAULT_BUILTINS
+
+.. autofunction:: r2.builtins.builtins_dir

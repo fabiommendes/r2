@@ -1,0 +1,8 @@
+r2.plugin
+=========
+
+.. automodule:: r2.plugin
+
+.. autoclass:: r2.plugin.Plugin
+   :members:
+   :member-order: bysource

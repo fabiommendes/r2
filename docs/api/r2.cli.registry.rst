@@ -1,0 +1,16 @@
+r2.cli.registry
+===============
+
+.. automodule:: r2.cli.registry
+
+.. autoclass:: r2.cli.registry.Entry
+   :members:
+   :member-order: bysource
+
+.. autoclass:: r2.cli.registry.Registry
+   :members:
+   :member-order: bysource
+
+.. autofunction:: r2.cli.registry.install
+
+.. autodata:: r2.cli.registry.registry

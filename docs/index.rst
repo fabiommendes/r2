@@ -1,5 +1,5 @@
 Welcome to the r2-assistant documentation!
-=======================================
+==========================================
 .. mdinclude:: _readme.md
 
 

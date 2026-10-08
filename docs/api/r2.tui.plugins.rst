@@ -1,0 +1,10 @@
+r2.tui.plugins
+==============
+
+.. automodule:: r2.tui.plugins
+
+.. autoclass:: r2.tui.plugins.PaneEntry
+   :members:
+   :member-order: bysource
+
+.. autofunction:: r2.tui.plugins.load_panes

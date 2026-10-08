@@ -1,0 +1,5 @@
+r2.core.plugins
+===============
+
+.. automodule:: r2.core.plugins
+   :members:

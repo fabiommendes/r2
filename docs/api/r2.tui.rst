@@ -1,0 +1,16 @@
+r2.tui
+======
+
+.. automodule:: r2.tui
+
+.. autodata:: r2.tui.Direction
+
+.. autoclass:: r2.tui.PaneCommand
+   :members:
+   :member-order: bysource
+
+.. autoclass:: r2.tui.PluginPane
+   :members:
+   :member-order: bysource
+
+.. autofunction:: r2.tui.focus_at_edge

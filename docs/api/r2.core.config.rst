@@ -1,5 +1,0 @@
-r2.core.config
-==============
-
-.. automodule:: r2.core.config
-   :members:

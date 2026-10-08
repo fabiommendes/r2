@@ -1,0 +1,22 @@
+r2.core.plugins.discovery
+=========================
+
+.. automodule:: r2.core.plugins.discovery
+
+.. autoclass:: r2.core.plugins.discovery.GlobalPlugin
+   :members:
+   :member-order: bysource
+
+.. autoclass:: r2.core.plugins.discovery.Problem
+   :members:
+   :member-order: bysource
+
+.. autoclass:: r2.core.plugins.discovery.ProjectPlugin
+   :members:
+   :member-order: bysource
+
+.. autofunction:: r2.core.plugins.discovery.discover_global
+
+.. autofunction:: r2.core.plugins.discovery.discover_project
+
+.. autofunction:: r2.core.plugins.discovery.find_project_manifest

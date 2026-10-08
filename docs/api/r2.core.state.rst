@@ -1,0 +1,5 @@
+r2.core.state
+=============
+
+.. automodule:: r2.core.state
+   :members:

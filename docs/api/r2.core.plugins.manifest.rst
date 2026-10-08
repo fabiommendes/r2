@@ -1,0 +1,28 @@
+r2.core.plugins.manifest
+========================
+
+.. automodule:: r2.core.plugins.manifest
+
+.. autoclass:: r2.core.plugins.manifest.CommandSpec
+   :members:
+   :member-order: bysource
+
+.. autoclass:: r2.core.plugins.manifest.PaneSpec
+   :members:
+   :member-order: bysource
+
+.. autoclass:: r2.core.plugins.manifest.PluginInfo
+   :members:
+   :member-order: bysource
+
+.. autoclass:: r2.core.plugins.manifest.PluginManifest
+   :members:
+   :member-order: bysource
+
+.. autoclass:: r2.core.plugins.manifest.ProjectCommand
+   :members:
+   :member-order: bysource
+
+.. autoclass:: r2.core.plugins.manifest.ProjectManifest
+   :members:
+   :member-order: bysource

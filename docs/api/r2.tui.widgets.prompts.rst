@@ -1,0 +1,5 @@
+r2.tui.widgets.prompts
+======================
+
+.. automodule:: r2.tui.widgets.prompts
+   :members:

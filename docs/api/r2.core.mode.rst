@@ -1,0 +1,12 @@
+r2.core.mode
+============
+
+.. automodule:: r2.core.mode
+
+.. autoclass:: r2.core.mode.Mode
+   :members:
+   :member-order: bysource
+
+.. autodata:: r2.core.mode.mode
+
+.. autofunction:: r2.core.mode.configure
