@@ -238,7 +238,7 @@ class MarkdownPane(Vertical):
     ) -> None:
         """Meta fields render chosen frontmatter keys their own way.
 
-        Commands, if given, pick the buttons shown under the document.
+        Commands, if given, pick the buttons shown above the document.
         """
         super().__init__()
         self.meta_fields = meta_fields
@@ -252,9 +252,8 @@ class MarkdownPane(Vertical):
 
     def compose(self) -> ComposeResult:
         yield MetaBar(self.meta_fields)
-        yield DocumentViewer(show_table_of_contents=False, open_links=False)
-        # Below the document, so that entering the pane focuses the document.
         yield CommandBar(self.commands)
+        yield DocumentViewer(show_table_of_contents=False, open_links=False)
         yield Static(id="search-state")
         yield SearchBar()
 

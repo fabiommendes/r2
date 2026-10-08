@@ -1,5 +1,6 @@
 """Issues kept as markdown files in the project."""
 
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -134,6 +135,11 @@ def issue_commands(meta: dict[str, Any] | None) -> list[Command]:
 SECTIONS = {"Issues": ISSUES_DIR}
 
 
+def tag_list(issue: Issue) -> list[str]:
+    tags = issue.meta.get("tags") or []
+    return [str(tag) for tag in (tags if isinstance(tags, list) else [tags])]
+
+
 def free_path(folder: Path, slug: str) -> Path:
     """Return folder/slug.md, numbered if that file already exists."""
     path = folder / f"{slug}.md"
@@ -170,6 +176,13 @@ class IssueBrowser(MarkdownBrowser):
         self.expanded: dict[str, bool] = {}
         """Groups the user opened or closed, by status."""
         self._groups: dict[TreeNode[Path], str] = {}
+        self.tags: dict[Path, list[str]] = {}
+        """Tags of each issue, as of the last time the tree was filled."""
+
+    def common_tags(self, limit: int = 8) -> list[str]:
+        """The tags most issues have, most used first."""
+        counts = Counter(tag for tags in self.tags.values() for tag in tags)
+        return [tag for tag, _ in counts.most_common(limit)]
 
     def meta_fields(self) -> dict[str, FieldRenderer]:
         return issue_fields(lambda: self.root)
@@ -188,12 +201,14 @@ class IssueBrowser(MarkdownBrowser):
     def fill(self, tree: Tree[Path], root: Path) -> None:
         query = self.query_one("#filter", Input).value
         groups: dict[str, list[tuple[Issue, Path]]] = {}
+        self.tags = {}
         folder = root / ISSUES_DIR
         for path in sorted(folder.rglob("*.md")) if folder.is_dir() else []:
             try:
                 issue = load(path)
             except OSError:
                 continue
+            self.tags[path] = tag_list(issue)
             if matches(issue, query, path.stem):
                 groups.setdefault(issue.status, []).append((issue, path))
         self._groups = {}
@@ -345,10 +360,10 @@ class IssuesView(View):
                 issue.meta["tags"] = split_list(answer)
                 self._save(issue, path)
 
-        tags = issue.meta.get("tags") or []
-        self.app.push_screen(
-            Ask("Tags", ", ".join(map(str, tags)), "comma separated"), apply
-        )
+        tags = tag_list(issue)
+        browser = self.query_one(IssueBrowser)
+        box = Ask("Tags", ", ".join(tags), "comma separated", browser.common_tags())
+        self.app.push_screen(box, apply)
 
     def _delete(self, issue: Issue, path: Path) -> None:
         async def apply(answer: bool | None) -> None:

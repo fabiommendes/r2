@@ -1,8 +1,10 @@
 """Small modal dialogs: a yes/no question and a one-line answer."""
 
+from collections.abc import Sequence
+
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
+from textual.containers import Grid, Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label
 
@@ -61,7 +63,11 @@ class Confirm(ModalScreen[bool]):
 
 
 class Ask(ModalScreen[str | None]):
-    """Ask for one line of text; escape gives None, enter the text."""
+    """Ask for one line of text; escape gives None, enter the text.
+
+    Choices show as buttons under the line; a click adds the choice to it
+    as one more comma separated item.
+    """
 
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
@@ -71,14 +77,31 @@ class Ask(ModalScreen[str | None]):
     Ask Input {
         background: $primary-muted;
     }
+    Ask #choices {
+        grid-size: 4;
+        grid-gutter: 0 1;
+        grid-rows: 1;
+        height: auto;
+        margin-top: 1;
+    }
+    Ask #choices > Button {
+        width: 1fr;
+    }
     """
     )
 
-    def __init__(self, title: str, value: str = "", placeholder: str = "") -> None:
+    def __init__(
+        self,
+        title: str,
+        value: str = "",
+        placeholder: str = "",
+        choices: Sequence[str] = (),
+    ) -> None:
         super().__init__()
         self.title_text = title
         self.value = value
         self.placeholder = placeholder
+        self.choices = choices
 
     def compose(self) -> ComposeResult:
         with Vertical() as box:
@@ -90,6 +113,18 @@ class Ask(ModalScreen[str | None]):
                 select_on_focus=False,
                 compact=True,
             )
+            if self.choices:
+                with Grid(id="choices"):
+                    for choice in self.choices:
+                        yield Button(choice, name=choice, compact=True)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        line = self.query_one(Input)
+        items = [item.strip() for item in line.value.split(",") if item.strip()]
+        if event.button.name and event.button.name not in items:
+            line.value = ", ".join([*items, event.button.name])
+        line.cursor_position = len(line.value)
+        line.focus()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         self.dismiss(event.value)

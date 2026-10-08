@@ -10,6 +10,7 @@ from textual.widgets import Input, TabbedContent, TabPane, Tree
 
 from r2.core.links import Link
 from r2.core.project import ProjectContext
+from r2.tui.widgets.commands import CommandBar
 from r2.tui.widgets.markdown import MarkdownBrowser
 from r2.tui.widgets.preview import FilePreview
 from r2.tui.widgets.splitter import Splitter
@@ -159,13 +160,17 @@ class View(Widget):
         return next((w for w in self.query("*").results(Widget) if _can_focus(w)), None)
 
     def _content(self) -> Widget | None:
-        """The first focusable widget to the right of the splitter."""
+        """The first focusable widget to the right of the splitter.
+
+        Command bars are left out, so the document takes the focus even
+        under a bar of buttons.
+        """
         splitter = self.query_one(Splitter)
         assert splitter.parent is not None
         siblings = list(splitter.parent.children)
         for sibling in siblings[siblings.index(splitter) + 1 :]:
             for widget in [sibling, *sibling.query("*").results(Widget)]:
-                if _can_focus(widget):
+                if _can_focus(widget) and not _in_command_bar(widget):
                     return widget
         return None
 
@@ -198,6 +203,10 @@ class View(Widget):
             # Plugin panes read the arrow that brought the user in.
             self.app.entry_direction = "right" if step > 0 else "left"  # type: ignore[attr-defined]
             tabs.active = panes[index].id or ""
+
+
+def _in_command_bar(widget: Widget) -> bool:
+    return any(isinstance(node, CommandBar) for node in widget.ancestors)
 
 
 def _can_focus(widget: Widget) -> bool:

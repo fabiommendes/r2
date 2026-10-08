@@ -16,7 +16,7 @@ from r2.core.issues import Issue, load
 from r2.tui.app import R2App
 from r2.tui.widgets.command_box import CommandBox, CommandRun
 from r2.tui.widgets.issue_form import Cycle, IssueForm
-from r2.tui.widgets.markdown import MarkdownBrowser
+from r2.tui.widgets.markdown import FrontmatterMarkdown, MarkdownBrowser
 from r2.tui.widgets.prompts import Ask, Confirm
 from r2.tui.widgets.status_menu import StatusMenu
 
@@ -291,16 +291,22 @@ def test_tags_replaces_the_tags_of_the_issue(
     config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     issue, show = issue_on_display(tmp_path, tags="ui")
+    other = issue.with_name("other.md")
+    other.write_text("---\ntype: issue\nstatus: todo\ntags: [tui, ui]\n---\n")
 
     async def test(app: R2App, pilot: Pilot[None]) -> None:
         await show(app, pilot)
         button(app, "tags").press()
         await pilot.pause()
-        assert isinstance(app.screen, Ask)
-        assert app.screen.query_one(Input).value == "ui"
-        await pilot.press(*", tui", "enter")
+        box = app.screen
+        assert isinstance(box, Ask)
+        assert box.query_one(Input).value == "ui"
+        choices = [str(b.label) for b in box.query("#choices Button").results(Button)]
+        assert choices == ["ui", "tui"]
+        await pilot.click("#choices Button:last-of-type")
+        await pilot.press(*", cli", "enter")
         await pilot.pause()
-        assert load(issue).meta["tags"] == ["ui", "tui"]
+        assert load(issue).meta["tags"] == ["ui", "tui", "cli"]
 
     drive(test, monkeypatch)
 
@@ -325,5 +331,20 @@ def test_delete_removes_the_issue_after_confirming(
         assert not issue.exists()
         assert browser.current is None
         assert not app.query_one("#issues CommandBar").display
+
+    drive(test, monkeypatch)
+
+
+def test_entering_the_issue_focuses_the_document_not_the_commands(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _, show = issue_on_display(tmp_path)
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        await show(app, pilot)
+        app.query_one("#issues Tree").focus()
+        await pilot.press("right")
+        await pilot.pause()
+        assert isinstance(app.focused, FrontmatterMarkdown)
 
     drive(test, monkeypatch)
