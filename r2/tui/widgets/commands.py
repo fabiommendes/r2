@@ -38,11 +38,14 @@ class CommandBar(Horizontal):
     CommandBar {
         height: 1;
         padding: 0 1;
-        background: $boost;
+        background: $panel;
         display: none;
     }
     CommandBar > Button {
         margin-right: 1;
+    }
+    CommandBar > Button.neutral {
+        background: $panel-lighten-2;
     }
     """
 
@@ -65,6 +68,8 @@ class CommandBar(Horizontal):
                 command.label,
                 id=f"{ID_PREFIX}{command.id}",
                 variant=command.variant,
+                # Default buttons would blend into the bar.
+                classes="neutral" if command.variant == "default" else "",
                 compact=True,
             )
             for command in commands

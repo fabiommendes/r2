@@ -94,7 +94,7 @@ class MetaBar(Static):
     MetaBar {
         height: auto;
         padding: 0 1;
-        background: $boost;
+        background: $panel;
         display: none;
     }
     """
