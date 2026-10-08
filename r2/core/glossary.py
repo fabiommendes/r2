@@ -38,7 +38,17 @@ from typing import Any
 
 from r2.core.threads import FENCE_RE, split_frontmatter, yaml_value
 
-__all__ = ["FILE", "Glossary", "Term", "parse", "term_line"]
+__all__ = [
+    "FILE",
+    "FIELD_KEY_RE",
+    "Glossary",
+    "Problem",
+    "Term",
+    "check",
+    "is_strict",
+    "parse",
+    "term_line",
+]
 
 FILE = "GLOSSARY.md"
 """Where a project keeps its glossary, relative to its root."""
@@ -48,8 +58,10 @@ DEFAULT_TITLE = "Glossary"
 # Fields in writing order; language codes come after them, then the rest.
 FIELDS = ["tags", "avoid", "related", "code"]
 
-FIELD_RE = re.compile(r"^- ([a-z][a-z0-9_-]*):[ \t]*(.*?)\s*$")
+FIELD_KEY_RE = re.compile(r"[a-z][a-z0-9_-]*")
+FIELD_RE = re.compile(rf"^- ({FIELD_KEY_RE.pattern}):[ \t]*(.*?)\s*$")
 LANGUAGE_RE = re.compile(r"[a-z]{2}")
+SENTENCE_RE = re.compile(r"(.+?[.!?])(?:\s|$)")
 
 
 @dataclass
@@ -81,6 +93,25 @@ class Term:
     def languages(self) -> dict[str, str]:
         """The term in other languages, by ISO 639-1 code."""
         return {key: value for key, value in self.fields.items() if _is_language(key)}
+
+    @property
+    def summary(self) -> str:
+        """The first sentence of the definition, on one line."""
+        paragraph = " ".join(self.definition.split("\n\n")[0].split())
+        match = SENTENCE_RE.match(paragraph)
+        return match.group(1) if match else paragraph
+
+    def avoided(self, query: str) -> list[str]:
+        """The avoid entries in which each word of query starts a word."""
+        words = _words(query)
+        return [
+            entry
+            for entry in self.avoid
+            if words and all(any(w.startswith(q) for w in _words(entry)) for q in words)
+        ]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"name": self.name, "definition": self.definition, "fields": self.fields}
 
     def matches(self, query: str) -> bool:
         """Whether each word of query starts a word of the term.
@@ -161,6 +192,52 @@ class Glossary:
         for term in self.terms:
             lines += [term.to_markdown(), ""]
         return "\n".join(lines)
+
+
+@dataclass(frozen=True)
+class Problem:
+    """Something `check` found wrong in a glossary."""
+
+    term: str | None
+    """The term it is about, or None for the whole file."""
+    problem: str
+
+
+def is_strict(src: str) -> bool:
+    """Whether the text declares itself a glossary in its frontmatter."""
+    meta, _ = split_frontmatter(src)
+    return meta is not None and meta.get("type") == "glossary"
+
+
+def check(src: str) -> list[Problem]:
+    """
+    The problems of a glossary file that only a human can fix.
+    """
+    problems: list[Problem] = []
+    if not is_strict(src):
+        problems.append(Problem(None, "the frontmatter lacks type: glossary"))
+
+    doc = parse(src)
+    names: dict[str, str] = {}
+    for term in doc.terms:
+        key = term.name.lower()
+        if key in names:
+            problems.append(Problem(term.name, "is defined twice"))
+        names.setdefault(key, term.name)
+
+    for term in doc.terms:
+        for word in term.avoid:
+            other = names.get(word.lower())
+            if other is not None and other.lower() != term.name.lower():
+                problems.append(
+                    Problem(term.name, f"avoids {word!r}, which is the term {other}")
+                )
+        for related in term.related:
+            if related.lower() not in names:
+                problems.append(
+                    Problem(term.name, f"relates to {related!r}, which is no term")
+                )
+    return problems
 
 
 def parse(src: str) -> Glossary:

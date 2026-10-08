@@ -356,3 +356,29 @@ def test_term_line_finds_the_heading() -> None:
     text = "# Glossary\n\n---\n\n## Alpha\n\na\n\n## Beta\n"
     assert term_line(text, "beta") == 9
     assert term_line(text, "gamma") is None
+
+
+#
+# summary, avoided, check
+#
+def test_summary_is_the_first_sentence_on_one_line() -> None:
+    term = Term("T", "First line\nwraps here. Second.\n\nOther paragraph.")
+    assert term.summary == "First line wraps here."
+
+
+def test_summary_without_a_full_stop_is_the_first_paragraph() -> None:
+    assert Term("T", "no stop\n\nmore").summary == "no stop"
+
+
+def test_avoided_lists_the_entries_matching_every_word() -> None:
+    term = Term("Issue", "", {"avoid": "ticket, bug report"})
+    assert term.avoided("bug rep") == ["bug report"]
+    assert term.avoided("tick") == ["ticket"]
+    assert term.avoided("issue") == []
+
+
+def test_check_accepts_an_avoid_word_equal_to_its_own_name() -> None:
+    from r2.core.glossary import check
+
+    src = "---\ntype: glossary\n---\n\n## Issue\n\ni\n\n- avoid: issue\n"
+    assert check(src) == []

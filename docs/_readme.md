@@ -51,12 +51,32 @@ List every available command as plain text, one per line, with tags such as
 `[project]`, `[global]`, `[destructive]` for commands that come from plugins.
 `--all` includes hidden commands. `r2 --help` is the usual Typer help.
 
-**`r2 glossary sort|add|remove`**
+**`r2 glossary`**
 
-Manage a `GLOSSARY.md` file (or the one given with `--file`): a title, an
-introduction, a `---` line, and one `## Term` section per definition.
-`add "name: definition"` adds a term and `remove NAME` drops one. Both sort
-the terms alphabetically, as does `sort`.
+Read and edit the project glossary: `GLOSSARY.md` at the project root, or
+the file given with `--file`. The format is in `dev/spec/glossary.md`.
+
+| Command | Does |
+| --- | --- |
+| `list [--tag T]` | one line per term: `Name: first sentence` |
+| `show TERM` | the term's section, as written |
+| `find WORDS` | terms matching the words; a word to avoid prints `gadget -> Widget` |
+| `check` | duplicate terms, avoided words that are terms, broken `related`; exits 1 on problems |
+| `add "Name: definition"` | add a term; human mode prompts for a missing definition |
+| `set TERM` | change a term: `--definition`, field options, `--unset KEY` |
+| `remove TERM` | remove a term |
+| `fmt` | rewrite the file in the strict format, terms sorted |
+
+`add` and `set` take the fields as `--tag`, `--avoid`, `--related` and
+`--code` (repeatable or comma separated) and `--field key=value` for any
+other, such as a translation (`--field pt=termo`). In `set`, each field
+option replaces the whole field. `--json` makes `list`, `show`, `find` and
+`check` print JSON.
+
+Reading accepts any Markdown file. Writing refuses a file without
+`type: glossary` in its frontmatter, so a wrong `--file` never rewrites a
+README; `fmt` converts such a file. Writes are atomic and hold a lock on the
+folder, so concurrent `r2` processes never lose each other's changes.
 
 **`r2 test`, `r2 build`, `r2 docs`**
 

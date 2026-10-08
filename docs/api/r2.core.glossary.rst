@@ -5,13 +5,23 @@ r2.core.glossary
 
 .. autodata:: r2.core.glossary.FILE
 
+.. autodata:: r2.core.glossary.FIELD_KEY_RE
+
 .. autoclass:: r2.core.glossary.Glossary
+   :members:
+   :member-order: bysource
+
+.. autoclass:: r2.core.glossary.Problem
    :members:
    :member-order: bysource
 
 .. autoclass:: r2.core.glossary.Term
    :members:
    :member-order: bysource
+
+.. autofunction:: r2.core.glossary.check
+
+.. autofunction:: r2.core.glossary.is_strict
 
 .. autofunction:: r2.core.glossary.parse
 
