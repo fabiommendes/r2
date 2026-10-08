@@ -5,6 +5,7 @@ optional extra that is slow to load, nor Typer. The TUI and the Typer app are
 imported only when they run.
 """
 
+import os
 import sys
 
 
@@ -28,6 +29,15 @@ def main(argv: list[str] | None = None) -> None:
     if not args:
         run_tui()
         return
-    from r2.cli.app import build_app
+    from r2.cli.app import build_app, hoist_globals, take_directory
+    from r2.cli.registry import registry
 
-    build_app()(args=args, prog_name="r2")
+    args, directory = take_directory(args)
+    if directory is not None:
+        try:
+            os.chdir(directory)
+        except OSError as error:
+            sys.exit(f"error: cannot change to {directory}: {error.strerror}")
+    app = build_app()
+    args = hoist_globals(args, passthrough=registry.entries)
+    app(args=args, prog_name="r2")

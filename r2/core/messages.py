@@ -3,6 +3,7 @@
 from typer import Exit
 
 from r2.core import console
+from r2.core.mode import SUMMARY, mode
 
 
 def error(msg: str, /, has_error: bool = True, code: int = 1) -> None:
@@ -16,7 +17,7 @@ def error(msg: str, /, has_error: bool = True, code: int = 1) -> None:
     """
     if not has_error:
         return
-    console.stdout.print(f"[b red]error[/]: {msg}")
+    console.stderr.print(f"[b red]error[/]: {msg}")
     raise Exit(code=code)
 
 
@@ -30,17 +31,17 @@ def warn(msg: str, /, has_warning: bool = True) -> None:
     """
     if not has_warning:
         return
-    console.stdout.print(f"[b yellow]warning[/]: {msg}")
+    console.stderr.print(f"[b yellow]warning[/]: {msg}")
 
 
 def success(msg: str, /, has_success: bool = True) -> None:
     """
-    Print a success message.
+    Print a success message, unless the verbosity is silent.
 
     Args:
         msg: The success message to display.
         has_success: If False, the function will do nothing.
     """
-    if not has_success:
+    if not has_success or mode.verbosity < SUMMARY:
         return
     console.stdout.print(f"[b green]success[/]: {msg}")

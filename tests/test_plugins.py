@@ -205,8 +205,7 @@ def test_project_command_runs_in_declared_cwd_and_env(env: Path) -> None:
         '[commands.where]\nrun = "basename $PWD; echo $R2_TEST_VAR"\n'
         'cwd = "sub"\nenv = { R2_TEST_VAR = "set" }\n',
     )
-    # Not in agent mode the output is not captured, so summarize via --agent --full
-    # would also passthrough; use summary mode on failure to read output instead.
+    # Only a failing summary shows the output captured from the command.
     write_manifest(
         env,
         '[commands.where]\nrun = "basename $PWD; echo $R2_TEST_VAR; exit 1"\n'
@@ -280,3 +279,32 @@ def test_help_lists_tags_and_hides_hidden_commands(env: Path) -> None:
 
     out = run("help", "--all").output
     assert "[global] [destructive] [hidden] Greet." in out
+
+
+#
+# Verbosity
+#
+def test_quiet_twice_prints_nothing_on_success(env: Path) -> None:
+    write_manifest(env, '[commands.say]\nrun = "echo hello"\n')
+    result = run("-qq", "say")
+    assert result.exit_code == 0
+    assert result.output == ""
+
+
+def test_quiet_twice_prints_only_the_failure_line(env: Path) -> None:
+    write_manifest(env, '[commands.say]\nrun = "echo hello; exit 3"\n')
+    result = run("-qq", "say")
+    assert result.exit_code == 3
+    assert result.output.strip() == "failed: say (exit 3)"
+
+
+def test_verbose_agent_passes_the_output_through(env: Path) -> None:
+    write_manifest(env, '[commands.say]\nrun = "echo hello"\n')
+    result = run("--agent", "-v", "say")
+    assert "ok: say" not in result.output
+
+
+def test_verbose_prints_the_command(env: Path) -> None:
+    write_manifest(env, '[commands.say]\nrun = "echo hello"\n')
+    result = run("-v", "say")
+    assert "$ echo hello" in result.output

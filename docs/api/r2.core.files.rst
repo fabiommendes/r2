@@ -1,0 +1,14 @@
+r2.core.files
+=============
+
+.. automodule:: r2.core.files
+
+.. autofunction:: r2.core.files.atomic_write
+
+.. autofunction:: r2.core.files.create
+
+.. autofunction:: r2.core.files.locked
+
+.. autofunction:: r2.core.files.move_to_hd
+
+.. autofunction:: r2.core.files.update

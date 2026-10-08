@@ -82,8 +82,29 @@ conventions meant for coding agents, for every command:
   `interactive`.
 - Output of project commands is reduced to a summary: one `ok: <name>` line
   on success; exit code plus the last 30 lines of output on failure.
-  `r2 --agent --full <command>` disables the reduction.
+  `r2 --agent -v <command>` disables the reduction.
 - Commands marked `destructive` refuse to run without `r2 --yes`.
+
+## Global options
+
+| Option | Meaning |
+| --- | --- |
+| `--agent` | agent mode |
+| `-v`, `--verbose` | more output, repeatable |
+| `-q`, `--quiet` | less output, repeatable |
+| `-y`, `--yes` | pre-approve destructive commands |
+| `--json` | JSON output for commands that read data |
+| `-C <dir>` | run as if r2 started in dir |
+
+Verbosity is a number: 0 for humans and -1 for agents, plus one per `-v`,
+minus one per `-q`. At -1 project commands print a summary, at -2 only
+errors, at 1 also the command they run, and at 2 debug logs.
+
+Global options work after the command name too (`r2 glossary list --json`),
+except `-C`, and except for project and plugin commands, which forward their
+arguments: `r2 -q test -v` runs the tests quietly and passes `-v` to the
+test runner. Errors go to stderr; the exit code is 1 for a failed command
+and 2 for a usage error.
 
 ## Plugins
 

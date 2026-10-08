@@ -3,10 +3,20 @@ r2.core.mode
 
 .. automodule:: r2.core.mode
 
+.. autodata:: r2.core.mode.DEBUG
+
+.. autodata:: r2.core.mode.NORMAL
+
+.. autodata:: r2.core.mode.SILENT
+
+.. autodata:: r2.core.mode.SUMMARY
+
+.. autodata:: r2.core.mode.VERBOSE
+
 .. autoclass:: r2.core.mode.Mode
    :members:
    :member-order: bysource
 
-.. autodata:: r2.core.mode.mode
-
 .. autofunction:: r2.core.mode.configure
+
+.. autodata:: r2.core.mode.mode

@@ -20,7 +20,7 @@ import typer
 
 from r2.core import console
 from r2.core.messages import error, warn
-from r2.core.mode import mode
+from r2.core.mode import SILENT, VERBOSE, mode
 from r2.core.plugins.discovery import (
     GlobalPlugin,
     Problem,
@@ -226,6 +226,8 @@ def run_project(project: ProjectPlugin, name: str, spec: ProjectCommand) -> Runn
             cmd += " " + shlex.join(args)
 
         summarize = mode.summarize and spec.output == "summary"
+        if mode.verbosity >= VERBOSE:
+            console.plain_error.print(f"$ {cmd}  (in {project.root / spec.cwd})")
         try:
             result = subprocess.run(
                 cmd,
@@ -252,16 +254,20 @@ def run_project(project: ProjectPlugin, name: str, spec: ProjectCommand) -> Runn
 def report_summary(name: str, result: subprocess.CompletedProcess[str]) -> None:
     """
     One line on success; exit code plus the last lines of output on failure.
+    When silent, only the failure line.
     """
     if result.returncode == 0:
-        console.plain.print(f"ok: {name}")
+        if mode.verbosity > SILENT:
+            console.plain.print(f"ok: {name}")
         return
 
     console.plain_error.print(f"failed: {name} (exit {result.returncode})")
+    if mode.verbosity <= SILENT:
+        return
     lines = (result.stdout + result.stderr).splitlines()
     if len(lines) > SUMMARY_TAIL:
         console.plain_error.print(
-            f"... {len(lines) - SUMMARY_TAIL} lines omitted (use --full)"
+            f"... {len(lines) - SUMMARY_TAIL} lines omitted (use -v)"
         )
         lines = lines[-SUMMARY_TAIL:]
     for line in lines:

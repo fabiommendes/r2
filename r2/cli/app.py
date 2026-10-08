@@ -3,6 +3,9 @@
 #
 from __future__ import annotations
 
+import os
+import re
+from collections.abc import Container
 from pathlib import Path
 from typing import Annotated
 
@@ -26,23 +29,46 @@ def root(
         typer.Option(
             "--agent",
             envvar="R2_AGENT",
-            help="Agent mode: no prompts, reduced output, --yes for destructive "
+            help="Agent mode: no prompts, summary output, --yes for destructive "
             "commands.",
         ),
     ] = False,
-    full: Annotated[
-        bool,
-        typer.Option("--full", help="In agent mode, do not reduce command output."),
-    ] = False,
+    verbose: Annotated[
+        int,
+        typer.Option(
+            "--verbose", "-v", count=True, help="More output; repeat for more."
+        ),
+    ] = 0,
+    quiet: Annotated[
+        int,
+        typer.Option("--quiet", "-q", count=True, help="Less output; repeat for less."),
+    ] = 0,
     yes: Annotated[
         bool, typer.Option("--yes", "-y", help="Pre-approve destructive commands.")
     ] = False,
+    json: Annotated[
+        bool, typer.Option("--json", help="Print data as JSON, where supported.")
+    ] = False,
+    directory: Annotated[
+        Path | None,
+        typer.Option(
+            "-C",
+            help="Run as if r2 started in this directory.",
+            file_okay=False,
+            exists=True,
+        ),
+    ] = None,
 ) -> None:
     """
     A development assistant for humans and coding agents. With no arguments,
     r2 opens the TUI.
+
+    Global options are accepted after the command name too, except for
+    project and plugin commands, which forward their arguments.
     """
-    configure(agent=agent, full=full, yes=yes)
+    if directory is not None:
+        os.chdir(directory)
+    configure(agent=agent, verbose=verbose, quiet=quiet, yes=yes, json=json)
 
 
 app.callback()(root)
@@ -150,3 +176,68 @@ def build_app(
     new.registered_groups += app.registered_groups
     install(new, plugins_dir=plugins_dir, project_start=project_start)
     return new
+
+
+#
+# GLOBAL OPTIONS
+#
+GLOBAL_FLAGS = {"--agent", "--verbose", "--quiet", "--yes", "--json"}
+GLOBAL_SHORT_RE = re.compile(r"-[vqy]+")
+
+
+def is_global_flag(arg: str) -> bool:
+    return arg in GLOBAL_FLAGS or GLOBAL_SHORT_RE.fullmatch(arg) is not None
+
+
+def command_index(args: list[str]) -> int | None:
+    """The position of the command name: the first argument not an option."""
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if arg == "--":
+            return None
+        if arg == "-C":
+            index += 2
+            continue
+        if not arg.startswith("-"):
+            return index
+        index += 1
+    return None
+
+
+def take_directory(args: list[str]) -> tuple[list[str], Path | None]:
+    """
+    Remove the -C option given before the command name, returning its value.
+
+    r2 must change directory before it builds the app, since project
+    commands are found from the current directory.
+    """
+    end = command_index(args)
+    head = args if end is None else args[:end]
+    for index, arg in enumerate(head):
+        if arg == "-C" and index + 1 < len(head):
+            return args[:index] + args[index + 2 :], Path(args[index + 1])
+        if arg.startswith("-C") and len(arg) > 2:
+            return args[:index] + args[index + 1 :], Path(arg[2:].removeprefix("="))
+    return args, None
+
+
+def hoist_globals(args: list[str], passthrough: Container[str]) -> list[str]:
+    """
+    Move the global options that follow the command name before it.
+
+    Commands in passthrough forward their arguments to another program, so
+    their arguments are left alone. Nothing after `--` moves.
+    """
+    start = command_index(args)
+    if start is None or args[start] in passthrough:
+        return args
+    head, rest = args[:start], args[start:]
+    moved: list[str] = []
+    kept: list[str] = []
+    for index, arg in enumerate(rest):
+        if arg == "--":
+            kept += rest[index:]
+            break
+        (moved if is_global_flag(arg) else kept).append(arg)
+    return head + moved + kept

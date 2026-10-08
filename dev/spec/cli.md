@@ -34,10 +34,11 @@ changes how r2 talks back, never what a command does.
    | `-C <dir>` | run as if r2 started in dir, like `git -C` |
 
 5. Global options are accepted anywhere before `--`: `r2 -q glossary list`
-   and `r2 glossary list -q` are the same. The exception is a project or
-   plugin command, which forwards its arguments to another program: there,
-   only options before the command name are global (`r2 -q test -v` runs
-   the tests quietly and passes `-v` to the test runner).
+   and `r2 glossary list -q` are the same. The exceptions:
+   - a project or plugin command forwards its arguments to another
+     program, so only options before the command name are global (`r2 -q
+     test -v` runs the tests quietly and passes `-v` to the test runner);
+   - `-C` is only read before the command name, as in git.
 6. Options that only make sense for one command group stay on it, like the
    `-f/--file` of `r2 glossary`.
 
@@ -146,5 +147,5 @@ The format is in [glossary.md](glossary.md).
 31. Term names match ignoring case. Adding a term that exists, or changing
     or removing one that does not, is an error that leaves the file as it
     was.
-32. Each write prints one line (`ok: added Gizmo`) at verbosity -1 or
-    above.
+32. Each write prints one line saying what changed, unless the verbosity
+    is -2.

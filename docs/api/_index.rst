@@ -13,6 +13,7 @@ Modules
    r2.core.adrs
    r2.core.conf
    r2.core.editor
+   r2.core.files
    r2.core.git
    r2.core.glossary
    r2.core.history
