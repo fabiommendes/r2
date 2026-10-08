@@ -14,12 +14,19 @@ from textual.containers import Vertical
 from textual.widgets import Input, Tree
 from textual.widgets.tree import TreeNode
 
-from r2.core import adrs, git, issues
+from r2.core import adrs, issues
 from r2.core.editor import uses_gui_editor
 from r2.core.files import create, update
 from r2.core.links import Link
 from r2.core.project import ProjectContext
-from r2.core.threads import Format, Thread, append_stub, comment_stub, matches
+from r2.core.threads import (
+    Format,
+    Thread,
+    append_stub,
+    comment_stub,
+    default_author,
+    matches,
+)
 from r2.tui import theme
 from r2.tui.views.base import View
 from r2.tui.widgets.commands import Command, CommandBar, CommandProvider
@@ -318,7 +325,7 @@ class ThreadsView(View):
         path = self.browser.current
         if path is None or self.context is None:
             return
-        stub = comment_stub(git.user_name(self.context.root))
+        stub = comment_stub(default_author(self.context.root))
         try:
             text = update(path, lambda text: append_stub(text, stub))
         except OSError as error:

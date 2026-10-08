@@ -7,7 +7,7 @@ from typing import Any
 from rich.text import Text
 from textual.binding import Binding
 
-from r2.core.issues import FORMAT, Issue, slugify
+from r2.core.issues import FORMAT, Issue, new_path
 from r2.tui.views.threads import ThreadsView, related_links, status_pill
 from r2.tui.widgets.issue_form import IssueForm
 from r2.tui.widgets.meta import FieldRenderer, render_value
@@ -28,16 +28,6 @@ def issue_fields(project_root: Callable[[], Path | None]) -> dict[str, FieldRend
     }
 
 
-def free_path(folder: Path, slug: str) -> Path:
-    """Return folder/slug.md, numbered if that file already exists."""
-    path = folder / f"{slug}.md"
-    number = 2
-    while path.exists():
-        path = folder / f"{slug}-{number}.md"
-        number += 1
-    return path
-
-
 class IssuesView(ThreadsView):
     ID = "issues"
     TITLE = "Issues"
@@ -55,4 +45,4 @@ class IssuesView(ThreadsView):
 
     def _create(self, issue: Issue | None) -> None:
         if issue is not None:
-            self.create(issue, lambda folder: free_path(folder, slugify(issue.title)))
+            self.create(issue, lambda folder: new_path(folder, issue.title))

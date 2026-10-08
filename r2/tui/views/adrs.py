@@ -12,7 +12,7 @@ from r2.core.adrs import (
     add_supersedes,
     mark_superseded,
     new_adr,
-    next_stem,
+    new_path,
 )
 from r2.core.threads import Thread
 from r2.tui.views.threads import ThreadsView
@@ -36,12 +36,7 @@ class AdrsView(ThreadsView):
         if not title or not title.strip():
             return
         adr = new_adr(title.strip())
-        self.create(adr, lambda folder: self._new_path(folder, adr.title))
-
-    @staticmethod
-    def _new_path(folder: Path, title: str) -> Path:
-        stems = (path.stem for path in folder.glob("*.md"))
-        return folder / f"{next_stem(stems, title)}.md"
+        self.create(adr, lambda folder: new_path(folder, adr.title))
 
     def extra_commands(self, meta: dict[str, Any]) -> list[Command]:
         return [Command("supersede", "Supersedes…")]

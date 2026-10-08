@@ -78,6 +78,27 @@ Reading accepts any Markdown file. Writing refuses a file without
 README; `fmt` converts such a file. Writes are atomic and hold a lock on the
 folder, so concurrent `r2` processes never lose each other's changes.
 
+**`r2 issue`, `r2 adr`**
+
+Work on the issues in `dev/issues` and the decision records in `dev/adr`
+(formats in `dev/spec/issues.md` and `dev/spec/adrs.md`).
+
+| Command | Does |
+| --- | --- |
+| `new TITLE [--body TEXT] [--tag T]` | create one and print its path |
+| `list [--status S] [--tag T] [--all]` | `id  status  title`, open ones by default |
+| `show ID` | print the file |
+| `comment ID TEXT` | add a comment at the end |
+| `status ID STATUS` | move to a status |
+| `advance ID` | move to the next status of the workflow |
+| `r2 adr supersede NEW OLD` | record that NEW replaces OLD |
+
+An id is the file name without `.md`, a unique prefix, or the number of an
+ADR. Text arguments read stdin when given `-`, so an agent can pass
+Markdown without fighting shell quoting:
+`r2 issue comment preview-bug - <<'EOF' ... EOF`. Comments and new threads
+are signed with `--by NAME`, else `$R2_AUTHOR`, else the git `user.name`.
+
 **`r2 test`, `r2 build`, `r2 docs`**
 
 Run the default test, build or documentation task of the project in the
@@ -99,6 +120,26 @@ conventions meant for coding agents, for every command:
   on success; exit code plus the last 30 lines of output on failure.
   `r2 --agent -v <command>` disables the reduction.
 - Commands marked `destructive` refuse to run without `r2 --yes`.
+
+### Setting up Claude Code
+
+Claude Code applies the `env` table of its settings to every command it
+runs, so one entry turns on agent mode and signs the agent's comments. Put
+it in `.claude/settings.json` to share it with the project, in
+`.claude/settings.local.json` to keep it to yourself, or in
+`~/.claude/settings.json` for every project:
+
+```json
+{
+  "env": {
+    "R2_AGENT": "1",
+    "R2_AUTHOR": "claude"
+  }
+}
+```
+
+Other agents need the same two variables in the environment of the shell
+they run commands in.
 
 ## Global options
 

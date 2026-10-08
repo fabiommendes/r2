@@ -1,7 +1,7 @@
 ---
 type: spec
 status: active
-tags: [cli, agent-mode, glossary]
+tags: [cli, agent-mode, glossary, issues, adrs]
 relatedTo: [glossary, issues, adrs]
 ---
 
@@ -149,3 +149,34 @@ The format is in [glossary.md](glossary.md).
     was.
 32. Each write prints one line saying what changed, unless the verbosity
     is -2.
+
+## Issues and ADRs
+
+The formats are in [issues.md](issues.md) and [adrs.md](adrs.md). `r2
+issue` works on `dev/issues` and `r2 adr` on `dev/adr`, both at the
+project root, with the same commands.
+
+33. A thread is named by its id: the file name without `.md`, a unique
+    prefix of it, or, for numbered files, the number (`r2 adr show 3`). No
+    match, or several, is an error that lists the candidates.
+34. Arguments that take Markdown text read it from stdin when given `-`.
+35. The author of a thread or comment is `--by NAME`, else the
+    `R2_AUTHOR` environment variable, else the git `user.name`. The TUI
+    uses the same default.
+36. Commands:
+
+    | Command | Does |
+    | --- | --- |
+    | `new TITLE [--body TEXT] [--tag T] [--by NAME]` | create a thread, print its path |
+    | `list [--status S] [--tag T] [--all]` | `id  status  title`, open threads by default |
+    | `show ID` | print the file |
+    | `comment ID TEXT [--by NAME]` | add a comment at the end |
+    | `status ID STATUS` | move to a status |
+    | `advance ID` | move to the next status of the workflow |
+    | `supersede NEW OLD` | ADRs only: NEW replaces OLD |
+
+37. `new` picks the file name under the folder lock (requirement 17):
+    issues get a free slug, ADRs the next number.
+38. With `--json`, `list` prints a list of `{"id", "path", "title",
+    "status", "meta"}`, and `show` adds `"description"` and `"comments"`
+    (`{"by", "text"}`).

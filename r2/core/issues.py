@@ -96,6 +96,17 @@ def new_issue(
     return Issue(title=title, meta={**meta, "created": created})
 
 
+def new_path(folder: Path, title: str) -> Path:
+    """Return folder/slug.md for title, numbered if that file already exists."""
+    slug = slugify(title)
+    path = folder / f"{slug}.md"
+    number = 2
+    while path.exists():
+        path = folder / f"{slug}-{number}.md"
+        number += 1
+    return path
+
+
 def status_order(status: str) -> tuple[int, str]:
     """Sort key that puts known statuses in lifecycle order, others last."""
     return threads.status_order(status, STATUSES)
@@ -118,6 +129,8 @@ FORMAT = threads.Format(
     next_status=NEXT_STATUS,
     load=load,
     parse=parse,
+    new=new_issue,
+    new_path=new_path,
     render=render,
     set_status=set_status,
 )

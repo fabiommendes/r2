@@ -5,6 +5,7 @@ with a frontmatter holding its type and status, then a level 1 heading with
 the title and a description. Lines holding only --- start comments.
 """
 
+import os
 import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
@@ -13,6 +14,7 @@ from typing import Any
 
 import yaml
 
+from r2.core import git
 from r2.core.files import update
 
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?\n)?---\n?", re.DOTALL)
@@ -57,6 +59,10 @@ class Format[T: Thread]:
     load: Callable[[Path], T]
     parse: Callable[[str, str], T]
     """Read a thread from its text and its file stem."""
+    new: Callable[..., T]
+    """Create a thread from a title and frontmatter keys, dated today."""
+    new_path: Callable[[Path, str], Path]
+    """The free path for a new thread with a title, in a folder."""
     render: Callable[[T], str]
     set_status: Callable[[T, str], None]
     reconcile: Callable[[Mapping[str, T]], None] = _keep
@@ -64,6 +70,27 @@ class Format[T: Thread]:
 
     def status_order(self, status: str) -> tuple[int, str]:
         return status_order(status, self.statuses)
+
+    def find(self, folder: Path, ident: str) -> Path:
+        """
+        The file of the thread ident: a file stem, a unique prefix of one,
+        or, for numbered files, the number.
+
+        Raise LookupError, saying why, when none or several match.
+        """
+        paths = sorted(folder.glob("*.md"))
+        stems = {path.stem: path for path in paths}
+        if ident in stems:
+            return stems[ident]
+        found = [path for path in paths if path.stem.startswith(ident)]
+        if ident.isdigit():
+            found = [path for path in paths if _number(path.stem) == int(ident)]
+        if len(found) == 1:
+            return found[0]
+        if not found:
+            raise LookupError(f"no {self.type} matches {ident!r} in {folder}")
+        names = ", ".join(path.stem for path in found)
+        raise LookupError(f"{ident!r} matches several: {names}")
 
     def edit(self, path: Path, change: Callable[[T], None]) -> T:
         """Apply change to the thread in path and save it, under a lock.
@@ -80,6 +107,11 @@ class Format[T: Thread]:
 
         update(path, apply)
         return edited[0]
+
+
+def _number(stem: str) -> int | None:
+    match = re.match(r"(\d+)-", stem)
+    return int(match.group(1)) if match else None
 
 
 def slugify(title: str, fallback: str) -> str:
@@ -236,6 +268,16 @@ def matches(thread: Thread, query: str, slug: str = "") -> bool:
         elif not _starts_words(token, everything):
             return False
     return True
+
+
+AUTHOR_ENV = "R2_AUTHOR"
+
+
+def default_author(root: Path) -> str:
+    """Who writes threads and comments: $R2_AUTHOR, then git user.name."""
+    if name := os.environ.get(AUTHOR_ENV, "").strip():
+        return name
+    return git.user_name(root)
 
 
 def comment_stub(author: str) -> str:

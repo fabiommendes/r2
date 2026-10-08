@@ -95,6 +95,12 @@ def new_adr(
     return Adr(title=title, description=description, meta={**meta, "created": created})
 
 
+def new_path(folder: Path, title: str) -> Path:
+    """The path of a new ADR in folder, numbered after the existing ones."""
+    stems = (path.stem for path in folder.glob("*.md"))
+    return folder / f"{next_stem(stems, title)}.md"
+
+
 def status_order(status: str) -> tuple[int, str]:
     """Sort key that puts known statuses in lifecycle order, others last."""
     return threads.status_order(status, STATUSES)
@@ -167,6 +173,8 @@ FORMAT = threads.Format(
     next_status=NEXT_STATUS,
     load=load,
     parse=parse,
+    new=new_adr,
+    new_path=new_path,
     render=render,
     set_status=set_status,
     reconcile=reconcile,

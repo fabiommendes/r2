@@ -14,6 +14,7 @@ from typer.core import TyperGroup
 
 from r2.cli.glossary import app as glossary_app
 from r2.cli.plugins import app as plugins_app
+from r2.cli.threads import adr_app, issue_app
 from r2.core import console
 from r2.core.mode import configure
 from r2.core.tasks import get_project
@@ -155,6 +156,8 @@ def docs(path: Annotated[Path | None, path_opt] = None) -> None:
 
 
 app.add_typer(glossary_app, name="glossary")
+app.add_typer(issue_app, name="issue")
+app.add_typer(adr_app, name="adr")
 app.add_typer(plugins_app, name="plugins")
 
 
