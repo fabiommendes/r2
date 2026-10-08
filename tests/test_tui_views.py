@@ -10,13 +10,14 @@ from pathlib import Path
 
 import pytest
 from textual.pilot import Pilot
-from textual.widgets import Input, Label, RichLog, TabbedContent, Tree
+from textual.widgets import Button, Input, Label, RichLog, TabbedContent, Tree
 
-from r2.core.issues import Issue
+from r2.core.issues import Issue, load
 from r2.tui.app import R2App
 from r2.tui.widgets.command_box import CommandBox, CommandRun
 from r2.tui.widgets.issue_form import Cycle, IssueForm
 from r2.tui.widgets.markdown import MarkdownBrowser
+from r2.tui.widgets.prompts import Ask, Confirm
 from r2.tui.widgets.status_menu import StatusMenu
 
 
@@ -242,5 +243,87 @@ def test_clearing_a_running_command_kills_it(
         await pilot.pause()
         assert not box.query(CommandRun)
         assert box.focused is box.query_one("#command", Input)
+
+    drive(test, monkeypatch)
+
+
+def issue_on_display(
+    tmp_path: Path, status: str = "todo", tags: str = ""
+) -> tuple[Path, Callable[[R2App, Pilot[None]], Awaitable[MarkdownBrowser]]]:
+    """An issue file and a coroutine that shows it in the Issues view."""
+    issue = tmp_path / "dev" / "issues" / "bug.md"
+    issue.parent.mkdir(parents=True)
+    extra = f"tags: [{tags}]\n" if tags else ""
+    issue.write_text(f"---\ntype: issue\nstatus: {status}\n{extra}---\n\n# Bug\n")
+
+    async def show(app: R2App, pilot: Pilot[None]) -> MarkdownBrowser:
+        app.query_one(TabbedContent).active = "issues"
+        await pilot.pause()
+        browser = app.query_one("#issues MarkdownBrowser", MarkdownBrowser)
+        await browser.open(issue)
+        await pilot.pause()
+        return browser
+
+    return issue, show
+
+
+def button(app: R2App, command: str) -> Button:
+    return app.query_one(f"#issues CommandBar #command-{command}", Button)
+
+
+def test_advance_moves_the_issue_to_its_next_status(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    issue, show = issue_on_display(tmp_path, "in_progress")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        await show(app, pilot)
+        assert str(button(app, "advance").label) == "→ completed"
+        button(app, "advance").press()
+        await pilot.pause(0.2)
+        assert load(issue).status == "completed"
+        assert str(button(app, "advance").label) == "→ backlog"
+
+    drive(test, monkeypatch)
+
+
+def test_tags_replaces_the_tags_of_the_issue(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    issue, show = issue_on_display(tmp_path, tags="ui")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        await show(app, pilot)
+        button(app, "tags").press()
+        await pilot.pause()
+        assert isinstance(app.screen, Ask)
+        assert app.screen.query_one(Input).value == "ui"
+        await pilot.press(*", tui", "enter")
+        await pilot.pause()
+        assert load(issue).meta["tags"] == ["ui", "tui"]
+
+    drive(test, monkeypatch)
+
+
+def test_delete_removes_the_issue_after_confirming(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    issue, show = issue_on_display(tmp_path)
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        browser = await show(app, pilot)
+        button(app, "delete").press()
+        await pilot.pause()
+        assert isinstance(app.screen, Confirm)
+        await pilot.press("escape")
+        await pilot.pause()
+        assert issue.exists()
+        button(app, "delete").press()
+        await pilot.pause()
+        await pilot.click("#yes")
+        await pilot.pause(0.2)
+        assert not issue.exists()
+        assert browser.current is None
+        assert not app.query_one("#issues CommandBar").display
 
     drive(test, monkeypatch)

@@ -23,6 +23,19 @@ OPEN_STATUSES = [
 CLOSED_STATUSES = ["completed", "wont_fix", "deprecated"]
 STATUSES = OPEN_STATUSES + CLOSED_STATUSES
 
+# The status the next step of the workflow moves an issue to.
+NEXT_STATUS = {
+    "backlog": "todo",
+    "todo": "in_progress",
+    "in_progress": "completed",
+    "blocked": "deferred",
+    "deferred": "wont_fix",
+    "in_review": "completed",
+    "completed": "backlog",
+    "wont_fix": "backlog",
+    "deprecated": "backlog",
+}
+
 KINDS = ["defect", "enhancement", "task"]
 PRIORITIES = ["low", "normal", "high", "urgent"]
 SEVERITIES = ["trivial", "minor", "normal", "major", "critical"]

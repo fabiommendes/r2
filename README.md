@@ -288,6 +288,9 @@ right. Drag the bar between them to resize the drawer.
    only, as in `tag:ui` or `kind:defect`. Comments show as a thread of collapsible cards. Press `n` to fill
    in a form with the metadata of a new issue; r2 writes the file and opens
    it in the editor. The format is described in `dev/spec/issues.md`.
+   Buttons under the issue move it to the next status of the workflow
+   (backlog → todo → in progress → completed, blocked → deferred → wont fix,
+   in review → completed, closed → backlog), edit its tags or delete it.
 
 When a reference has a line range, the preview shows an excerpt around it.
 Press `f` to switch between the excerpt and the whole file. Images are shown

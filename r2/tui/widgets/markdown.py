@@ -19,6 +19,7 @@ from textual.widgets.markdown import MarkdownTableOfContents
 
 from r2.core.issues import Comment, parse, split_frontmatter
 from r2.tui import theme
+from r2.tui.widgets.commands import CommandBar, CommandProvider
 from r2.tui.widgets.meta import FieldRenderer, MetaBar
 from r2.tui.widgets.search import SearchBar, describe, find_spans
 from r2.tui.widgets.splitter import Splitter
@@ -230,10 +231,18 @@ class MarkdownPane(Vertical):
     current: Path | None = None
     """The document on display."""
 
-    def __init__(self, meta_fields: Mapping[str, FieldRenderer] | None = None) -> None:
-        """Meta fields render chosen frontmatter keys their own way."""
+    def __init__(
+        self,
+        meta_fields: Mapping[str, FieldRenderer] | None = None,
+        commands: CommandProvider | None = None,
+    ) -> None:
+        """Meta fields render chosen frontmatter keys their own way.
+
+        Commands, if given, pick the buttons shown under the document.
+        """
         super().__init__()
         self.meta_fields = meta_fields
+        self.commands = commands
         self.pattern = ""
         self.matches: list[TextMatch] = []
         self.match_index = -1
@@ -244,6 +253,8 @@ class MarkdownPane(Vertical):
     def compose(self) -> ComposeResult:
         yield MetaBar(self.meta_fields)
         yield DocumentViewer(show_table_of_contents=False, open_links=False)
+        # Below the document, so that entering the pane focuses the document.
+        yield CommandBar(self.commands)
         yield Static(id="search-state")
         yield SearchBar()
 
@@ -359,15 +370,22 @@ class MarkdownPane(Vertical):
     def _focus_document(self) -> None:
         self.query_one(FrontmatterMarkdown).focus()
 
-    def on_frontmatter_markdown_parsed(
+    async def on_frontmatter_markdown_parsed(
         self, message: FrontmatterMarkdown.Parsed
     ) -> None:
         self.query_one(MetaBar).show(message.meta)
+        await self.query_one(CommandBar).show(message.meta)
 
     async def open(self, path: Path) -> None:
         self.current = path
         self.action_clear_search()
         await self.query_one(DocumentViewer).go(path)
+
+    async def close(self) -> None:
+        """Show no document."""
+        self.current = None
+        self.action_clear_search()
+        await self.query_one(FrontmatterMarkdown).update("")
 
     async def reload(self) -> None:
         """Show the current document as it is now."""
@@ -399,11 +417,15 @@ class MarkdownBrowser(Horizontal):
     def compose(self) -> ComposeResult:
         yield from self.compose_drawer()
         yield Splitter(self.key)
-        yield MarkdownPane(self.meta_fields())
+        yield MarkdownPane(self.meta_fields(), self.commands())
 
     def meta_fields(self) -> Mapping[str, FieldRenderer]:
         """Frontmatter keys the document pane renders its own way."""
         return {}
+
+    def commands(self) -> CommandProvider | None:
+        """Buttons for the document on display; None shows no bar."""
+        return None
 
     def compose_drawer(self) -> ComposeResult:
         """The left side; its first focusable widget must be the tree."""
@@ -438,6 +460,11 @@ class MarkdownBrowser(Horizontal):
         self.current = path
         self.reveal(path)
         await self.query_one(MarkdownPane).open(path)
+
+    async def close(self) -> None:
+        """Show no document, for instance after the current one is deleted."""
+        self.current = None
+        await self.query_one(MarkdownPane).close()
 
     def reveal(self, path: Path) -> None:
         """Move the tree cursor to the leaf of path, unfolding its section."""

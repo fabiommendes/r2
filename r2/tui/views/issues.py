@@ -15,6 +15,7 @@ from textual.widgets.tree import TreeNode
 from r2.core import git
 from r2.core.issues import (
     CLOSED_STATUSES,
+    NEXT_STATUS,
     Issue,
     append_stub,
     comment_stub,
@@ -29,7 +30,8 @@ from r2.core.links import Link
 from r2.core.project import ProjectContext
 from r2.tui import theme
 from r2.tui.views.base import View
-from r2.tui.widgets.issue_form import IssueForm
+from r2.tui.widgets.commands import Command, CommandBar, CommandProvider
+from r2.tui.widgets.issue_form import IssueForm, split_list
 from r2.tui.widgets.markdown import MarkdownBrowser
 from r2.tui.widgets.meta import (
     SEPARATOR,
@@ -38,6 +40,7 @@ from r2.tui.widgets.meta import (
     clickable,
     render_value,
 )
+from r2.tui.widgets.prompts import Ask, Confirm
 from r2.tui.widgets.status_menu import StatusMenu
 
 # Theme variable that colors the status pill, by status.
@@ -115,6 +118,19 @@ def issue_fields(project_root: Callable[[], Path | None]) -> dict[str, FieldRend
     }
 
 
+def issue_commands(meta: dict[str, Any] | None) -> list[Command]:
+    """Move the issue to its next status, edit its tags or delete it."""
+    if not meta or meta.get("type") != "issue":
+        return []
+    commands = []
+    if target := NEXT_STATUS.get(str(meta.get("status"))):
+        label = f"→ {target.replace('_', ' ')}"
+        commands.append(Command("advance", label, "primary"))
+    commands.append(Command("tags", "# Tags"))
+    commands.append(Command("delete", "🗑 Delete", "error"))
+    return commands
+
+
 SECTIONS = {"Issues": ISSUES_DIR}
 
 
@@ -157,6 +173,9 @@ class IssueBrowser(MarkdownBrowser):
 
     def meta_fields(self) -> dict[str, FieldRenderer]:
         return issue_fields(lambda: self.root)
+
+    def commands(self) -> CommandProvider:
+        return issue_commands
 
     def compose_drawer(self) -> ComposeResult:
         tree: Tree[Path] = Tree("issues")
@@ -275,28 +294,76 @@ class IssuesView(View):
             if path := resolve_related(self.context.root, event.value):
                 self.post_message(self.OpenFile(path))
 
-    def action_status(self) -> None:
+    def _current_issue(self) -> tuple[Issue, Path] | None:
+        """The issue on display and its file, or None, saying why."""
         path = self.query_one(MarkdownBrowser).current
         if path is None:
-            return
+            return None
         try:
-            issue = load(path)
+            return load(path), path
         except OSError as error:
             self.notify(f"Could not read the issue: {error}", severity="error")
-            return
+            return None
 
-        def apply(status: str | None) -> None:
-            if status is None or status == issue.status:
+    def _save(self, issue: Issue, path: Path) -> None:
+        try:
+            path.write_text(render(issue))
+        except OSError as error:
+            self.notify(f"Could not save the issue: {error}", severity="error")
+            return
+        self.reload()
+
+    def _move(self, issue: Issue, path: Path, status: str | None) -> None:
+        if status is None or status == issue.status:
+            return
+        set_status(issue, status)
+        self._save(issue, path)
+
+    def action_status(self) -> None:
+        if current := self._current_issue():
+            self.app.push_screen(
+                StatusMenu(current[0].status),
+                lambda status: self._move(*current, status),
+            )
+
+    def on_command_bar_pressed(self, event: CommandBar.Pressed) -> None:
+        event.stop()
+        current = self._current_issue()
+        if current is None:
+            return
+        issue, path = current
+        if event.command == "advance":
+            self._move(issue, path, NEXT_STATUS.get(issue.status))
+        elif event.command == "tags":
+            self._edit_tags(issue, path)
+        elif event.command == "delete":
+            self._delete(issue, path)
+
+    def _edit_tags(self, issue: Issue, path: Path) -> None:
+        def apply(answer: str | None) -> None:
+            if answer is not None:
+                issue.meta["tags"] = split_list(answer)
+                self._save(issue, path)
+
+        tags = issue.meta.get("tags") or []
+        self.app.push_screen(
+            Ask("Tags", ", ".join(map(str, tags)), "comma separated"), apply
+        )
+
+    def _delete(self, issue: Issue, path: Path) -> None:
+        async def apply(answer: bool | None) -> None:
+            if not answer:
                 return
-            set_status(issue, status)
             try:
-                path.write_text(render(issue))
+                path.unlink()
             except OSError as error:
-                self.notify(f"Could not save the issue: {error}", severity="error")
+                self.notify(f"Could not delete the issue: {error}", severity="error")
                 return
+            await self.query_one(MarkdownBrowser).close()
             self.reload()
 
-        self.app.push_screen(StatusMenu(issue.status), apply)
+        question = f"Delete {path.name}?"
+        self.app.push_screen(Confirm(issue.title, question, "Delete"), apply)
 
     def _drop_empty_stub(self) -> None:
         """Remove the comment stub if the editor left it empty."""
