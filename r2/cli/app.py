@@ -85,6 +85,7 @@ def use_plain_output() -> None:
 
     typer.core.HAS_RICH = False
     os.environ["TYPER_STANDARD_TRACEBACK"] = "1"
+    os.environ.setdefault("NO_COLOR", "1")
     console.use_plain()
 
 

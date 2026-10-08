@@ -12,9 +12,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated
 
-import rich
 import typer
 from pydantic import BaseModel
+from rich.markup import escape
 
 from r2.core.alias import create_alias, parse_sections
 from r2.core.editor import edit_file
@@ -81,11 +81,13 @@ def alias(
 
     if sections or list:
         for header, entries in (section_map := parse_sections(path)).items():
-            rich.print(f"[b blue]{header}[/]")
+            plugin.console.print(f"[b blue]{escape(header)}[/]")
             if list:
                 for name, value in entries:
-                    rich.print(f"  - [b yellow]{name}[/]=[fg]{value}[/]")
-                rich.print()
+                    plugin.console.print(
+                        f"  - [b yellow]{escape(name)}[/]={escape(value)}"
+                    )
+                plugin.console.print()
         if not section_map:
             warn("No alias sections found.")
         return

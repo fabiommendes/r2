@@ -22,6 +22,11 @@ changes how r2 talks back, never what a command does.
    instead of Rich boxes, and standard tracebacks. This holds for every
    command, plugins included, without code in the commands. Output format
    is chosen separately, with `--json`.
+3a. Agent mode sets `NO_COLOR=1` in the environment, unless it is set
+   already, so the programs r2 runs and Consoles that plugins create on
+   their own print plain text too.
+3b. Plugins print through `plugin.console` and `plugin.err`, which always
+   return r2's current consoles, and read `plugin.mode`.
 
 ## Global options
 

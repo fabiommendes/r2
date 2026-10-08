@@ -141,3 +141,40 @@ def test_agent_mode_prints_plain_text(
         monkeypatch.setenv("R2_AGENT", env)
         agent = run_r2(*flag, *args, cwd=tmp_path)
         assert not styled(agent.stdout + agent.stderr), agent.stdout + agent.stderr
+
+
+def test_plugin_consoles_follow_the_plain_switch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from r2.cli.app import use_plain_output
+    from r2.core import console
+    from r2.plugin import Plugin
+
+    for name in ("stdout", "stderr"):
+        monkeypatch.setattr(console, name, getattr(console, name))
+    monkeypatch.setenv("TYPER_STANDARD_TRACEBACK", "")
+    monkeypatch.setenv("NO_COLOR", "")
+    monkeypatch.setattr("typer.core.HAS_RICH", True)
+    plugin = Plugin("x")
+    before = plugin.console
+
+    use_plain_output()
+
+    assert plugin.console is console.stdout is not before
+    assert plugin.err is console.stderr
+    assert plugin.console.color_system is None
+
+
+def test_agent_mode_sets_no_color_for_the_programs_r2_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tests.support import run_r2
+
+    (tmp_path / "r2.toml").write_text(
+        '[commands.color]\nrun = "echo NO_COLOR=$NO_COLOR"\noutput = "passthrough"\n'
+    )
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.delenv("R2_AGENT", raising=False)
+
+    assert run_r2("color", cwd=tmp_path).stdout.strip() == "NO_COLOR="
+    assert run_r2("--agent", "color", cwd=tmp_path).stdout.strip() == "NO_COLOR=1"

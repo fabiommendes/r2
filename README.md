@@ -127,7 +127,8 @@ conventions meant for coding agents, for every command:
 - Commands marked `destructive` refuse to run without `r2 --yes`.
 - Output is plain text, even on a terminal: no colors, no boxes in `--help`
   and usage errors, and standard Python tracebacks. This covers plugin
-  commands too.
+  commands too. r2 also sets `NO_COLOR=1`, so the programs it runs print
+  plain text as well.
 
 ### Setting up Claude Code
 
@@ -246,7 +247,21 @@ def hd(path: Path) -> None:
     ...
 ```
 
-Command functions are ordinary Typer commands. Only `plugin.toml` is read at
+Command functions are ordinary Typer commands. Print through
+`plugin.console` (stdout) and `plugin.err` (stderr), and read
+`plugin.mode` for the verbosity and `--json`, instead of creating Rich
+consoles of your own: agent mode swaps those consoles for plain ones, so
+the plugin's output matches the rest of r2.
+
+```python
+@plugin.command()
+def status() -> None:
+    """Show what is mounted."""
+    if plugin.mode.verbosity >= 0:
+        plugin.console.print("[b]mounted[/]: /mnt/hd")
+```
+
+Only `plugin.toml` is read at
 startup; the package is imported when one of its commands runs, so a broken
 plugin costs nothing until used and `r2 plugins doctor` finds it.
 

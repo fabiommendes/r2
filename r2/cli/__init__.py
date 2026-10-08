@@ -32,8 +32,11 @@ def main(argv: list[str] | None = None) -> None:
     if wants_agent(args):
         # Typer reads these when it is imported: plain Click help and
         # errors, and standard tracebacks, with no colors or boxes.
+        # NO_COLOR reaches the Consoles plugins create themselves, and the
+        # programs r2 runs, whose output an agent reads as text.
         os.environ["TYPER_USE_RICH"] = "0"
         os.environ["TYPER_STANDARD_TRACEBACK"] = "1"
+        os.environ.setdefault("NO_COLOR", "1")
     from r2.cli.app import build_app, hoist_globals, take_directory
     from r2.cli.registry import registry
 

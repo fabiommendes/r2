@@ -1,9 +1,7 @@
 from pathlib import Path
 
-import rich
-
 from r2.core.files import atomic_write
-from r2.core.messages import error, warn
+from r2.core.messages import error, success, warn
 
 ERRORS = {
     "package-forbidden": "Cannot specify a package when not using --py or --js",
@@ -62,7 +60,7 @@ def create_alias(
         lines.insert(start_aliases, alias_cmd)
 
     atomic_write(path, "".join(lines))
-    rich.print(f"[b green]success[/]: Added alias '{alias}' to {path}")
+    success(f"Added alias '{alias}' to {path}")
 
 
 def parse_sections(path: Path | None = None) -> dict[str, list[tuple[str, str]]]:
