@@ -210,13 +210,13 @@ def test_arrows_cross_between_views_and_plugin_panes(config: Path) -> None:
     async def check(app: R2App, pilot: Pilot[None]) -> None:
         await show(app, pilot, "demo--first")
         await pilot.press("left")
-        assert active(app) == "issues"
-        view = app.query_one("#issues View", View)
+        assert active(app) == "adrs"
+        view = app.query_one("#adrs View", View)
         assert app.focused is not None and view in app.focused.ancestors
 
-        # From the issues view, right walks drawer -> content -> next tab.
+        # From the last view, right walks drawer -> content -> next tab.
         for _ in range(4):
-            if active(app) != "issues":
+            if active(app) != "adrs":
                 break
             await pilot.press("right")
         assert active(app) == "first"

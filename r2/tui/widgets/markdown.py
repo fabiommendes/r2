@@ -17,13 +17,15 @@ from textual.widgets import Collapsible, Label, Markdown, MarkdownViewer, Static
 from textual.widgets._markdown import MarkdownBlock, MarkdownFence, MarkdownH1
 from textual.widgets.markdown import MarkdownTableOfContents
 
-from r2.core.issues import parse
-from r2.core.threads import Comment, split_frontmatter
+from r2.core.threads import Comment, Thread, parse, split_frontmatter
 from r2.tui import theme
 from r2.tui.widgets.commands import CommandBar, CommandProvider
 from r2.tui.widgets.meta import FieldRenderer, MetaBar
 from r2.tui.widgets.search import SearchBar, describe, find_spans
 from r2.tui.widgets.splitter import Splitter
+
+# Frontmatter types whose files hold a comment thread.
+THREAD_TYPES = {"issue", "adr"}
 
 # Comments of an issue shown open; older ones start collapsed.
 OPEN_COMMENTS = 3
@@ -99,8 +101,8 @@ class UpperH1(MarkdownH1):
 class FrontmatterMarkdown(Markdown):
     """Markdown that renders the body only and reports the frontmatter apart.
 
-    For issues, the body stops at the description; the comments are reported
-    apart too, so they can be shown as a thread.
+    For threads (issues and ADRs), the body stops at the description; the
+    comments are reported apart too, so they can be shown as a thread.
     """
 
     BLOCKS = {**Markdown.BLOCKS, "h1": UpperH1}
@@ -114,10 +116,10 @@ class FrontmatterMarkdown(Markdown):
     def update(self, markdown: str) -> AwaitComplete:
         meta, body = split_frontmatter(markdown)
         comments: list[Comment] = []
-        if meta is not None and meta.get("type") == "issue":
-            issue = parse(markdown)
-            body = f"# {issue.title}\n\n{issue.description}"
-            comments = issue.comments
+        if meta is not None and meta.get("type") in THREAD_TYPES:
+            thread = parse(markdown, Thread, "", "")
+            body = f"# {thread.title}\n\n{thread.description}"
+            comments = thread.comments
         self.post_message(self.Parsed(meta, comments))
         return super().update(body)
 

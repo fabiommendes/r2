@@ -6,7 +6,9 @@ the title and a description. Lines holding only --- start comments.
 """
 
 import re
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import yaml
@@ -31,6 +33,33 @@ class Thread:
     comments: list[Comment] = field(default_factory=list)
     meta: dict[str, Any] = field(default_factory=dict)
     """Every frontmatter key but type and status, known or not."""
+
+
+def _keep(threads: Mapping[str, Any]) -> None:
+    pass
+
+
+@dataclass(frozen=True)
+class Format[T: Thread]:
+    """What a kind of thread needs to be listed and edited in r2."""
+
+    type: str
+    """The type key in the frontmatter."""
+    folder: str
+    """Folder of the files, relative to the project root."""
+    statuses: list[str]
+    """Known statuses in lifecycle order."""
+    closed: list[str]
+    next_status: dict[str, str]
+    """The status the next step of the workflow moves a thread to."""
+    load: Callable[[Path], T]
+    render: Callable[[T], str]
+    set_status: Callable[[T, str], None]
+    reconcile: Callable[[Mapping[str, T]], None] = _keep
+    """Fix the statuses of threads read together, keyed by file stem."""
+
+    def status_order(self, status: str) -> tuple[int, str]:
+        return status_order(status, self.statuses)
 
 
 def slugify(title: str, fallback: str) -> str:

@@ -11,6 +11,8 @@ from typing import Any
 
 from r2.core import threads
 
+FOLDER = "dev/issues"
+
 OPEN_STATUSES = [
     "backlog",
     "todo",
@@ -106,3 +108,15 @@ def set_status(issue: Issue, status: str, today: datetime.date | None = None) ->
     elif status not in CLOSED_STATUSES:
         issue.meta.pop("closed", None)
     issue.status = status
+
+
+FORMAT = threads.Format(
+    type="issue",
+    folder=FOLDER,
+    statuses=STATUSES,
+    closed=CLOSED_STATUSES,
+    next_status=NEXT_STATUS,
+    load=load,
+    render=render,
+    set_status=set_status,
+)

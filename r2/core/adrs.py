@@ -14,9 +14,19 @@ from typing import Any
 
 from r2.core import threads
 
+FOLDER = "dev/adr"
+
 OPEN_STATUSES = ["proposed"]
 CLOSED_STATUSES = ["accepted", "rejected", "deprecated", "superseded"]
 STATUSES = OPEN_STATUSES + CLOSED_STATUSES
+
+# The quick step between statuses. Deprecated is picked from the status menu
+# and superseded is set by supersede(), so neither is in the cycle.
+NEXT_STATUS = {
+    "proposed": "accepted",
+    "accepted": "rejected",
+    "rejected": "proposed",
+}
 
 # Optional keys in writing order, with the default that leaves them out.
 DEFAULTS: dict[str, Any] = {
@@ -128,3 +138,23 @@ def superseded(adrs: Mapping[str, Adr]) -> dict[str, str]:
             if str(old) in adrs:
                 replaced[str(old)] = stem
     return replaced
+
+
+def reconcile(adrs: Mapping[str, Adr]) -> None:
+    """Mark as superseded the ADRs that a newer one supersedes."""
+    for old, new in superseded(adrs).items():
+        adrs[old].status = "superseded"
+        adrs[old].meta["supersededBy"] = new
+
+
+FORMAT = threads.Format(
+    type="adr",
+    folder=FOLDER,
+    statuses=STATUSES,
+    closed=CLOSED_STATUSES,
+    next_status=NEXT_STATUS,
+    load=load,
+    render=render,
+    set_status=set_status,
+    reconcile=reconcile,
+)

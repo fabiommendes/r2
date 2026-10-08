@@ -12,13 +12,14 @@ import pytest
 from textual.pilot import Pilot
 from textual.widgets import Button, Input, Label, RichLog, TabbedContent, Tree
 
+from r2.core.adrs import load as load_adr
 from r2.core.issues import Issue, load
 from r2.tui.app import R2App
 from r2.tui.widgets.command_box import CommandBox, CommandRun
 from r2.tui.widgets.issue_form import Cycle, IssueForm
 from r2.tui.widgets.markdown import FrontmatterMarkdown, MarkdownBrowser
 from r2.tui.widgets.prompts import Ask, Confirm
-from r2.tui.widgets.status_menu import StatusMenu
+from r2.tui.widgets.status_menu import Pick, StatusMenu
 
 
 def drive(
@@ -459,5 +460,122 @@ def test_the_cursor_moving_is_not_a_visit(
         await pilot.pause()
         assert tabs.active == first
         assert app.query_one("#back").has_class("-unavailable")
+
+    drive(test, monkeypatch)
+
+
+def adr_file(folder: Path, stem: str, status: str, extra: str = "") -> Path:
+    path = folder / f"{stem}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    title = stem.partition("-")[2].replace("-", " ").capitalize()
+    path.write_text(f"---\ntype: adr\nstatus: {status}\n{extra}---\n\n# {title}\n")
+    return path
+
+
+async def show_adr(app: R2App, pilot: Pilot[None], path: Path) -> MarkdownBrowser:
+    app.query_one(TabbedContent).active = "adrs"
+    await pilot.pause()
+    browser = app.query_one("#adrs MarkdownBrowser", MarkdownBrowser)
+    await browser.open(path)
+    await pilot.pause()
+    return browser
+
+
+def adr_button(app: R2App, command: str) -> Button:
+    return app.query_one(f"#adrs CommandBar #command-{command}", Button)
+
+
+def test_new_adr_takes_the_next_number_and_opens_the_editor(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("R2_EDITOR", "my-editor")
+    folder = tmp_path / "dev" / "adr"
+    adr_file(folder, "0004-old", "accepted")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        app.query_one(TabbedContent).active = "adrs"
+        await pilot.pause()
+        await pilot.press("n")
+        await pilot.pause()
+        assert isinstance(app.screen, Ask)
+        await pilot.press(*"Use TOML", "enter")
+        await pilot.pause()
+
+    commands = drive(test, monkeypatch)
+    created = folder / "0005-use-toml.md"
+    adr = load_adr(created)
+    assert (adr.title, adr.status) == ("Use TOML", "proposed")
+    assert commands[-1][-1] == str(created)
+
+
+def test_advance_cycles_an_adr_between_proposed_accepted_and_rejected(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    path = adr_file(tmp_path / "dev" / "adr", "0001-use-toml", "proposed")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        await show_adr(app, pilot, path)
+        assert str(adr_button(app, "advance").label) == "accepted →"
+        adr_button(app, "advance").press()
+        await pilot.pause(0.2)
+        assert load_adr(path).status == "accepted"
+        assert "decided" in load_adr(path).meta
+        assert str(adr_button(app, "advance").label) == "rejected →"
+
+    drive(test, monkeypatch)
+
+
+def test_supersedes_records_the_replacement_on_both_adrs(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    folder = tmp_path / "dev" / "adr"
+    old = adr_file(folder, "0001-json-config", "accepted")
+    new = adr_file(folder, "0002-toml-config", "accepted")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        await show_adr(app, pilot, new)
+        adr_button(app, "supersede").press()
+        await pilot.pause()
+        assert isinstance(app.screen, Pick)
+        await pilot.press("enter")
+        await pilot.pause(0.2)
+
+    drive(test, monkeypatch)
+    assert load_adr(new).meta["supersedes"] == ["0001-json-config"]
+    assert load_adr(old).status == "superseded"
+    assert load_adr(old).meta["supersededBy"] == "0002-toml-config"
+
+
+def test_the_tree_trusts_supersedes_over_the_old_adr_status(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    folder = tmp_path / "dev" / "adr"
+    old = adr_file(folder, "0001-json-config", "accepted")
+    new = adr_file(folder, "0002-toml", "accepted", "supersedes: [0001-json-config]\n")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        browser = await show_adr(app, pilot, new)
+        groups = {
+            str(node.label).split()[0]: [leaf.data for leaf in node.children]
+            for node in browser.query_one(Tree).root.children
+        }
+        assert groups == {"accepted": [new], "superseded": [old]}
+
+    drive(test, monkeypatch)
+
+
+def test_clicking_a_superseded_adr_opens_it(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    folder = tmp_path / "dev" / "adr"
+    old = adr_file(folder, "0001-json-config", "superseded")
+    new = adr_file(folder, "0002-toml", "accepted", "supersedes: [0001-json-config]\n")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        browser = await show_adr(app, pilot, new)
+        # Padding, then the "supersedes" key column, on the third line.
+        await pilot.click("#adrs MetaBar", offset=(14, 2))
+        await pilot.pause()
+        assert browser.current == old
 
     drive(test, monkeypatch)
