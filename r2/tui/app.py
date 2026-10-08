@@ -20,6 +20,7 @@ from r2.core import git
 from r2.core.editor import (
     editor_command,
     ide_command,
+    is_gui_editor,
     launch_detached,
     open_externally,
     shell_command,
@@ -180,6 +181,8 @@ class R2App(App[None]):
         self.entry_direction: Direction | None = None
         #: Tab being activated by back or forward, which is not a new visit.
         self._restoring: str | None = None
+        #: A GUI editor was started; read the files again on coming back.
+        self._reload_on_focus = False
         self.bind_global_commands()
 
     def compose(self) -> ComposeResult:
@@ -451,8 +454,24 @@ class R2App(App[None]):
         self._edit(message.link)
 
     def _edit(self, link: Link) -> None:
-        self._hand_over(editor_command(link))
-        self._active_view().reload()
+        command = editor_command(link)
+        if not is_gui_editor(command):
+            self._hand_over(command)
+            self._active_view().reload()
+            return
+        # A GUI editor gets its own window; r2 reads the files again when
+        # the user comes back to it.
+        try:
+            launch_detached(command)
+        except OSError as error:
+            self.notify(f"Could not run {command[0]}: {error}", severity="error")
+            return
+        self._reload_on_focus = True
+
+    def on_app_focus(self) -> None:
+        if self._reload_on_focus:
+            self._reload_on_focus = False
+            self._active_view().reload()
 
     def action_shell(self) -> None:
         """Run an interactive shell in the project root; exiting it returns here."""

@@ -9,6 +9,7 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 import pytest
+from textual import events
 from textual.pilot import Pilot
 from textual.widgets import Button, Input, Label, RichLog, TabbedContent, Tree
 
@@ -577,5 +578,50 @@ def test_clicking_a_superseded_adr_opens_it(
         await pilot.click("#adrs MetaBar", offset=(14, 2))
         await pilot.pause()
         assert browser.current == old
+
+    drive(test, monkeypatch)
+
+
+def test_a_gui_editor_starts_detached_and_reloads_on_coming_back(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("R2_EDITOR", "code -w")
+    launched: list[list[str]] = []
+    monkeypatch.setattr("r2.tui.app.launch_detached", launched.append)
+    doc = tmp_path / "docs" / "guide.md"
+    doc.parent.mkdir()
+    doc.write_text("# Guide\n")
+    reloads: list[str] = []
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        app.query_one(TabbedContent).active = "docs"
+        await pilot.pause()
+        await app.query_one("#docs MarkdownBrowser", MarkdownBrowser).open(doc)
+        view = app._active_view()
+        monkeypatch.setattr(view, "reload", lambda: reloads.append("reload"))
+        await pilot.press("e")
+        await pilot.pause()
+        assert reloads == []
+        app.post_message(events.AppFocus())
+        await pilot.pause()
+        app.post_message(events.AppFocus())
+        await pilot.pause()
+
+    assert drive(test, monkeypatch) == []
+    assert launched == [["code", str(doc)]]
+    assert reloads == ["reload"]
+
+
+def test_empty_comments_are_not_shown(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    issue, show = issue_on_display(tmp_path)
+    text = issue.read_text()
+    issue.write_text(text + "\n---\nby: fabio\n\nKept.\n\n---\nby: fabio\n\n")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        await show(app, pilot)
+        await pilot.pause()
+        assert len(app.query("#issues CommentThread Collapsible")) == 1
 
     drive(test, monkeypatch)

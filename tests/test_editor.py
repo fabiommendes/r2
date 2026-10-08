@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from r2.core.conf import Config
-from r2.core.editor import editor_command
+from r2.core.editor import editor_command, is_gui_editor
 from r2.core.links import Link
 
 
@@ -22,7 +22,7 @@ def test_editor_precedence(config: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.delenv("EDITOR")
     assert editor_command(link) == ["code", "--goto", "/a.py:10"]
     monkeypatch.setenv("VISUAL", "/usr/bin/codium -w")
-    assert editor_command(link) == ["/usr/bin/codium", "-w", "--goto", "/a.py:10"]
+    assert editor_command(link) == ["/usr/bin/codium", "--goto", "/a.py:10"]
     monkeypatch.delenv("VISUAL")
     assert editor_command(Link(Path("/a.py"))) == ["micro", "/a.py"]
 
@@ -41,3 +41,13 @@ def test_ide_precedence(config: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     assert ide_command(Path("/p")) == ["code", "/p"]
     monkeypatch.delenv("VISUAL")
     assert ide_command(Path("/p")) == ["code", "/p"]
+
+
+def test_gui_editors_lose_their_wait_flag(
+    config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("R2_EDITOR", "code -w --wait --new-window")
+    command = editor_command(Link(Path("/a.py")))
+    assert command == ["code", "--new-window", "/a.py"]
+    assert is_gui_editor(command)
+    assert not is_gui_editor(["vim", "-w", "/a.py"])

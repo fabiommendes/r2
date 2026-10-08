@@ -320,7 +320,7 @@ project has its own history, and an arrow dims when it has nowhere to go.
 | `1` to `4` | Switch to a view |
 | `←` `→` | Move between drawer and content, then to the previous or next view |
 | `f` | Toggle excerpt and whole file (Live view) |
-| `e` | Edit the current file in the terminal editor |
+| `e` | Edit the current file in the editor |
 | `o` | Open the current file in its default application |
 | `i` | Open the project in the GUI editor |
 | `t` | Open a shell in the project root |
@@ -345,7 +345,10 @@ R2 picks the programs it launches from the environment:
 
 - `e` runs `$R2_EDITOR`, `editor` under `[r2]` in `~/.config/r2/config.toml`,
   `$EDITOR` or `$VISUAL`, falling back to `micro`.
-  It passes `+LINE` to jump to the reference.
+  It passes `+LINE` to jump to the reference. VS Code and its forks get
+  `--goto PATH:LINE` instead and start in their own window, without a wait
+  flag such as `-w`, so r2 stays usable; r2 reads the files again when you
+  come back to it.
 - `i` runs `$R2_IDE`, `ide` under `[r2]` in the same file or `$VISUAL`,
   falling back to `code`.
 - `t` runs `$SHELL`.

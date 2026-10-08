@@ -14,6 +14,7 @@ from textual.widgets import Input, Tree
 from textual.widgets.tree import TreeNode
 
 from r2.core import adrs, git, issues
+from r2.core.editor import uses_gui_editor
 from r2.core.links import Link
 from r2.core.project import ProjectContext
 from r2.core.threads import Format, Thread, append_stub, comment_stub, matches
@@ -322,7 +323,10 @@ class ThreadsView(View):
         except OSError as error:
             self.notify(f"Could not comment: {error}", severity="error")
             return
-        self._stub = (path, stub)
+        # A GUI editor may still have the file open when r2 reloads, so the
+        # stub stays; empty comments are not shown anyway.
+        if not uses_gui_editor():
+            self._stub = (path, stub)
         self.post_message(self.EditFile(Link(path, len(text.splitlines()) + 1)))
 
     def on_meta_bar_field_clicked(self, event: MetaBar.FieldClicked) -> None:

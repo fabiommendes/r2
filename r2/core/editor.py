@@ -11,8 +11,16 @@ from r2.core.links import Link
 
 DEFAULT_EDITOR = "micro"
 
-# Editors that take "--goto PATH:LINE" instead of "+LINE PATH".
-GOTO_EDITORS = {"code", "code-insiders", "codium", "cursor", "windsurf"}
+# GUI editors, which take "--goto PATH:LINE" instead of "+LINE PATH". R2
+# starts them detached instead of handing them the terminal.
+GUI_EDITORS = {"code", "code-insiders", "codium", "cursor", "windsurf"}
+
+# Flags that make a GUI editor block until the file is closed.
+WAIT_FLAGS = {"-w", "--wait"}
+
+
+def is_gui_editor(command: list[str]) -> bool:
+    return bool(command) and Path(command[0]).name in GUI_EDITORS
 
 
 def editor_command(link: Link) -> list[str]:
@@ -25,8 +33,21 @@ def editor_command(link: Link) -> list[str]:
 
     Most terminal editors (micro, vim, nvim, nano, emacs) accept "+LINE" to
     jump to a line. VS Code and its forks read "+LINE" as a file name, so
-    they get "--goto PATH:LINE" instead.
+    they get "--goto PATH:LINE" instead, and lose any wait flag: r2 starts
+    them detached and never waits for them.
     """
+    command = _editor()
+    if is_gui_editor(command):
+        command = [arg for arg in command if arg not in WAIT_FLAGS]
+        if link.start is None:
+            return [*command, str(link.path)]
+        return [*command, "--goto", f"{link.path}:{link.start}"]
+    if link.start is None:
+        return [*command, str(link.path)]
+    return [*command, f"+{link.start}", str(link.path)]
+
+
+def _editor() -> list[str]:
     editor = (
         os.environ.get("R2_EDITOR")
         or Config().editor
@@ -34,12 +55,13 @@ def editor_command(link: Link) -> list[str]:
         or os.environ.get("VISUAL")
         or DEFAULT_EDITOR
     )
-    command = shlex.split(editor)
-    if link.start is None:
-        return [*command, str(link.path)]
-    if Path(command[0]).name in GOTO_EDITORS:
-        return [*command, "--goto", f"{link.path}:{link.start}"]
-    return [*command, f"+{link.start}", str(link.path)]
+    return shlex.split(editor)
+
+
+def uses_gui_editor() -> bool:
+    """Whether editor_command opens files in a GUI editor, which r2 does not
+    wait for."""
+    return is_gui_editor(_editor())
 
 
 def edit_file(path: Path) -> None:

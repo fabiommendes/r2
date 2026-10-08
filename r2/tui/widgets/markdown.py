@@ -119,7 +119,7 @@ class FrontmatterMarkdown(Markdown):
         if meta is not None and meta.get("type") in THREAD_TYPES:
             thread = parse(markdown, Thread, "", "")
             body = f"# {thread.title}\n\n{thread.description}"
-            comments = thread.comments
+            comments = [c for c in thread.comments if c.text.strip()]
         self.post_message(self.Parsed(meta, comments))
         return super().update(body)
 
