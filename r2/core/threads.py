@@ -121,10 +121,10 @@ def render(thread: Thread, type_: str, defaults: dict[str, Any]) -> str:
     for key, default in defaults.items():
         value = thread.meta.get(key, default)
         if value != default and value not in (None, "", []):
-            lines.append(f"{key}: {_yaml_value(value)}")
+            lines.append(f"{key}: {yaml_value(value)}")
     for key, value in thread.meta.items():
         if key not in defaults:
-            lines.append(f"{key}: {_yaml_value(value)}")
+            lines.append(f"{key}: {yaml_value(value)}")
     lines += ["---", "", f"# {thread.title}", ""]
     body = "\n".join(lines) + "\n"
     if thread.description:
@@ -172,7 +172,7 @@ def _comment(section: str) -> Comment:
     return Comment(section)
 
 
-def _yaml_value(value: Any) -> str:
+def yaml_value(value: Any) -> str:
     """Dump a value on one line, quoting only what YAML needs quoted."""
     dumped = yaml.safe_dump(value, default_flow_style=True, width=1 << 16)
     return dumped.removesuffix("...\n").strip()

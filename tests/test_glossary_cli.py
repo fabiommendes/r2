@@ -105,14 +105,18 @@ def test_a_missing_file_is_an_error(tmp_path: Path) -> None:
     assert "not found" in result.output
 
 
-def test_an_unparseable_file_is_an_error_and_is_left_alone(tmp_path: Path) -> None:
-    path = tmp_path / "bad.md"
-    path.write_text("not a glossary at all\n", encoding="utf-8")
+def test_any_markdown_file_is_read_leniently(tmp_path: Path) -> None:
+    path = tmp_path / "loose.md"
+    path.write_text("Some notes.\n\n## Beta\n\nb\n\n## Alpha\n\na\n")
 
     result = run("sort", "-f", str(path))
 
-    assert result.exit_code != 0
-    assert path.read_text(encoding="utf-8") == "not a glossary at all\n"
+    assert result.exit_code == 0
+    doc = parse(path.read_text(encoding="utf-8"))
+    assert (doc.intro, [t.name for t in doc.terms]) == (
+        "Some notes.",
+        ["Alpha", "Beta"],
+    )
 
 
 #

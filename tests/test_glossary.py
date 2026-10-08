@@ -194,31 +194,102 @@ def test_parse_accepts_a_term_with_an_empty_definition() -> None:
 
 
 #
-# parse: rejected documents
+# parse: lenient read
 #
-def test_parse_rejects_an_empty_document() -> None:
-    with pytest.raises(ValueError):
-        parse("")
+def test_parse_reads_an_empty_document_as_an_empty_glossary() -> None:
+    assert parse("") == Glossary(terms=[], intro="")
 
 
-def test_parse_rejects_a_document_without_a_heading() -> None:
-    with pytest.raises(ValueError):
-        parse("Glossary\n\n---\n")
+def test_parse_takes_the_text_before_the_first_term_as_intro() -> None:
+    doc = parse("Some words.\n\n## Alpha\n\na\n")
+    assert (doc.title, doc.intro) == ("Glossary", "Some words.")
+    assert doc.terms == [Term("Alpha", "a")]
 
 
-def test_parse_rejects_a_heading_that_is_not_a_glossary() -> None:
-    with pytest.raises(ValueError):
-        parse("# Notes\n\nintro\n\n---\n\n## Alpha\n\na\n")
+def test_parse_accepts_any_title() -> None:
+    assert parse("# Notes\n\nintro\n\n---\n\n## Alpha\n\na\n").title == "Notes"
 
 
-def test_parse_rejects_a_deeper_heading() -> None:
-    with pytest.raises(ValueError):
-        parse("## Glossary\n\n---\n")
+def test_parse_keeps_text_that_is_not_a_term_heading_in_the_intro() -> None:
+    doc = parse("# Glossary\n\n---\n\nAlpha\n\nThe first letter.\n")
+    assert doc.intro == "Alpha\n\nThe first letter."
+    assert doc.terms == []
 
 
-def test_parse_rejects_a_term_that_is_not_a_heading() -> None:
-    with pytest.raises(ValueError):
-        parse("# Glossary\n\n---\n\nAlpha\n\nThe first letter.\n")
+def test_parse_ignores_headings_inside_fenced_code() -> None:
+    doc = parse("## Alpha\n\n```\n## not a term\n```\n")
+    assert [term.name for term in doc.terms] == ["Alpha"]
+
+
+#
+# fields
+#
+FIELDS_SAMPLE = """\
+## Issue
+
+A unit of work.
+
+- not a field list, since this item has no key
+
+- tags: process, files
+- avoid: ticket, bug
+- related: Comment
+- code: `r2.core.issues.Issue`
+- pt: tarefa
+"""
+
+
+def test_parse_reads_the_trailing_field_list() -> None:
+    [term] = parse(FIELDS_SAMPLE).terms
+    assert term.definition == (
+        "A unit of work.\n\n- not a field list, since this item has no key"
+    )
+    assert term.tags == ["process", "files"]
+    assert term.avoid == ["ticket", "bug"]
+    assert term.related == ["Comment"]
+    assert term.fields["code"] == "`r2.core.issues.Issue`"
+    assert term.languages == {"pt": "tarefa"}
+
+
+def test_a_list_that_is_not_all_fields_stays_in_the_definition() -> None:
+    [term] = parse("## A\n\nText.\n\n- tags: x\n- plain item\n").terms
+    assert term.fields == {}
+    assert term.definition.endswith("- plain item")
+
+
+def test_fields_are_written_in_order_and_empty_ones_left_out() -> None:
+    term = Term(
+        "Issue",
+        "A unit of work.",
+        {"zz-custom": "kept", "pt": "tarefa", "es": "tarea", "code": "", "tags": "a"},
+    )
+    assert term.to_markdown() == (
+        "## Issue\n\nA unit of work.\n\n"
+        "- tags: a\n- es: tarea\n- pt: tarefa\n- zz-custom: kept"
+    )
+
+
+def test_fields_round_trip() -> None:
+    doc = parse(FIELDS_SAMPLE)
+    assert parse(doc.to_markdown()) == doc
+
+
+def test_find_and_tags() -> None:
+    doc = parse(FIELDS_SAMPLE + "\n## Comment\n\nA reply.\n\n- tags: Files\n")
+    assert doc.find("issue") is doc.terms[0]
+    assert doc.find("nope") is None
+    assert doc.tags() == ["files", "process"]
+
+
+#
+# frontmatter
+#
+def test_frontmatter_status_and_unknown_keys_are_kept() -> None:
+    doc = parse("---\ntype: glossary\nstatus: draft\nowner: me\n---\n# Glossary\n")
+    assert (doc.status, doc.meta) == ("draft", {"owner": "me"})
+    assert doc.to_markdown().startswith(
+        "---\ntype: glossary\nstatus: draft\nowner: me\n---\n"
+    )
 
 
 #
@@ -260,7 +331,10 @@ def test_to_markdown_round_trips_a_multi_paragraph_definition() -> None:
 
 def test_to_markdown_writes_markdown_headings() -> None:
     doc = Glossary(terms=[Term("Alpha", "a")], intro="An intro.")
-    assert doc.to_markdown() == ("# Glossary\n\nAn intro.\n\n---\n\n## Alpha\n\na\n")
+    assert doc.to_markdown() == (
+        "---\ntype: glossary\nstatus: active\n---\n\n"
+        "# Glossary\n\nAn intro.\n\n---\n\n## Alpha\n\na\n"
+    )
 
 
 def test_to_markdown_is_idempotent(glossary: Glossary) -> None:

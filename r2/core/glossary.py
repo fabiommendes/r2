@@ -1,47 +1,103 @@
 """
-Glossary is a special markdown document with the following structure:
+Glossary: the project's ubiquitous language, kept in one Markdown file.
+
+The format is specified in dev/spec/glossary.md:
 
 ```markdown
+---
+type: glossary
+status: active
+---
+
 # Glossary
 
-One or more paragraphs of introduction text.
+Introduction.
 
 ---
 
-## Definition 1
+## Term
 
-Definition 1 text.
+Definition.
 
-
-## Definition 2
-
-Definition 2 text.
-
-....
-
+- tags: process
+- avoid: synonym, other synonym
+- related: Other term
+- code: `module.Class`
+- pt: termo
 ```
+
+Reading is lenient, so any Markdown text passes as a glossary; writing always
+produces the strict format.
 """
 
 from __future__ import annotations
 
-from collections import deque
-from collections.abc import Callable
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
+from typing import Any
+
+from r2.core.threads import FENCE_RE, split_frontmatter, yaml_value
 
 __all__ = ["Glossary", "Term", "parse"]
+
+DEFAULT_TITLE = "Glossary"
+
+# Fields in writing order; language codes come after them, then the rest.
+FIELDS = ["tags", "avoid", "related", "code"]
+
+FIELD_RE = re.compile(r"^- ([a-z][a-z0-9_-]*):[ \t]*(.*?)\s*$")
+LANGUAGE_RE = re.compile(r"[a-z]{2}")
 
 
 @dataclass
 class Term:
     name: str
-    definition: str
+    definition: str = ""
+    fields: dict[str, str] = field(default_factory=dict)
+    """Values of the trailing field list, by key, as written."""
+
+    def items(self, key: str) -> list[str]:
+        """The comma separated entries of a field."""
+        return [
+            item.strip() for item in self.fields.get(key, "").split(",") if item.strip()
+        ]
+
+    @property
+    def tags(self) -> list[str]:
+        return self.items("tags")
+
+    @property
+    def avoid(self) -> list[str]:
+        return self.items("avoid")
+
+    @property
+    def related(self) -> list[str]:
+        return self.items("related")
+
+    @property
+    def languages(self) -> dict[str, str]:
+        """The term in other languages, by ISO 639-1 code."""
+        return {key: value for key, value in self.fields.items() if _is_language(key)}
+
+    def to_markdown(self) -> str:
+        """The term as a level 2 section, without a trailing newline."""
+        parts = [f"## {self.name}"]
+        if self.definition:
+            parts.append(self.definition)
+        fields = [f"- {key}: {value}" for key, value in _ordered(self.fields) if value]
+        if fields:
+            parts.append("\n".join(fields))
+        return "\n\n".join(parts)
 
 
 @dataclass
 class Glossary:
     terms: list[Term]
     intro: str
-    title: str = "Glossary"
+    title: str = DEFAULT_TITLE
+    status: str = "active"
+    meta: dict[str, Any] = field(default_factory=dict)
+    """Frontmatter keys other than type and status."""
 
     def sorted(self) -> Glossary:
         """
@@ -51,11 +107,26 @@ class Glossary:
             terms=sorted(self.terms, key=lambda term: term.name.lower()),
             intro=self.intro,
             title=self.title,
+            status=self.status,
+            meta=self.meta,
         )
+
+    def find(self, name: str) -> Term | None:
+        """The term called name, compared case-insensitively."""
+        target = name.strip().lower()
+        return next((term for term in self.terms if term.name.lower() == target), None)
+
+    def tags(self) -> list[str]:
+        """Every tag in use, sorted; tags that differ only in case are one."""
+        seen: dict[str, str] = {}
+        for term in self.terms:
+            for tag in term.tags:
+                seen.setdefault(tag.lower(), tag)
+        return [seen[key] for key in sorted(seen)]
 
     def render(self) -> str:
         """
-        Render the glossary as a string.
+        Render the glossary as plain text: the intro, then "name: definition".
         """
         output = [self.intro, ""]
         for term in self.terms:
@@ -68,165 +139,91 @@ class Glossary:
 
         The result round-trips through :func:`parse`.
         """
-        lines = [f"# {self.title}", ""]
+        lines = ["---", "type: glossary", f"status: {self.status}"]
+        lines += [f"{key}: {yaml_value(value)}" for key, value in self.meta.items()]
+        lines += ["---", "", f"# {self.title}", ""]
         if self.intro:
             lines += [self.intro, ""]
         lines += ["---", ""]
-
         for term in self.terms:
-            lines += [f"## {term.name}", ""]
-            if term.definition:
-                lines += [term.definition, ""]
-
+            lines += [term.to_markdown(), ""]
         return "\n".join(lines)
 
 
 def parse(src: str) -> Glossary:
     """
-    Parse a glossary from a string.
+    Read a glossary, accepting any Markdown text.
     """
-    parser = GlossaryParser(src)
-    doc = parser.parse()
-    if parser.is_empty():
-        return doc
-    raise ValueError("Unexpected content after glossary document.")
+    loaded, body = split_frontmatter(src)
+    meta = dict(loaded or {})
+    meta.pop("type", None)
+    status = str(meta.pop("status", None) or "active")
+
+    head, sections = _split_terms(body)
+    title, head = _split_title(head)
+    intro = _intro(head)
+    terms = [_term(section) for section in sections]
+    return Glossary(terms=terms, intro=intro, title=title, status=status, meta=meta)
 
 
-class GlossaryParser:
-    """
-    A parser for glossary files.
-    """
-
-    def __init__(self, src: str):
-        self.src = src
-        self.lines = deque(src.splitlines())
-
-        self.intro = ""
-        self.title = "Glossary"
-        self.terms: list[Term] = []
-
-    def parse(self) -> Glossary:
-        """
-        Parse the glossary file.
-        """
-
-        self.title = self.parse_title()
-        self.intro = self.parse_intro()
-
-        while self.lines:
-            term = self.parse_term()
-            self.terms.append(term)
-
-        return Glossary(terms=self.terms.copy(), intro=self.intro, title=self.title)
-
-    def is_empty(self) -> bool:
-        return not self.lines
-
-    def read(self) -> str:
-        if not self.lines:
-            return ""
-        return self.lines.popleft()
-
-    def peek(self) -> str:
-        if not self.lines:
-            return ""
-        return self.lines[0]
-
-    def read_if(self, pred: Callable[[str], bool]) -> str | None:
-        if not self.lines:
-            return None
-
-        if pred(self.peek()):
-            return self.lines.popleft()
-        return None
-
-    def match(self, pred: Callable[[str], bool] | str) -> str | None:
-        pred = normalize_pred(pred)
-        if not self.lines:
-            return None
-        if pred(self.peek()):
-            return self.lines.popleft()
-        return None
-
-    def expect(self, pred: Callable[[str], bool] | str) -> str:
-        pred = normalize_pred(pred)
-        if not self.lines:
-            raise ValueError("Unexpected end of input.")
-        line = self.lines.popleft()
-        if not pred(line):
-            raise ValueError(f"Unexpected line: {line}")
-        return line
-
-    def expect_prefix(self, prefix: str) -> None:
-        if not self.lines:
-            message = f"Expect a line starting with {prefix!r}, but got end of input."
-            raise ValueError(message)
-
-        if not self.lines[0].startswith(prefix):
-            msg = f"Expect a line starting with {prefix!r}, but got: {self.lines[0]!r}"
-            raise ValueError(msg)
-
-        self.lines[0] = self.lines[0].removeprefix(prefix)
-
-    def consume_ws(self) -> None:
-        """
-        Remove any empty lines.
-        """
-        while self.read_if(lambda line: not line.strip()) is not None:
-            pass
-
-    #
-    # Parse elements of the glossary
-    #
-    def parse_title(self) -> str:
-        """
-        Title is of the form `# Glossary [optional subtitle]`
-        """
-        self.consume_ws()
-        self.expect_prefix("# ")
-        title = self.expect(lambda line: line.strip().lower().startswith("glossary"))
-        return title.strip()
-
-    def parse_intro(self) -> str:
-        """
-        Parse the introduction text.
-
-        Those are arbitrary paragraphs of text before the first `---` line.
-        """
-        self.consume_ws()
-        intro_lines = []
-
-        while self.lines and not self.match("---"):
-            intro_lines.append(self.read())
-
-        return "\n".join(intro_lines).rstrip()
-
-    def parse_term(self) -> Term:
-        """
-        Parse a term definition.
-
-        A term definition is of the form:
-
-        ```
-        ## Term Name
-
-        Definition text.
-        ```
-        """
-        self.consume_ws()
-        self.expect_prefix("## ")
-        name = self.read().strip()
-
-        self.consume_ws()
-        definition_lines = []
-
-        while self.lines and not self.peek().startswith("## "):
-            definition_lines.append(self.read())
-
-        return Term(name=name, definition="\n".join(definition_lines).rstrip())
+def _split_terms(body: str) -> tuple[list[str], list[list[str]]]:
+    """Split the body into the lines before the first term and each term."""
+    head: list[str] = []
+    sections: list[list[str]] = []
+    fence: str | None = None
+    for line in body.splitlines():
+        if match := FENCE_RE.match(line):
+            if fence is None:
+                fence = match.group(1)
+            elif match.group(1) == fence:
+                fence = None
+        if fence is None and line.startswith("## "):
+            sections.append([line])
+        elif sections:
+            sections[-1].append(line)
+        else:
+            head.append(line)
+    return head, sections
 
 
-def normalize_pred(pred: Callable[[str], bool] | str) -> Callable[[str], bool]:
-    if isinstance(pred, str):
-        return lambda line: line.rstrip() == pred
-    return pred
+def _split_title(lines: list[str]) -> tuple[str, list[str]]:
+    for index, line in enumerate(lines):
+        if not line.strip():
+            continue
+        if line.startswith("# "):
+            return line[2:].strip(), lines[index + 1 :]
+        break
+    return DEFAULT_TITLE, lines
+
+
+def _intro(lines: list[str]) -> str:
+    """The text before the first term, without the --- lines that end it."""
+    kept = [line for line in lines if line.strip() != "---"]
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip("\n")
+
+
+def _term(lines: list[str]) -> Term:
+    name = lines[0][3:].strip()
+    body = "\n".join(lines[1:]).strip("\n")
+    blocks = re.split(r"\n[ \t]*\n", body) if body else []
+    fields: dict[str, str] = {}
+    if blocks:
+        matches = [FIELD_RE.match(line) for line in blocks[-1].splitlines()]
+        if all(matches):
+            fields = {m.group(1): m.group(2) for m in matches if m}
+            blocks = blocks[:-1]
+    definition = "\n\n".join(blocks).strip("\n")
+    return Term(name=name, definition=definition, fields=fields)
+
+
+def _is_language(key: str) -> bool:
+    return key not in FIELDS and LANGUAGE_RE.fullmatch(key) is not None
+
+
+def _ordered(fields: dict[str, str]) -> list[tuple[str, str]]:
+    known = [(key, fields[key]) for key in FIELDS if key in fields]
+    languages = sorted((k, v) for k, v in fields.items() if _is_language(k))
+    rest = [
+        (k, v) for k, v in fields.items() if k not in FIELDS and not _is_language(k)
+    ]
+    return known + languages + rest
