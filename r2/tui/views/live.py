@@ -83,3 +83,11 @@ class LiveView(View):
         link = self.context.links[event.option_index]
         self.context.view_state[self.ID] = link
         self.query_one(FilePreview).show(link, link.label(self.context.root))
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
+        self.post_message(self.Navigated())
+
+    async def restore(self, link: Link | None) -> None:
+        """Select the link again, if the list still has it."""
+        if self.context is not None and link in self.context.links:
+            self.query_one(OptionList).highlighted = self.context.links.index(link)

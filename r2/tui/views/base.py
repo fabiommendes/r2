@@ -49,6 +49,9 @@ class View(Widget):
             super().__init__()
             self.path = path
 
+    class Navigated(Message):
+        """The view changed what it shows, by a committed action of the user."""
+
     ID: ClassVar[str]
     TITLE: ClassVar[str]
 
@@ -92,6 +95,18 @@ class View(Widget):
         """Display path, which shows() accepted or SHOWS_ANY_FILE allows."""
         for browser in self.query(MarkdownBrowser):
             await browser.open(path)
+
+    async def restore(self, link: Link | None) -> None:
+        """Show what the view showed at link, when going back or forward.
+
+        Files that no longer exist are skipped; the view stays as it is.
+        """
+        if link is not None and link.path.exists():
+            await self.show_file(link.path)
+
+    def on_markdown_browser_selected(self, event: MarkdownBrowser.Selected) -> None:
+        event.stop()
+        self.post_message(self.Navigated())
 
     def reload(self) -> None:
         """Read the files on screen again, for instance after an edit."""

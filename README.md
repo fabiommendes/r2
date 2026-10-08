@@ -300,6 +300,11 @@ The top bar shows the project, its git branch, and whether the worktree is
 clean, has staged changes or has unstaged changes. Click the `⭘` icon on its
 left to open the command palette, where you can also change the theme.
 
+The `‹` and `›` arrows at its right end go back and forward through the places
+you visited, across tabs, like a browser. Tab switches, documents picked in a
+tree and links followed count as visits; moving the cursor does not. Each
+project has its own history, and an arrow dims when it has nowhere to go.
+
 ### Keys
 
 | Key | Action |

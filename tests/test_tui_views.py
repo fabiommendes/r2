@@ -348,3 +348,116 @@ def test_entering_the_issue_focuses_the_document_not_the_commands(
         assert isinstance(app.focused, FrontmatterMarkdown)
 
     drive(test, monkeypatch)
+
+
+def select_doc(app: R2App, view: str, path: Path) -> None:
+    """Select the tree leaf of path, as Enter does."""
+    tree = app.query_one(f"#{view} Tree", Tree)
+    nodes = list(tree.root.children)
+    while nodes:
+        node = nodes.pop(0)
+        if node.data == path:
+            tree.select_node(node)
+            return
+        nodes.extend(node.children)
+    raise AssertionError(f"{path} is not in the {view} tree")
+
+
+def history_setup(tmp_path: Path) -> tuple[Path, Path]:
+    """A doc and an issue, with the Issues view not yet loaded."""
+    doc = tmp_path / "docs" / "guide.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("# Guide\n")
+    issue, _ = issue_on_display(tmp_path)
+    return doc, issue
+
+
+async def open_doc_then_issues(app: R2App, pilot: Pilot[None], doc: Path) -> None:
+    tabs = app.query_one(TabbedContent)
+    tabs.active = "docs"
+    await pilot.pause()
+    select_doc(app, "docs", doc)
+    await pilot.pause()
+    tabs.active = "issues"
+    await pilot.pause()
+
+
+def test_back_returns_to_the_doc_and_forward_to_the_issues(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    doc, _ = history_setup(tmp_path)
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        await open_doc_then_issues(app, pilot, doc)
+        await app.action_back()
+        await pilot.pause()
+        assert app.query_one(TabbedContent).active == "docs"
+        browser = app.query_one("#docs MarkdownBrowser", MarkdownBrowser)
+        assert browser.current == doc
+        tree = app.query_one("#docs Tree", Tree)
+        assert tree.cursor_node is not None and tree.cursor_node.data == doc
+        await app.action_forward()
+        await pilot.pause()
+        assert app.query_one(TabbedContent).active == "issues"
+
+    drive(test, monkeypatch)
+
+
+def test_a_visit_after_going_back_clears_forward(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    doc, _ = history_setup(tmp_path)
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        await open_doc_then_issues(app, pilot, doc)
+        await app.action_back()
+        await pilot.pause()
+        assert app.query_one("#forward").has_class("-unavailable") is False
+        app.query_one(TabbedContent).active = "live"
+        await pilot.pause()
+        assert app.query_one("#forward").has_class("-unavailable")
+        await app.action_forward()
+        assert app.query_one(TabbedContent).active == "live"
+
+    drive(test, monkeypatch)
+
+
+def test_the_arrows_dim_when_unavailable_and_click_when_not(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    doc, _ = history_setup(tmp_path)
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        back, forward = app.query_one("#back"), app.query_one("#forward")
+        assert back.has_class("-unavailable") and forward.has_class("-unavailable")
+        await open_doc_then_issues(app, pilot, doc)
+        assert not back.has_class("-unavailable")
+        assert forward.has_class("-unavailable")
+        await pilot.click("#back")
+        await pilot.pause()
+        assert app.query_one(TabbedContent).active == "docs"
+        assert not forward.has_class("-unavailable")
+
+    drive(test, monkeypatch)
+
+
+def test_the_cursor_moving_is_not_a_visit(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    doc, _ = history_setup(tmp_path)
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        tabs = app.query_one(TabbedContent)
+        first = tabs.active
+        tabs.active = "docs"
+        await pilot.pause()
+        tree = app.query_one("#docs Tree", Tree)
+        leaf = next(n for section in tree.root.children for n in section.children)
+        tree.move_cursor(leaf)
+        await pilot.pause()
+        await app.action_back()
+        await pilot.pause()
+        assert tabs.active == first
+        assert app.query_one("#back").has_class("-unavailable")
+
+    drive(test, monkeypatch)

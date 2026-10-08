@@ -6,9 +6,11 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
+from rich.text import Text
 from textual import events
 from textual.app import App, ComposeResult, SuspendNotSupported, SystemCommand
 from textual.binding import Binding
+from textual.containers import Horizontal
 from textual.css.query import NoMatches
 from textual.reactive import reactive
 from textual.screen import Screen
@@ -22,6 +24,7 @@ from r2.core.editor import (
     open_externally,
     shell_command,
 )
+from r2.core.history import Location
 from r2.core.links import Link
 from r2.core.project import ProjectContext, Projects
 from r2.core.state import UIState
@@ -58,9 +61,12 @@ RESERVED_KEYS = {"left", "right", "alt+left", "alt+right", "ctrl+q", "ctrl+p"}
 PALETTE_ICON = "⭘"
 PALETTE_COLOR = "secondary"
 
+BACK_ARROW = "‹"
+FORWARD_ARROW = "›"
 
-class TopBar(Static):
-    """Powerline title bar whose first segment opens the command palette."""
+
+class Powerline(Static):
+    """The powerline segments, whose first one opens the command palette."""
 
     # The palette segment: the icon padded by spaces, plus the arrow.
     PALETTE_WIDTH = len(PALETTE_ICON) + 3
@@ -68,6 +74,57 @@ class TopBar(Static):
     def on_click(self, event: events.Click) -> None:
         if event.x < self.PALETTE_WIDTH:
             self.app.action_command_palette()
+
+
+class ArrowButton(Static):
+    """A clickable arrow that runs an app action and dims when unavailable."""
+
+    DEFAULT_CSS = """
+    ArrowButton {
+        width: 3;
+        content-align: center middle;
+        text-style: bold;
+    }
+    ArrowButton.-unavailable {
+        color: $text-disabled;
+        text-style: none;
+    }
+    """
+
+    def __init__(self, arrow: str, action: str, id: str) -> None:
+        super().__init__(arrow, id=id)
+        self.action_name = action
+
+    @property
+    def available(self) -> bool:
+        return not self.has_class("-unavailable")
+
+    def on_click(self) -> None:
+        if self.available:
+            self.run_worker(self.app.run_action(self.action_name))
+
+
+class TopBar(Horizontal):
+    """Powerline title bar, with the back and forward arrows at its right."""
+
+    DEFAULT_CSS = """
+    TopBar > Powerline {
+        width: 1fr;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        yield Powerline()
+        yield ArrowButton(BACK_ARROW, "back", id="back")
+        yield ArrowButton(FORWARD_ARROW, "forward", id="forward")
+
+    def update(self, content: Text) -> None:
+        self.query_one(Powerline).update(content)
+
+    def set_history(self, can_go_back: bool, can_go_forward: bool) -> None:
+        """Dim the arrows that lead nowhere."""
+        self.query_one("#back").set_class(not can_go_back, "-unavailable")
+        self.query_one("#forward").set_class(not can_go_forward, "-unavailable")
 
 
 class R2App(App[None]):
@@ -121,6 +178,8 @@ class R2App(App[None]):
         self.problems = list(problems or [])
         #: Arrow that led to the tab being activated, for `PluginPane.enter`.
         self.entry_direction: Direction | None = None
+        #: Tab being activated by back or forward, which is not a new visit.
+        self._restoring: str | None = None
         self.bind_global_commands()
 
     def compose(self) -> ComposeResult:
@@ -171,6 +230,9 @@ class R2App(App[None]):
             except NoMatches:
                 return
         self._update_subtitle()
+        if context.history.current is None:
+            self._record()
+        self._update_arrows()
 
     def watch_pinned(self) -> None:
         self._update_subtitle()
@@ -242,6 +304,54 @@ class R2App(App[None]):
     ) -> None:
         self._focus_entry(self._active_view())
         self.refresh_bindings()
+        if self._restoring == event.pane.id:
+            self._restoring = None
+        else:
+            self._record()
+
+    #
+    # History
+    #
+    def _record(self) -> None:
+        """Add the active tab and its file to the history of the project."""
+        if self.context is None:
+            return
+        view = self._active_view()
+        link = view.current_link() if isinstance(view, View) else None
+        self.context.history.visit(Location(self.query_one(TabbedContent).active, link))
+        self._update_arrows()
+
+    def _update_arrows(self) -> None:
+        history = self.context.history if self.context else None
+        self.query_one(TopBar).set_history(
+            history is not None and history.can_go_back,
+            history is not None and history.can_go_forward,
+        )
+
+    def on_view_navigated(self, message: View.Navigated) -> None:
+        self._record()
+
+    async def action_back(self) -> None:
+        """Go to the previous place in the history of the project."""
+        if self.context is not None:
+            await self._restore(self.context.history.back())
+
+    async def action_forward(self) -> None:
+        """Go to the next place in the history of the project."""
+        if self.context is not None:
+            await self._restore(self.context.history.forward())
+
+    async def _restore(self, location: Location | None) -> None:
+        self._update_arrows()
+        if location is None:
+            return
+        tabs = self.query_one(TabbedContent)
+        # Activating the tab that is already active posts no event.
+        self._restoring = location.view if tabs.active != location.view else None
+        self.screen.set_focus(None)
+        tabs.active = location.view
+        for view in tabs.get_pane(location.view).query(View):
+            await view.restore(location.link)
 
     #
     # Plugin panes
@@ -335,6 +445,7 @@ class R2App(App[None]):
         self.screen.set_focus(None)
         self.query_one(TabbedContent).active = view.ID
         await view.show_file(message.path)
+        self._record()
 
     def on_view_edit_file(self, message: View.EditFile) -> None:
         self._edit(message.link)

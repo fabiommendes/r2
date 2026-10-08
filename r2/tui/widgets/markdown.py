@@ -401,6 +401,9 @@ class MarkdownBrowser(Horizontal):
     }
     """
 
+    class Selected(Message):
+        """The user picked a document in the tree and it is on display."""
+
     def __init__(self, key: str, sections: dict[str, str]) -> None:
         """Sections map titles to directories relative to the project root.
 
@@ -490,3 +493,4 @@ class MarkdownBrowser(Horizontal):
     async def on_tree_node_selected(self, event: Tree.NodeSelected[Path]) -> None:
         if event.node.data is not None:
             await self.open(event.node.data)
+            self.post_message(self.Selected())

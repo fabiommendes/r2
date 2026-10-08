@@ -116,6 +116,7 @@ class ProjectView(View):
         if self.context is not None:
             self.context.view_state[self.ID] = event.path
         self._show(event.path)
+        self.post_message(self.Navigated())
 
     def _show(self, path: Path | None) -> None:
         """Render Markdown files; show the others in the file preview."""

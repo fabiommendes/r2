@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from r2.core.history import History
 from r2.core.links import Link
 
 MAX_LINKS = 200
@@ -28,6 +29,7 @@ class ProjectContext:
     root: Path
     links: list[Link] = field(default_factory=list)
     view_state: dict[str, Any] = field(default_factory=dict)
+    history: History = field(default_factory=History)
 
     @property
     def name(self) -> str:
