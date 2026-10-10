@@ -2,11 +2,13 @@
 # The `r2 coverage` command group. See dev/spec/coverage.md.
 #
 import json
+import time
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Annotated, Any, NoReturn
 
 import typer
+from rich.markup import escape
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -14,7 +16,9 @@ from rich.progress import (
     SpinnerColumn,
     TaskID,
     TextColumn,
+    TimeElapsedColumn,
 )
+from rich.table import Column
 
 from r2.core import console
 from r2.core.coverage import analysis
@@ -83,20 +87,21 @@ def collect(selectors: Selectors = None, runner: Runners = None) -> None:
                 typer.echo(tail, err=True)
             fail(exc.message)
         failed = sum(1 for t in result.tests.values() if t.outcome == "failed")
-        typer.echo(f"{r.name}: {len(result.tests)} tests, {failed} failed")
+        feedback.summary(len(result.tests), failed)
 
 
 class Feedback:
     """
     Shows the progress of one runner on stderr: a line with the number of
     tests, a transient progress bar and a line for each failed test. The bar
-    and the spinner only render on a terminal.
+    and the spinner only render on a terminal; colors drop off it.
     """
 
     def __init__(self, runner: str) -> None:
         self.runner = runner
         self.live: Progress | None = None
         self.task: TaskID | None = None
+        self.start = time.monotonic()
 
     def __enter__(self) -> "Feedback":
         return self
@@ -104,35 +109,73 @@ class Feedback:
     def __exit__(self, *exc: object) -> None:
         self._stop()
 
+    @property
+    def elapsed(self) -> float:
+        return time.monotonic() - self.start
+
     def started(self, total: int) -> None:
-        console.stderr.print(f"{self.runner}: running {total} tests", markup=False)
+        console.stderr.print(
+            f"[bold cyan]{self.runner}[/]: running [bold]{total}[/] tests"
+        )
         self.live = Progress(
-            SpinnerColumn(),
-            BarColumn(),
+            SpinnerColumn("dots", style="cyan"),
+            TextColumn(f"[bold cyan]{self.runner}[/]"),
+            BarColumn(
+                bar_width=20,
+                complete_style="green",
+                finished_style="bold green",
+                pulse_style="cyan",
+            ),
             MofNCompleteColumn(),
-            TextColumn("{task.description}", markup=False),
+            TextColumn(
+                "[green]✓ {task.fields[passed]}[/] [red]✗ {task.fields[failed]}[/]"
+            ),
+            TimeElapsedColumn(),
+            # Long test ids end in an ellipsis instead of wrapping the bar.
+            TextColumn(
+                "[dim]{task.description}[/]",
+                table_column=Column(no_wrap=True, overflow="ellipsis", ratio=1),
+            ),
             console=console.stderr,
             transient=True,
         )
-        self.task = self.live.add_task("", total=total)
+        self.task = self.live.add_task("", total=total, passed=0, failed=0)
         self._start()
 
     def finished(self, test: str, outcome: Outcome) -> None:
         if outcome == "failed":
-            console.stderr.print(f"  FAILED {test}", markup=False)
-        if self.live is not None and self.task is not None:
-            self.live.update(self.task, advance=1, description=test)
+            console.stderr.print(f"  [bold red]✗ FAILED[/] {escape(test)}")
+        if self.live is None or self.task is None:
+            return
+        fields = self.live.tasks[self.task].fields
+        counts = {
+            "passed": fields["passed"] + (outcome == "passed"),
+            "failed": fields["failed"] + (outcome == "failed"),
+        }
+        self.live.update(self.task, advance=1, description=escape(test), **counts)
 
     def reading(self) -> None:
         self._stop()
         self.live = Progress(
-            SpinnerColumn(),
-            TextColumn(f"{self.runner}: reading coverage data", markup=False),
+            SpinnerColumn("dots", style="magenta"),
+            TextColumn(f"[bold cyan]{self.runner}[/]: reading coverage data"),
+            TimeElapsedColumn(),
             console=console.stderr,
             transient=True,
         )
         self.live.add_task("")
         self._start()
+
+    def summary(self, tests: int, failed: int) -> None:
+        """
+        The result line on stdout. On a terminal it gains a mark and the time.
+        """
+        color = "red" if failed else "green"
+        line = f"[bold]{self.runner}[/]: {tests} tests, [{color}]{failed} failed[/]"
+        if console.stdout.is_terminal:
+            mark = "[bold red]✗[/]" if failed else "[bold green]✓[/]"
+            line = f"{mark} {line} [dim]in {self.elapsed:.1f}s[/]"
+        console.stdout.print(line)
 
     def _start(self) -> None:
         # Off a terminal rich prints a blank line on stop instead of nothing.
