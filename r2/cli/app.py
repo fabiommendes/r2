@@ -12,6 +12,7 @@ from typing import Annotated
 import typer
 from typer.core import TyperGroup
 
+from r2.cli.coverage import app as coverage_app
 from r2.cli.glossary import app as glossary_app
 from r2.cli.plugins import app as plugins_app
 from r2.cli.threads import adr_app, issue_app
@@ -172,6 +173,7 @@ def docs(path: Annotated[Path | None, path_opt] = None) -> None:
     project.docs()
 
 
+app.add_typer(coverage_app, name="coverage")
 app.add_typer(glossary_app, name="glossary")
 app.add_typer(issue_app, name="issue")
 app.add_typer(adr_app, name="adr")

@@ -26,6 +26,7 @@ from r2.core.coverage.base import (
     TestRecord,
     matches,
 )
+from r2.core.mode import VERBOSE, mode
 from r2.core.project.base import Project
 from r2.core.project.py import UvProject, uv
 
@@ -146,7 +147,7 @@ class PytestCoverage(CoverageRunner):
                 filter(None, [str(folder), os.environ.get("PYTHONPATH", "")])
             ),
         }
-        done = uv.call(
+        done = _uv().call(
             "run",
             *with_args,
             "pytest",
@@ -169,7 +170,7 @@ class PytestCoverage(CoverageRunner):
             raise CollectError("pytest produced no coverage data", output)
         outcomes: dict[str, Outcome] = json.loads(outcomes_file.read_text())
 
-        dump = uv.call(
+        dump = _uv().call(
             "run",
             *with_args,
             "python",
@@ -204,8 +205,7 @@ class PytestCoverage(CoverageRunner):
         """
         if not selectors:
             return []
-        quiet = replace(uv, echo=False)
-        done = quiet.call(
+        done = _uv().call(
             "run",
             *with_args,
             "pytest",
@@ -268,6 +268,13 @@ class PytestCoverage(CoverageRunner):
             commit=commit,
             dirty=dirty,
         )
+
+
+def _uv() -> CliTool:
+    """
+    The `uv` tool, echoing the commands it runs only at verbose level.
+    """
+    return replace(uv, echo=mode.verbosity >= VERBOSE)
 
 
 def _relative(name: str, root: Path) -> str | None:
