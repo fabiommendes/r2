@@ -102,6 +102,11 @@ All commands take `-C` and the global options from [cli.md](cli.md).
     map, and prints one line per runner, `pytest: 12 tests, 1 failed`.
     It exits 1 when a runner could not run at all (build error, no tests
     collected), and shows the runner's last 30 lines of output.
+
+    While a runner works, `collect` shows its progress on stderr:
+    `pytest: running 12 tests`, a `FAILED <id>` line per failed test and,
+    on a terminal, a transient progress bar and a spinner while it reads
+    the coverage data. Agent mode and `--json` print only the summary line.
 17. Collecting with selectors replaces the recorded tests that match them
     and keeps the others, so one test can be refreshed without running
     the whole suite. The ambient spans are replaced on every run.

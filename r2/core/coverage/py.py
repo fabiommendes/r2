@@ -21,6 +21,7 @@ from r2.core.coverage.base import (
     CoverageRunner,
     MissingTool,
     Outcome,
+    Progress,
     Span,
     SpanKind,
     TestRecord,
@@ -31,16 +32,41 @@ from r2.core.project.base import Project
 from r2.core.project.py import UvProject, uv
 
 _PHASES = ("setup", "run", "teardown")
+_MARKER = "##r2 "
+"""Prefix of the progress lines r2's pytest plugin prints."""
 
 _OUTCOMES_PLUGIN = '''
 """
-Pytest plugin written by r2: records the outcome of each test.
+Pytest plugin written by r2: records the outcome of each test and prints
+progress markers r2 reads while pytest runs.
 """
 
 import json
 import os
 
 outcomes = {}
+config = None
+
+
+def marker(text):
+    # Looked up late: pytest registers its reporter after this plugin loads.
+    reporter = config and config.pluginmanager.get_plugin("terminalreporter")
+    if reporter is not None:
+        reporter.write_line("##r2 " + text)
+        reporter.flush()
+
+
+def pytest_configure(config):
+    globals()["config"] = config
+
+
+def pytest_collection_finish(session):
+    marker(f"started {len(session.items)}")
+
+
+def pytest_runtest_logfinish(nodeid, location):
+    if nodeid in outcomes:
+        marker(f"finished {outcomes[nodeid]} {nodeid}")
 
 
 def pytest_runtest_logreport(report):
@@ -121,7 +147,9 @@ class PytestCoverage(CoverageRunner):
             return []
         return [MissingTool(uv.name, uv.install_hint)]
 
-    def collect(self, selectors: Sequence[str] = ()) -> CoverageMap:
+    def collect(
+        self, selectors: Sequence[str] = (), progress: Progress | None = None
+    ) -> CoverageMap:
         """
         See `CoverageRunner.collect`. Selectors are resolved against the ids
         pytest collects. Records the outcome of each test, the sha256 of
@@ -162,13 +190,16 @@ class PytestCoverage(CoverageRunner):
             *ids,
             _path=root,
             _env=env,
+            _on_line=lambda line: _report(line, progress),
         )
-        output = done.stdout + done.stderr
+        output = _without_markers(done.stdout) + done.stderr
         if done.returncode not in (0, 1):
             raise CollectError(f"pytest exited with {done.returncode}", output)
         if not outcomes_file.exists() or not data_file.exists():
             raise CollectError("pytest produced no coverage data", output)
         outcomes: dict[str, Outcome] = json.loads(outcomes_file.read_text())
+        if progress is not None:
+            progress.reading()
 
         dump = _uv().call(
             "run",
@@ -275,6 +306,31 @@ def _uv() -> CliTool:
     The `uv` tool, echoing the commands it runs only at verbose level.
     """
     return replace(uv, echo=mode.verbosity >= VERBOSE)
+
+
+def _report(line: str, progress: Progress | None) -> None:
+    """
+    Pass a progress marker line from the pytest plugin to `progress`.
+    """
+    if progress is None or not line.startswith(_MARKER):
+        return
+    event, _, rest = line.removeprefix(_MARKER).partition(" ")
+    if event == "started":
+        progress.started(int(rest))
+    elif event == "finished":
+        outcome, _, test_id = rest.partition(" ")
+        progress.finished(test_id, cast(Outcome, outcome))
+
+
+def _without_markers(output: str) -> str:
+    """
+    `output` without the plugin's progress marker lines.
+    """
+    return "".join(
+        line
+        for line in output.splitlines(keepends=True)
+        if not line.startswith(_MARKER)
+    )
 
 
 def _relative(name: str, root: Path) -> str | None:

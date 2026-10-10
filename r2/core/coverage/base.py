@@ -12,7 +12,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from fnmatch import fnmatchcase
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, ClassVar, Literal, Protocol
 
 if TYPE_CHECKING:
     from r2.core.project.base import Project
@@ -294,6 +294,27 @@ class CollectError(Exception):
         """The runner's combined output, for the caller to show a tail of."""
 
 
+class Progress(Protocol):
+    """
+    Receives the progress of `CoverageRunner.collect` while it runs.
+    """
+
+    def started(self, total: int) -> None:
+        """
+        The runner collected `total` tests and starts running them.
+        """
+
+    def finished(self, test: TestId, outcome: Outcome) -> None:
+        """
+        A test finished, with its final outcome.
+        """
+
+    def reading(self) -> None:
+        """
+        The tests are done and the runner reads the coverage data.
+        """
+
+
 class CoverageRunner(ABC):
     """
     A test tool r2 knows how to instrument for per-test coverage.
@@ -319,10 +340,13 @@ class CoverageRunner(ABC):
         """
 
     @abstractmethod
-    def collect(self, selectors: Sequence[str] = ()) -> CoverageMap:
+    def collect(
+        self, selectors: Sequence[str] = (), progress: Progress | None = None
+    ) -> CoverageMap:
         """
         Run the tests picked by `selectors` (every test without selectors)
-        under instrumentation and return their map. Never changes the
+        under instrumentation and return their map, reporting to `progress`
+        while the tests run. Never changes the
         project's files; scratch files go under `.r2/coverage/`. Raise
         CollectError when the runner could not run.
         """

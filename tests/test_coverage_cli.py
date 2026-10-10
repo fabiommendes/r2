@@ -24,6 +24,7 @@ from r2.core.coverage.base import (
     CoverageRunner,
     MissingTool,
     Outcome,
+    Progress,
     Span,
     SpanKind,
     TestRecord,
@@ -160,8 +161,15 @@ class FakeRunner(CoverageRunner):
     def missing_tools(self) -> list[MissingTool]:
         return []
 
-    def collect(self, selectors: Sequence[str] = ()) -> CoverageMap:
+    def collect(
+        self, selectors: Sequence[str] = (), progress: Progress | None = None
+    ) -> CoverageMap:
         self.selectors = selectors
+        if progress is not None:
+            progress.started(len(self.result.tests))
+            for id, record in self.result.tests.items():
+                progress.finished(id, record.outcome)
+            progress.reading()
         return self.result
 
 
@@ -338,10 +346,44 @@ def test_collect_reports_missing_tools(
     assert "uv" in result.stderr
 
 
+@pytest.fixture
+def fake_collect(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    result = make_map(
+        {"t::ok": lines("a.py", 1), "t::bad": lines("a.py", 2)},
+        outcomes={"t::bad": "failed"},
+    )
+    runner = FakeRunner(tmp_path, result)
+    monkeypatch.setattr(
+        "r2.cli.coverage.detect_runners", lambda root, names=(): [runner]
+    )
+    monkeypatch.chdir(tmp_path)
+
+
+@pytest.mark.usefixtures("fake_collect")
+def test_collect_shows_progress() -> None:
+    result = r2("coverage", "collect")
+    assert result.exit_code == 0, result.output
+    assert out_lines(result) == ["pytest: 2 tests, 1 failed"]
+    assert "pytest: running 2 tests" in result.stderr
+    assert "FAILED t::bad" in result.stderr
+    assert "t::ok" not in result.stderr
+
+
+@pytest.mark.usefixtures("fake_collect")
+@pytest.mark.parametrize("flag", ["--agent", "--json"])
+def test_collect_hides_progress_in_agent_and_json_mode(flag: str) -> None:
+    result = r2(flag, "coverage", "collect")
+    assert result.exit_code == 0, result.output
+    assert out_lines(result) == ["pytest: 2 tests, 1 failed"]
+    assert result.stderr == ""
+
+
 def test_collect_error_shows_runner_output(
     roman_project: ExampleProjectFactory, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def fail(self: object, selectors: Sequence[str] = ()) -> CoverageMap:
+    def fail(
+        self: object, selectors: Sequence[str] = (), progress: object = None
+    ) -> CoverageMap:
         raise CollectError(
             "pytest could not collect", "line 1\nE   SyntaxError: boom\n"
         )

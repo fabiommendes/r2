@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import threading
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -53,16 +54,20 @@ class CliTool[T = str]:
         *args: CLIArg,
         _path: Path | None = None,
         _env: dict[str, str] | None = None,
+        _on_line: Callable[[str], None] | None = None,
         **kwargs: CLIArg,
     ) -> Completed:
         """
         Run the program and return its exit code and output. Never raises
         for a non-zero exit code; `on_error` and `parser` do not apply.
         Arguments render like `run`. `_env` is merged over the current
-        environment.
+        environment. `_on_line` receives each line of stdout, without the
+        line break, as the program prints it.
         """
         cmd = self._command_line(args, kwargs)
         self._echo(cmd)
+        if _on_line is not None:
+            return _stream(cmd, _path, _merged_env(_env), _on_line)
         result = subprocess.run(
             cmd,
             capture_output=True,
@@ -172,6 +177,39 @@ class CliTool[T = str]:
                     assert_never(other)
         else:
             return parser(result.stdout)
+
+
+def _stream(
+    cmd: list[str],
+    path: Path | None,
+    env: dict[str, str] | None,
+    on_line: Callable[[str], None],
+) -> Completed:
+    """
+    Run `cmd` passing each stdout line to `on_line` as it arrives. Stderr is
+    drained in a thread so a chatty program cannot block on a full pipe.
+    """
+    with subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        cwd=path,
+        env=env,
+        stdin=subprocess.DEVNULL if mode.agent else None,
+    ) as proc:
+        stdout, stderr = proc.stdout, proc.stderr
+        assert stdout is not None and stderr is not None
+        err: list[str] = []
+        drain = threading.Thread(target=lambda: err.append(stderr.read()))
+        drain.start()
+        out: list[str] = []
+        for line in stdout:
+            out.append(line)
+            on_line(line.rstrip("\n"))
+        drain.join()
+        returncode = proc.wait()
+    return Completed(returncode, "".join(out), "".join(err))
 
 
 def render_arg(arg: CLIArg) -> str:

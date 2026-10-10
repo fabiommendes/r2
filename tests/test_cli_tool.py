@@ -40,3 +40,10 @@ def test_run_merges_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("R2_KEPT", "kept")
     out = sh.run("-c", 'echo "$R2_KEPT $R2_ADDED"', _env={"R2_ADDED": "added"})
     assert out == "kept added\n"
+
+
+def test_call_streams_stdout_lines() -> None:
+    seen: list[str] = []
+    result = sh.call("-c", "echo a; echo err >&2; echo b", _on_line=seen.append)
+    assert seen == ["a", "b"]
+    assert (result.stdout, result.stderr) == ("a\nb\n", "err\n")

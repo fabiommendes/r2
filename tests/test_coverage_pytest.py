@@ -12,7 +12,13 @@ from pathlib import Path
 import pytest
 
 from r2.core.coverage.analysis import TestRef, combine, redundant
-from r2.core.coverage.base import CollectError, CoverageMap, MissingTool
+from r2.core.coverage.base import (
+    CollectError,
+    CoverageMap,
+    MissingTool,
+    Outcome,
+    TestId,
+)
 from r2.core.coverage.py import PytestCoverage
 from r2.core.project.py import UvProject
 from tests.support import ExampleProjectFactory
@@ -55,6 +61,24 @@ def sources(root: Path) -> dict[Path, bytes]:
         *root.glob("tests/*.py"),
     ]
     return {p: p.read_bytes() for p in files}
+
+
+class Recorder:
+    """
+    A Progress that records the events it receives.
+    """
+
+    def __init__(self) -> None:
+        self.events: list[tuple[object, ...]] = []
+
+    def started(self, total: int) -> None:
+        self.events.append(("started", total))
+
+    def finished(self, test: TestId, outcome: Outcome) -> None:
+        self.events.append(("finished", test, outcome))
+
+    def reading(self) -> None:
+        self.events.append(("reading",))
 
 
 def runner_for(root: Path) -> PytestCoverage:
@@ -146,6 +170,31 @@ def test_failing_test_is_recorded(roman: Path) -> None:
     assert broken.outcome == "failed"
     assert broken.spans
     assert cov.tests[EXAMPLES + "test_from_roman_iv"].outcome == "passed"
+
+
+def test_collect_reports_progress(roman: Path) -> None:
+    path = roman / "tests" / "test_examples.py"
+    path.write_text(
+        path.read_text()
+        + "\n\ndef test_broken() -> None:\n    assert to_roman(1) == 'X'\n"
+    )
+    progress = Recorder()
+    runner_for(roman).collect(progress=progress)
+    events = progress.events
+    assert events[0] == ("started", 13)
+    assert events[-1] == ("reading",)
+    assert sorted(events[1:-1]) == sorted(
+        [("finished", id, "passed") for id in CATALOG]
+        + [("finished", EXAMPLES + "test_broken", "failed")]
+    )
+
+
+def test_collection_error_output_hides_progress_markers(roman: Path) -> None:
+    (roman / "tests" / "test_syntax.py").write_text("def broken(:\n")
+    with pytest.raises(CollectError) as info:
+        runner_for(roman).collect(progress=Recorder())
+    assert "test_syntax.py" in info.value.output
+    assert "##r2" not in info.value.output
 
 
 def test_skipped_test_has_no_spans(roman: Path) -> None:

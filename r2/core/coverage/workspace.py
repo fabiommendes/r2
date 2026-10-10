@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Protocol, cast
 
-from r2.core.coverage.base import RUNNERS, CoverageMap, CoverageRunner
+from r2.core.coverage.base import RUNNERS, CoverageMap, CoverageRunner, Progress
 from r2.core.coverage.py import PytestCoverage
 from r2.core.project.base import Project
 from r2.core.project.py import UvProject
@@ -55,14 +55,18 @@ def detect_runners(root: Path, names: Sequence[str] = ()) -> list[CoverageRunner
     return [runner for runner in runners if not names or runner.name in names]
 
 
-def collect(runner: CoverageRunner, selectors: Sequence[str] = ()) -> CoverageMap:
+def collect(
+    runner: CoverageRunner,
+    selectors: Sequence[str] = (),
+    progress: Progress | None = None,
+) -> CoverageMap:
     """
-    Run `runner.collect(selectors)`, merge the result into the saved map of
+    Run `runner.collect(selectors, progress)`, merge the result into the saved map of
     that runner (`CoverageMap.merge`), save it and return it. Without a
     saved map, the result is saved as is.
     """
     root = cast(_Rooted, runner.project).root
-    new = runner.collect(selectors)
+    new = runner.collect(selectors, progress)
     try:
         saved = CoverageMap.load(root, runner.name).merge(new, selectors)
     except FileNotFoundError:

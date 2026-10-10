@@ -7,10 +7,19 @@ from pathlib import Path
 from typing import Annotated, Any, NoReturn
 
 import typer
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    SpinnerColumn,
+    TaskID,
+    TextColumn,
+)
 
+from r2.core import console
 from r2.core.coverage import analysis
 from r2.core.coverage.analysis import Suite, TestRef, combine, group_by_file
-from r2.core.coverage.base import CollectError, Span, SpanKind
+from r2.core.coverage.base import CollectError, Outcome, Span, SpanKind
 from r2.core.coverage.workspace import (
     collect as collect_runner,
 )
@@ -60,7 +69,9 @@ def collect(selectors: Selectors = None, runner: Runners = None) -> None:
 
     for r in runners:
         try:
-            result = collect_runner(r, selectors or ())
+            with Feedback(r.name) as feedback:
+                quiet = mode.summarize or mode.json
+                result = collect_runner(r, selectors or (), None if quiet else feedback)
         except CollectError as exc:
             tail = "\n".join(exc.output.splitlines()[-30:])
             if tail:
@@ -68,6 +79,69 @@ def collect(selectors: Selectors = None, runner: Runners = None) -> None:
             fail(exc.message)
         failed = sum(1 for t in result.tests.values() if t.outcome == "failed")
         typer.echo(f"{r.name}: {len(result.tests)} tests, {failed} failed")
+
+
+class Feedback:
+    """
+    Shows the progress of one runner on stderr: a line with the number of
+    tests, a transient progress bar and a line for each failed test. The bar
+    and the spinner only render on a terminal.
+    """
+
+    def __init__(self, runner: str) -> None:
+        self.runner = runner
+        self.live: Progress | None = None
+        self.task: TaskID | None = None
+
+    def __enter__(self) -> "Feedback":
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self._stop()
+
+    def started(self, total: int) -> None:
+        console.stderr.print(f"{self.runner}: running {total} tests", markup=False)
+        self.live = Progress(
+            SpinnerColumn(),
+            BarColumn(),
+            MofNCompleteColumn(),
+            TextColumn("{task.description}", markup=False),
+            console=console.stderr,
+            transient=True,
+        )
+        self.task = self.live.add_task("", total=total)
+        self._start()
+
+    def finished(self, test: str, outcome: Outcome) -> None:
+        if outcome == "failed":
+            console.stderr.print(f"  FAILED {test}", markup=False)
+        if self.live is not None and self.task is not None:
+            self.live.update(self.task, advance=1, description=test)
+
+    def reading(self) -> None:
+        self._stop()
+        self.live = Progress(
+            SpinnerColumn(),
+            TextColumn(f"{self.runner}: reading coverage data", markup=False),
+            console=console.stderr,
+            transient=True,
+        )
+        self.live.add_task("")
+        self._start()
+
+    def _start(self) -> None:
+        # Off a terminal rich prints a blank line on stop instead of nothing.
+        if self.live is None:
+            return
+        if console.stderr.is_terminal:
+            self.live.start()
+        else:
+            self.live = None
+
+    def _stop(self) -> None:
+        if self.live is not None:
+            self.live.stop()
+            self.live = None
 
 
 @app.command()
