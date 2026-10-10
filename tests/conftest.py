@@ -13,7 +13,7 @@ import pytest
 
 from r2.core.conf import Config
 from r2.core.plugins import loader
-from tests.support import EXAMPLES_ROOT, ExampleProjectFactory
+from tests.support import EXAMPLES_ROOT, ROMAN_ROOT, ExampleProjectFactory
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -60,6 +60,37 @@ def example_project() -> Iterator[ExampleProjectFactory]:
 
     for temp_dir in made:
         shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+ROMAN_IGNORE = shutil.ignore_patterns(
+    ".venv",
+    "node_modules",
+    "target",
+    ".r2",
+    ".hypothesis",
+    ".coverage*",
+    "__pycache__",
+    "test-results",
+    "playwright-report",
+)
+
+
+@pytest.fixture
+def roman_project(tmp_path_factory: pytest.TempPathFactory) -> ExampleProjectFactory:
+    """
+    Factory fixture for tests/examples/roman/<language>: a copy without
+    build artifacts in a fresh temporary directory.
+    """
+
+    def _make(language: str) -> Path:
+        source = ROMAN_ROOT / language
+        if not source.is_dir():
+            raise FileNotFoundError(f"No roman example for {language!r} at {source}")
+        target = tmp_path_factory.mktemp(f"roman-{language}") / language
+        shutil.copytree(source, target, ignore=ROMAN_IGNORE)
+        return target
+
+    return _make
 
 
 @pytest.fixture

@@ -15,7 +15,7 @@ from r2.core.project.base import ProjectKind
 type Data = dict[str, Any]
 type Manager = Literal["uv"]
 
-uv = CliTool("uv")
+uv = CliTool("uv", install_hint="curl -LsSf https://astral.sh/uv/install.sh | sh")
 
 DEPENDENCY_RE = re.compile(
     r"\s*(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)\s*(?:\[[^\]]*\])?(?P<spec>.*)"

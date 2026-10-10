@@ -7,6 +7,7 @@ ExampleProjectFactory = Callable[[str], Path]
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 EXAMPLES_ROOT = REPO_ROOT / "tests" / "examples" / "tasks" / "uv"
+ROMAN_ROOT = REPO_ROOT / "tests" / "examples" / "roman"
 
 
 def run_r2(
