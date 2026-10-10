@@ -162,6 +162,9 @@ class FakeRunner(CoverageRunner):
     def missing_tools(self) -> list[MissingTool]:
         return []
 
+    def suggestions(self) -> list[str]:
+        return ["add speedup: run this"]
+
     def collect(
         self, selectors: Sequence[str] = (), progress: Progress | None = None
     ) -> CoverageMap:
@@ -374,6 +377,7 @@ def test_collect_shows_progress() -> None:
     assert out_lines(result) == ["pytest: 2 tests, 1 failed"]
     assert "pytest: running 2 tests" in result.stderr
     assert "FAILED t::bad" in result.stderr
+    assert "add speedup: run this" in result.stderr
     assert "t::ok" not in result.stderr
 
 

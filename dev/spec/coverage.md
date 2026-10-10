@@ -108,6 +108,10 @@ All commands take `-C` and the global options from [cli.md](cli.md).
     on a terminal, a transient progress bar and a spinner while it reads
     the coverage data. Agent mode and `--json` print only the summary line.
 
+    `pytest` runs with `-n auto` when the project depends on
+    `pytest-xdist`; without it, `collect` warns and prints the command
+    that adds it. Agent mode and `--json` skip the warning.
+
     Each runner holds `.r2/coverage/<runner>.lock` while it collects. A
     second `collect` of the same runner in the same project fails at once
     with exit 1 instead of overwriting the first one's scratch files.

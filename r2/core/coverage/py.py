@@ -42,11 +42,14 @@ _MARKER = "##r2 "
 _OUTCOMES_PLUGIN = '''
 """
 Pytest plugin written by r2: records the outcome of each test and prints
-progress markers r2 reads while pytest runs.
+progress markers r2 reads while pytest runs. Under pytest-xdist it only
+acts in the controller, which receives every worker's reports.
 """
 
 import json
 import os
+
+import pytest
 
 outcomes = {}
 config = None
@@ -61,19 +64,29 @@ def marker(text):
 
 
 def pytest_configure(config):
-    globals()["config"] = config
+    if not hasattr(config, "workerinput"):
+        globals()["config"] = config
 
 
 def pytest_collection_finish(session):
-    marker(f"started {len(session.items)}")
+    if config is not None and not config.pluginmanager.has_plugin("dsession"):
+        marker(f"started {len(session.items)}")
 
 
-def pytest_runtest_logfinish(nodeid, location):
-    if nodeid in outcomes:
-        marker(f"finished {outcomes[nodeid]} {nodeid}")
+@pytest.hookimpl(optionalhook=True)
+def pytest_xdist_node_collection_finished(node, ids):
+    global started
+    if not started:
+        started = True
+        marker(f"started {len(ids)}")
+
+
+started = False
 
 
 def pytest_runtest_logreport(report):
+    if config is None:
+        return
     if report.failed:
         new = "failed"
     elif report.skipped:
@@ -86,7 +99,14 @@ def pytest_runtest_logreport(report):
         outcomes[report.nodeid] = new
 
 
+def pytest_runtest_logfinish(nodeid, location):
+    if nodeid in outcomes:
+        marker(f"finished {outcomes[nodeid]} {nodeid}")
+
+
 def pytest_sessionfinish(session):
+    if config is None:
+        return
     with open(os.environ["R2_PYTEST_OUTCOMES"], "w") as file:
         json.dump(outcomes, file)
 '''
@@ -122,6 +142,17 @@ class PytestCoverage(CoverageRunner):
         if uv.available():
             return []
         return [MissingTool(uv.name, uv.install_hint)]
+
+    def suggestions(self) -> list[str]:
+        """
+        Adding pytest-xdist, when the project lacks it, so `collect` runs
+        the tests in parallel.
+        """
+        if self._parallel_args():
+            return []
+        return [
+            "add pytest-xdist to run the tests in parallel: uv add --dev pytest-xdist"
+        ]
 
     def collect(
         self, selectors: Sequence[str] = (), progress: Progress | None = None
@@ -162,6 +193,7 @@ class PytestCoverage(CoverageRunner):
             "no:cacheprovider",
             "-p",
             "r2_pytest_outcomes",
+            *self._parallel_args(),
             *ids,
             _path=root,
             _env=env,
@@ -193,6 +225,18 @@ class PytestCoverage(CoverageRunner):
         if isinstance(project, UvProject) and "pytest-cov" in project.any_dependencies:
             return []
         return ["--with", "pytest-cov"]
+
+    def _parallel_args(self) -> list[str]:
+        """
+        `-n auto` when the project has pytest-xdist.
+        """
+        project = self.project
+        if (
+            isinstance(project, UvProject)
+            and "pytest-xdist" in project.any_dependencies
+        ):
+            return ["-n", "auto"]
+        return []
 
     def _resolve(self, selectors: Sequence[str], with_args: list[str]) -> list[str]:
         """
@@ -304,9 +348,11 @@ def _report(line: str, progress: Progress | None) -> None:
     """
     Pass a progress marker line from the pytest plugin to `progress`.
     """
-    if progress is None or not line.startswith(_MARKER):
+    # Under xdist a marker may follow progress dots on the same line.
+    _, found, marker = line.partition(_MARKER)
+    if progress is None or not found:
         return
-    event, _, rest = line.removeprefix(_MARKER).partition(" ")
+    event, _, rest = marker.partition(" ")
     if event == "started":
         progress.started(int(rest))
     elif event == "finished":
@@ -316,23 +362,28 @@ def _report(line: str, progress: Progress | None) -> None:
 
 def _without_markers(output: str) -> str:
     """
-    `output` without the plugin's progress marker lines.
+    `output` without the plugin's progress markers.
     """
-    return "".join(
-        line
-        for line in output.splitlines(keepends=True)
-        if not line.startswith(_MARKER)
-    )
+    kept = []
+    for line in output.splitlines():
+        before, found, _ = line.partition(_MARKER)
+        if before or not found:
+            kept.append(before + "\n")
+    return "".join(kept)
 
 
 def _relative(name: str, root: Path) -> str | None:
     """
-    `name` as a posix path relative to `root`, or None when outside it.
+    `name` as a posix path relative to `root`, or None when outside it or
+    under `.r2/`, where r2's own pytest plugin lives.
     """
     try:
-        return Path(name).resolve().relative_to(root.resolve()).as_posix()
+        path = Path(name).resolve().relative_to(root.resolve())
     except ValueError:
         return None
+    if path.parts[:1] == (COVERAGE_DIR.parts[0],):
+        return None
+    return path.as_posix()
 
 
 def _git_state(root: Path) -> tuple[str | None, bool]:

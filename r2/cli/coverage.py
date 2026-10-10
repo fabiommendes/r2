@@ -68,6 +68,9 @@ def collect(selectors: Selectors = None, runner: Runners = None) -> None:
         error(f"missing tools:\n{lines}")
 
     for r in runners:
+        if not (mode.summarize or mode.json):
+            for suggestion in r.suggestions():
+                warn(f"{r.name}: {suggestion}")
         try:
             with Feedback(r.name) as feedback:
                 quiet = mode.summarize or mode.json

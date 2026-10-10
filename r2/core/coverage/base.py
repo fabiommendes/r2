@@ -339,6 +339,13 @@ class CoverageRunner(ABC):
         External programs needed by `collect` that are not available.
         """
 
+    def suggestions(self) -> list[str]:
+        """
+        Optional changes to the project that make `collect` faster, such as
+        a plugin to run the tests in parallel. None by default.
+        """
+        return []
+
     @abstractmethod
     def collect(
         self, selectors: Sequence[str] = (), progress: Progress | None = None

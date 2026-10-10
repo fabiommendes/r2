@@ -108,6 +108,22 @@ def test_missing_uv(
     assert all(isinstance(tool, MissingTool) and tool.install for tool in missing)
 
 
+def test_suggests_xdist(roman: Path) -> None:
+    assert runner_for(roman).suggestions() == [
+        "add pytest-xdist to run the tests in parallel: uv add --dev pytest-xdist"
+    ]
+
+
+def test_no_suggestion_with_xdist(roman: Path) -> None:
+    pyproject = roman / "pyproject.toml"
+    pyproject.write_text(
+        pyproject.read_text().replace(
+            '"pytest-cov>=6"', '"pytest-cov>=6", "pytest-xdist"'
+        )
+    )
+    assert runner_for(roman).suggestions() == []
+
+
 def test_nothing_missing(roman: Path) -> None:
     assert runner_for(roman).missing_tools() == []
 
@@ -230,3 +246,35 @@ def test_unknown_coverage_schema_raises(tmp_path: Path) -> None:
         db.execute("insert into coverage_schema values (99)")
     with pytest.raises(CollectError, match="schema 99"):
         read_coverage_data(data_file)
+
+
+def test_collect_runs_in_parallel_with_xdist(roman: Path) -> None:
+    serial = runner_for(roman).collect()
+    pyproject = roman / "pyproject.toml"
+    pyproject.write_text(
+        pyproject.read_text().replace(
+            '"pytest-cov>=6"', '"pytest-cov>=6", "pytest-xdist"'
+        )
+    )
+    (roman / "tests" / "test_worker.py").write_text(
+        "import os, pathlib\n\n\ndef test_worker() -> None:\n"
+        "    worker = os.environ.get('PYTEST_XDIST_WORKER', '')\n"
+        "    pathlib.Path('worker.txt').write_text(worker)\n"
+    )
+    progress = Recorder()
+    parallel = runner_for(roman).collect(progress=progress)
+    assert (roman / "worker.txt").read_text().startswith("gw")
+    worker = "tests/test_worker.py::test_worker"
+    assert {k: v for k, v in parallel.tests.items() if k != worker} == serial.tests
+    assert progress.events[0] == ("started", 13)
+    assert len(progress.events) == 15
+
+
+def test_r2_scratch_files_are_not_measured(roman: Path) -> None:
+    pyproject = roman / "pyproject.toml"
+    pyproject.write_text(pyproject.read_text().replace('source = ["roman"]\n', ""))
+    cov = runner_for(roman).collect([PROPERTIES + "test_roundtrip"])
+    paths = {sp.path for r in cov.tests.values() for sp in r.spans}
+    paths |= {sp.path for sp in cov.ambient} | set(cov.files)
+    assert "tests/test_properties.py" in paths, "measures the whole folder"
+    assert not [p for p in paths if p.startswith(".r2/")]
