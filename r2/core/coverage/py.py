@@ -7,7 +7,9 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sqlite3
 from collections.abc import Sequence
+from contextlib import closing
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -32,6 +34,8 @@ from r2.core.project.base import Project
 from r2.core.project.py import UvProject, uv
 
 _PHASES = ("setup", "run", "teardown")
+_SCHEMA = 7
+"""The coverage.py data file schema r2 reads."""
 _MARKER = "##r2 "
 """Prefix of the progress lines r2's pytest plugin prints."""
 
@@ -87,34 +91,6 @@ def pytest_sessionfinish(session):
         json.dump(outcomes, file)
 '''
 
-_READER = '''
-"""
-Script written by r2: dumps the arcs of a coverage data file per context.
-"""
-
-import json
-import os
-import re
-import sys
-
-from coverage import CoverageData
-
-data_file, root = sys.argv[1:3]
-data = CoverageData(basename=data_file)
-data.read()
-files = sorted(data.measured_files())
-contexts = {}
-for context in sorted(data.measured_contexts()):
-    data.set_query_contexts(["^" + re.escape(context) + "$"])
-    arcs = {}
-    for name in files:
-        found = data.arcs(name)
-        if found:
-            arcs[name] = sorted(found)
-    contexts[context] = arcs
-json.dump({"files": files, "contexts": contexts}, sys.stdout)
-'''
-
 
 class PytestCoverage(CoverageRunner):
     """
@@ -164,7 +140,6 @@ class PytestCoverage(CoverageRunner):
         data_file.unlink(missing_ok=True)
         outcomes_file.unlink(missing_ok=True)
         (folder / "r2_pytest_outcomes.py").write_text(_OUTCOMES_PLUGIN)
-        (folder / "r2_read_coverage.py").write_text(_READER)
 
         with_args = self._with_args()
         ids = self._resolve(selectors, with_args)
@@ -201,18 +176,7 @@ class PytestCoverage(CoverageRunner):
         if progress is not None:
             progress.reading()
 
-        dump = _uv().call(
-            "run",
-            *with_args,
-            "python",
-            str(folder / "r2_read_coverage.py"),
-            str(data_file),
-            str(root),
-            _path=root,
-        )
-        if dump.returncode != 0:
-            raise CollectError("could not read the coverage data", dump.stderr)
-        return self._build(json.loads(dump.stdout), outcomes)
+        return self._build(read_coverage_data(data_file), outcomes)
 
     def _root(self) -> Path:
         """
@@ -299,6 +263,34 @@ class PytestCoverage(CoverageRunner):
             commit=commit,
             dirty=dirty,
         )
+
+
+def read_coverage_data(data_file: Path) -> dict[str, object]:
+    """
+    The measured files and the arcs of each context in a coverage.py data
+    file, as `{"files": [path], "contexts": {context: {path: [[a, b]]}}}`.
+
+    Reads the SQLite file directly: coverage.py's API filters contexts with
+    a regex scan per query, which takes minutes on large suites. Raise
+    CollectError for a schema other than 7, the one since coverage 5.0.
+    """
+    with closing(sqlite3.connect(data_file)) as db:
+        try:
+            (version,) = db.execute("select version from coverage_schema").fetchone()
+            if version != _SCHEMA:
+                raise CollectError(f"unsupported coverage data schema {version}", "")
+            files = sorted(path for (path,) in db.execute("select path from file"))
+            rows = db.execute(
+                "select context.context, file.path, arc.fromno, arc.tono from arc"
+                " join file on file.id = arc.file_id"
+                " join context on context.id = arc.context_id"
+            ).fetchall()
+        except sqlite3.Error as exc:
+            raise CollectError(f"could not read the coverage data: {exc}", "") from exc
+    contexts: dict[str, dict[str, list[list[int]]]] = {}
+    for context, path, start, end in rows:
+        contexts.setdefault(context, {}).setdefault(path, []).append([start, end])
+    return {"files": files, "contexts": contexts}
 
 
 def _uv() -> CliTool:

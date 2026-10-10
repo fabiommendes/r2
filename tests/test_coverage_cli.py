@@ -31,6 +31,7 @@ from r2.core.coverage.base import (
 )
 from r2.core.coverage.workspace import (
     collect,
+    collect_lock,
     detect_runners,
     find_project_root,
     load_maps,
@@ -177,6 +178,13 @@ def test_collect_saves_the_map(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path, ROMAN_MAP)
     assert collect(runner) == ROMAN_MAP
     assert CoverageMap.load(tmp_path, "pytest") == ROMAN_MAP
+
+
+def test_collect_fails_while_another_collect_runs(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path, ROMAN_MAP)
+    with collect_lock(tmp_path, "pytest"), pytest.raises(CollectError, match="running"):
+        collect(runner)
+    assert collect(runner) == ROMAN_MAP, "the lock is released on exit"
 
 
 def test_collect_with_selectors_merges_into_the_saved_map(tmp_path: Path) -> None:

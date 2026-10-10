@@ -107,6 +107,10 @@ All commands take `-C` and the global options from [cli.md](cli.md).
     `pytest: running 12 tests`, a `FAILED <id>` line per failed test and,
     on a terminal, a transient progress bar and a spinner while it reads
     the coverage data. Agent mode and `--json` print only the summary line.
+
+    Each runner holds `.r2/coverage/<runner>.lock` while it collects. A
+    second `collect` of the same runner in the same project fails at once
+    with exit 1 instead of overwriting the first one's scratch files.
 17. Collecting with selectors replaces the recorded tests that match them
     and keeps the others, so one test can be refreshed without running
     the whole suite. The ambient spans are replaced on every run.

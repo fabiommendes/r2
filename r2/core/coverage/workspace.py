@@ -5,11 +5,20 @@ its maps. The glue between the runners, the maps and the CLI.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import fcntl
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Protocol, cast
 
-from r2.core.coverage.base import RUNNERS, CoverageMap, CoverageRunner, Progress
+from r2.core.coverage.base import (
+    COVERAGE_DIR,
+    RUNNERS,
+    CollectError,
+    CoverageMap,
+    CoverageRunner,
+    Progress,
+)
 from r2.core.coverage.py import PytestCoverage
 from r2.core.project.base import Project
 from r2.core.project.py import UvProject
@@ -61,18 +70,41 @@ def collect(
     progress: Progress | None = None,
 ) -> CoverageMap:
     """
-    Run `runner.collect(selectors, progress)`, merge the result into the saved map of
-    that runner (`CoverageMap.merge`), save it and return it. Without a
-    saved map, the result is saved as is.
+    Under `collect_lock`, run `runner.collect(selectors, progress)`, merge
+    the result into the saved map of that runner (`CoverageMap.merge`), save
+    it and return it. Without a saved map, the result is saved as is.
     """
     root = cast(_Rooted, runner.project).root
-    new = runner.collect(selectors, progress)
-    try:
-        saved = CoverageMap.load(root, runner.name).merge(new, selectors)
-    except FileNotFoundError:
-        saved = new
-    saved.save(root)
+    with collect_lock(root, runner.name):
+        new = runner.collect(selectors, progress)
+        try:
+            saved = CoverageMap.load(root, runner.name).merge(new, selectors)
+        except FileNotFoundError:
+            saved = new
+        saved.save(root)
     return saved
+
+
+@contextmanager
+def collect_lock(root: Path, runner: str) -> Iterator[None]:
+    """
+    Hold `.r2/coverage/<runner>.lock` while collecting, so two collects of
+    the same runner cannot overwrite each other's scratch files. Raise
+    CollectError at once when another process holds it.
+    """
+    path = root / COVERAGE_DIR / f"{runner}.lock"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w") as file:
+        try:
+            fcntl.flock(file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise CollectError(
+                f"another r2 coverage collect is running for {runner} in {root}", ""
+            ) from None
+        try:
+            yield
+        finally:
+            fcntl.flock(file, fcntl.LOCK_UN)
 
 
 def load_maps(root: Path, names: Sequence[str] = ()) -> list[CoverageMap]:

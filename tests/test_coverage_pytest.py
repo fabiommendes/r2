@@ -7,6 +7,8 @@ bundle their assertions.
 from __future__ import annotations
 
 import hashlib
+import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -19,7 +21,7 @@ from r2.core.coverage.base import (
     Outcome,
     TestId,
 )
-from r2.core.coverage.py import PytestCoverage
+from r2.core.coverage.py import PytestCoverage, read_coverage_data
 from r2.core.project.py import UvProject
 from tests.support import ExampleProjectFactory
 
@@ -219,3 +221,12 @@ def test_map_round_trips_through_disk(roman: Path) -> None:
     cov = runner_for(roman).collect([PROPERTIES + "test_roundtrip"])
     cov.save(roman)
     assert CoverageMap.load(roman, "pytest") == cov
+
+
+def test_unknown_coverage_schema_raises(tmp_path: Path) -> None:
+    data_file = tmp_path / "data.coverage"
+    with closing(sqlite3.connect(data_file)) as db, db:
+        db.execute("create table coverage_schema (version integer)")
+        db.execute("insert into coverage_schema values (99)")
+    with pytest.raises(CollectError, match="schema 99"):
+        read_coverage_data(data_file)
