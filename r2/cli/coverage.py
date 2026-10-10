@@ -212,7 +212,7 @@ def redundant(
         return
     for ref in refs:
         failed = suite.tests[ref].outcome == "failed"
-        typer.echo(f"{ref}{' (failed)' if failed else ''}")
+        out(f"{styled_ref(ref)}{' [red](failed)[/]' if failed else ''}")
 
 
 @app.command()
@@ -269,7 +269,7 @@ def fragile(
         if ranges:
             rows.append((path, ranges[0][0], ref, ranges))
     for path, _, ref, ranges in sorted(rows, key=lambda r: r[:3]):
-        typer.echo(f"{path}:{format_ranges(ranges)}  {ref}")
+        out(f"{styled_path(path)}:{styled_ranges(ranges)}  {styled_ref(ref)}")
 
 
 @app.command()
@@ -293,9 +293,9 @@ def minimize(
         )
         return
     for ref in result.kept:
-        typer.echo(str(ref))
+        out(styled_ref(ref))
     total = len(result.kept) + len(result.dropped)
-    typer.echo(f"kept {len(result.kept)} of {total} tests")
+    out(f"[bold]kept [green]{len(result.kept)}[/] of {total} tests[/]")
 
 
 @app.command()
@@ -327,10 +327,10 @@ def show(
         return
     kind = kinds[ref.runner]
     for path, ranges in group_by_file(record.spans, kind).items():
-        typer.echo(f"covers {path}: {format_ranges(ranges)}")
+        out(f"[dim]covers[/] {styled_path(path)}: {styled_ranges(ranges)}")
     if extra:
         for path, ranges in group_by_file(extra, kind).items():
-            typer.echo(f"adds {path}: {format_ranges(ranges)}")
+            out(f"[bold green]adds[/] {styled_path(path)}: {styled_ranges(ranges)}")
 
 
 #
@@ -392,10 +392,11 @@ def report_spans(
         return
     for ref, spans in rows:
         count = len(spans)
-        typer.echo(f"{ref}: {count} span{'' if count == 1 else 's'}")
+        noun = "span" if count == 1 else "spans"
+        out(f"{styled_ref(ref)}: [bold yellow]{count}[/] {noun}")
         if mode.verbosity >= VERBOSE:
             for path, ranges in group_by_file(spans, kinds[ref.runner]).items():
-                typer.echo(f"  {path}: {format_ranges(ranges)}")
+                out(f"  {styled_path(path)}: {styled_ranges(ranges)}")
 
 
 def ref_data(suite: Suite, ref: TestRef, **extra: Any) -> dict[str, Any]:
@@ -409,6 +410,33 @@ def ref_data(suite: Suite, ref: TestRef, **extra: Any) -> dict[str, Any]:
 
 def format_ranges(ranges: Sequence[tuple[int, int]]) -> str:
     return ", ".join(f"{a}-{b}" if a != b else str(a) for a, b in ranges)
+
+
+def out(markup: str) -> None:
+    """
+    Print a result line on stdout. Colors only show on a terminal; piped and
+    agent output get the same text without them.
+    """
+    console.stdout.print(markup)
+
+
+def styled_ref(ref: TestRef) -> str:
+    """
+    The test id with its file part dim and the test name bold.
+    """
+    for sep in ("::", " > "):
+        head, found, name = ref.id.rpartition(sep)
+        if found:
+            return f"[dim]{escape(head + sep)}[/][bold]{escape(name)}[/]"
+    return f"[bold]{escape(ref.id)}[/]"
+
+
+def styled_path(path: str) -> str:
+    return f"[blue]{escape(path)}[/]"
+
+
+def styled_ranges(ranges: Sequence[tuple[int, int]]) -> str:
+    return f"[cyan]{format_ranges(ranges)}[/]"
 
 
 def emit_json(data: Any) -> None:
