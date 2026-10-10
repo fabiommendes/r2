@@ -27,7 +27,7 @@ text_help = "Markdown text, or - to read it from stdin."
 
 def thread_app(fmt: Format[Any], help: str) -> typer.Typer:
     """The commands shared by every kind of thread."""
-    app = typer.Typer(help=help)
+    app = typer.Typer(help=help, no_args_is_help=True)
 
     @app.command()
     def new(

@@ -22,7 +22,9 @@ from r2.core.messages import error, success
 from r2.core.mode import mode
 from r2.core.r2_context import find_root
 
-app = typer.Typer(help="Manage the project glossary, GLOSSARY.md.")
+app = typer.Typer(
+    help="Manage the project glossary, GLOSSARY.md.", no_args_is_help=True
+)
 
 file_opt = typer.Option(
     "--file",

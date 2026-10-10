@@ -22,10 +22,11 @@ from r2.core.project import get_project
 
 __all__ = ["app", "build_app"]
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 
 
 def root(
+    ctx: typer.Context,
     agent: Annotated[
         bool,
         typer.Option(
@@ -72,6 +73,10 @@ def root(
         os.chdir(directory)
     if configure(agent=agent, verbose=verbose, quiet=quiet, yes=yes, json=json).agent:
         use_plain_output()
+    if ctx.invoked_subcommand is None:
+        # Only global options: show the help, as a group without a command does.
+        typer.echo(ctx.get_help())
+        raise typer.Exit(2)
 
 
 def use_plain_output() -> None:
@@ -90,7 +95,7 @@ def use_plain_output() -> None:
     console.use_plain()
 
 
-app.callback()(root)
+app.callback(invoke_without_command=True)(root)
 
 
 @app.command()
@@ -192,8 +197,8 @@ def build_app(
     from r2.cli.registry import install
 
     # `add_typer` without a name drops the callback, so rebuild explicitly.
-    new = typer.Typer()
-    new.callback()(root)
+    new = typer.Typer(no_args_is_help=True)
+    new.callback(invoke_without_command=True)(root)
     new.registered_commands += app.registered_commands
     new.registered_groups += app.registered_groups
     install(new, plugins_dir=plugins_dir, project_start=project_start)

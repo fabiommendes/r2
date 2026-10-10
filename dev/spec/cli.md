@@ -80,6 +80,9 @@ changes how r2 talks back, never what a command does.
 13. Exit codes: 0 on success; 1 when the command fails for a reason of the
     domain (term not found, duplicate term, problems found by a check); 2
     for usage errors (unknown option, missing argument).
+13a. A command group called without a subcommand (`r2 coverage`, or `r2`
+    with only global options) prints its help to stdout instead of an
+    error, and still exits 2. `r2` with no arguments at all opens the TUI.
 14. With `--json`, a command that reads data prints one JSON document to
     stdout. Commands that only write ignore `--json`.
 

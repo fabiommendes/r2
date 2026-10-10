@@ -178,3 +178,20 @@ def test_agent_mode_sets_no_color_for_the_programs_r2_runs(
 
     assert run_r2("color", cwd=tmp_path).stdout.strip() == "NO_COLOR="
     assert run_r2("--agent", "color", cwd=tmp_path).stdout.strip() == "NO_COLOR=1"
+
+
+#
+# Groups without a subcommand
+#
+@pytest.mark.parametrize(
+    "args", [["coverage"], ["glossary"], ["issue"], ["adr"], ["plugins"], ["-v"]]
+)
+def test_missing_subcommand_shows_help(
+    args: list[str], capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(SystemExit) as info:
+        main(args)
+    out = capsys.readouterr()
+    assert info.value.code == 2, "still a usage error for scripts"
+    assert "Usage:" in out.out
+    assert "Missing command" not in out.err

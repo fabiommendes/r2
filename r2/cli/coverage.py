@@ -31,7 +31,9 @@ from r2.core.coverage.workspace import (
 from r2.core.messages import error, warn
 from r2.core.mode import VERBOSE, mode
 
-app = typer.Typer(help="Per-test coverage: which code each test runs.")
+app = typer.Typer(
+    help="Per-test coverage: which code each test runs.", no_args_is_help=True
+)
 
 runner_opt = typer.Option("--runner", help="Only this runner; repeatable.")
 baseline_opt = typer.Option(

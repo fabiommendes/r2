@@ -11,7 +11,7 @@ from r2.core.messages import error, success
 from r2.core.plugins.discovery import available_builtins
 from r2.core.plugins.loader import PluginError, load_plugin
 
-app = typer.Typer(help="Inspect installed plugins.")
+app = typer.Typer(help="Inspect installed plugins.", no_args_is_help=True)
 
 
 @app.command("list")
