@@ -25,7 +25,7 @@ def _require_uv() -> None:
 @pytest.fixture
 def example_project() -> Iterator[ExampleProjectFactory]:
     """
-    Factory fixture for the hardcoded projects under tests/examples/pyproject/.
+    Factory fixture for the hardcoded projects under tests/examples/tasks/uv/.
 
     Call it with an example's directory name to get a copy in a fresh
     temporary directory:
@@ -36,7 +36,7 @@ def example_project() -> Iterator[ExampleProjectFactory]:
 
     Every copy this factory hands out is removed at teardown, pass or fail,
     so tests never leave anything behind and never mutate the checked-in
-    fixtures under tests/examples/pyproject/.
+    fixtures under tests/examples/tasks/uv/.
     """
     made: list[Path] = []
 

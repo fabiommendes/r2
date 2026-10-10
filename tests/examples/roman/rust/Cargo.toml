@@ -1,0 +1,9 @@
+[package]
+name = "roman"
+version = "0.1.0"
+edition = "2021"
+description = "Roman numeral conversion. Baseline project for r2's test analysis commands."
+publish = false
+
+[dev-dependencies]
+proptest = "1"

@@ -6,7 +6,7 @@ from pathlib import Path
 ExampleProjectFactory = Callable[[str], Path]
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-EXAMPLES_ROOT = REPO_ROOT / "tests" / "examples" / "pyproject"
+EXAMPLES_ROOT = REPO_ROOT / "tests" / "examples" / "tasks" / "uv"
 
 
 def run_r2(

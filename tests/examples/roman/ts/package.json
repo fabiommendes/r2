@@ -1,0 +1,20 @@
+{
+  "name": "roman",
+  "version": "0.1.0",
+  "description": "Roman numeral conversion. Baseline project for r2's test analysis commands.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "fast-check": "^4.10.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3"
+  }
+}

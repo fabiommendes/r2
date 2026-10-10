@@ -1,0 +1,10 @@
+# Build and run artifacts of the example projects
+target/
+node_modules/
+test-results/
+playwright-report/
+coverage/
+.coverage
+.coverage.*
+.hypothesis/
+mutants.out*/

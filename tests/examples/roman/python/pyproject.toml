@@ -1,0 +1,20 @@
+[project]
+name = "roman"
+version = "0.1.0"
+description = "Roman numeral conversion. Baseline project for r2's test analysis commands."
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8", "hypothesis>=6", "pytest-cov>=6"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["roman"]

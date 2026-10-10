@@ -2,7 +2,7 @@
 Integration tests for r2's PyProject task commands: `r2 test`, `r2 build`,
 and `r2 docs`.
 
-Each test copies a hardcoded project from tests/examples/pyproject/ into a
+Each test copies a hardcoded project from tests/examples/tasks/uv/ into a
 fresh temporary directory (see the `example_project` fixture in
 conftest.py), then drives the real `r2` executable against that copy as a
 subprocess and checks what it actually did on disk.
