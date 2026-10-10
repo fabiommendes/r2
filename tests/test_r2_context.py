@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from r2.core.links import Link
-from r2.core.project import Projects
+from r2.core.r2_context import Projects
 
 
 def test_contexts_are_shared_by_git_root(tmp_path: Path) -> None:

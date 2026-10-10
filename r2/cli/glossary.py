@@ -20,7 +20,7 @@ from r2.core.glossary import (
 )
 from r2.core.messages import error, success
 from r2.core.mode import mode
-from r2.core.project import find_root
+from r2.core.r2_context import find_root
 
 app = typer.Typer(help="Manage the project glossary, GLOSSARY.md.")
 

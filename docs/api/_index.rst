@@ -27,6 +27,7 @@ Modules
    r2.core.plugins.loader
    r2.core.plugins.manifest
    r2.core.project
+   r2.core.r2_context
    r2.core.state
    r2.core.threads
    r2.integrations.claude.events

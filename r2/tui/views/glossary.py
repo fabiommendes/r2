@@ -15,7 +15,7 @@ from textual.widgets.tree import TreeNode
 from r2.core.files import update
 from r2.core.glossary import FILE, Glossary, Term, parse, term_line
 from r2.core.links import Link
-from r2.core.project import ProjectContext
+from r2.core.r2_context import ProjectContext
 from r2.tui import theme
 from r2.tui.views.base import View
 from r2.tui.widgets.meta import SEPARATOR, FieldRenderer, MetaBar, clickable

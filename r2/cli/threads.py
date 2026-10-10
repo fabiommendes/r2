@@ -12,7 +12,7 @@ from r2.core import adrs, issues
 from r2.core.files import create
 from r2.core.messages import error, success
 from r2.core.mode import mode
-from r2.core.project import find_root
+from r2.core.r2_context import find_root
 from r2.core.threads import AUTHOR_ENV, Comment, Format, Thread, default_author
 
 __all__ = ["AUTHOR_ENV", "adr_app", "author", "issue_app"]

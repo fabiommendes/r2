@@ -9,7 +9,7 @@ from textual.widget import Widget
 from textual.widgets import Input, TabbedContent, TabPane, Tree
 
 from r2.core.links import Link
-from r2.core.project import ProjectContext
+from r2.core.r2_context import ProjectContext
 from r2.tui.widgets.commands import CommandBar
 from r2.tui.widgets.markdown import MarkdownBrowser
 from r2.tui.widgets.preview import FilePreview

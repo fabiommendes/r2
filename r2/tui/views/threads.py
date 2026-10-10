@@ -18,7 +18,7 @@ from r2.core import adrs, issues
 from r2.core.editor import uses_gui_editor
 from r2.core.files import create, update
 from r2.core.links import Link
-from r2.core.project import ProjectContext
+from r2.core.r2_context import ProjectContext
 from r2.core.threads import (
     Format,
     Thread,

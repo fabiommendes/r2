@@ -8,7 +8,7 @@ from textual.app import ComposeResult
 from textual.widgets import DirectoryTree
 
 from r2.core.links import Link
-from r2.core.project import ProjectContext
+from r2.core.r2_context import ProjectContext
 from r2.tui import theme
 from r2.tui.views.base import View
 from r2.tui.widgets.markdown import MarkdownPane

@@ -27,7 +27,7 @@ from r2.core.editor import (
 )
 from r2.core.history import Location
 from r2.core.links import Link
-from r2.core.project import ProjectContext, Projects
+from r2.core.r2_context import ProjectContext, Projects
 from r2.core.state import UIState
 from r2.integrations import herdr
 from r2.integrations.claude.events import event_links, recent_events, tail
