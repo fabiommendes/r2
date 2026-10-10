@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -8,19 +9,23 @@ from typing import Any, Literal, Never, assert_never
 
 from r2.core import console
 from r2.core.cli_tool import CliTool
-from r2.core.tasks.base import Project as BaseProject
-from r2.core.tasks.base import ProjectKind
+from r2.core.project.base import Project as BaseProject
+from r2.core.project.base import ProjectKind
 
 type Data = dict[str, Any]
 type Manager = Literal["uv"]
 
 uv = CliTool("uv")
 
+DEPENDENCY_RE = re.compile(
+    r"\s*(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)\s*(?:\[[^\]]*\])?(?P<spec>.*)"
+)
+
 
 @dataclass(frozen=True)
-class PyProject(BaseProject):
+class UvProject(BaseProject):
     """
-    Python projects using the `pyproject.toml` file for configuration.
+    Python project using uv and `pyproject.toml` for configuration.
     """
 
     root: Path
@@ -37,20 +42,20 @@ class PyProject(BaseProject):
         return os.path.isfile(os.path.join(path, "pyproject.toml"))
 
     @classmethod
-    def init(cls, path: Path, kind: ProjectKind) -> PyProject:
-        if not cls.is_project(path):
-            msg = f"Not a valid python project: pyproject.toml was not found in {path}"
+    def init(cls, path: Path, kind: ProjectKind) -> UvProject:
+        if cls.is_project(path):
+            msg = f"There is already a pyproject.toml in {path}"
             raise RuntimeError(msg)
 
         match kind:
             case "lib":
-                uv.run("init", "--lib")
+                uv.run("init", "--lib", _path=path)
             case "cli" | "app":
-                uv.run("init")
+                uv.run("init", _path=path)
             case other:
                 assert_never(other)
 
-        return PyProject(path)
+        return UvProject(path)
 
     @property
     def tasks(self) -> dict[str, str]:
@@ -96,7 +101,7 @@ class PyProject(BaseProject):
         self._try_tasks(["test", "tests"])
 
         # Try pytest run
-        if self.dev_dependencies.get("pytest"):
+        if "pytest" in self.any_dependencies:
             uv.exec("run", "pytest", _path=self.root)
         fail("Could not find the test runner")
 
@@ -150,17 +155,22 @@ def fail(msg: str) -> Never:
 
 def parse_dependencies(deps: list[str]) -> dict[str, str]:
     """
-    Parse a list of dependency strings into a dictionary of {name: version}.
+    Parse a list of PEP 508 dependency strings into a dictionary of
+    {name: version}.
+
+    Extras and environment markers are dropped. The version is the bound of a
+    single `>=` or `==` specifier, the URL of a direct reference, or the raw
+    specifier otherwise (e.g. `~=1.4`, `>=1,<2`).
     """
     result: dict[str, str] = {}
     for dep in deps:
-        if "@" in dep:
-            name, version = dep.split("@", 1)
-        elif ">=" in dep:
-            name, version = dep.split(">=", 1)
-        elif "==" in dep:
-            name, version = dep.split("==", 1)
-        else:
-            name, version = dep, ""
-        result[name.strip()] = version.strip()
+        match = DEPENDENCY_RE.match(dep.split(";", 1)[0])
+        if match is None:
+            continue
+        name, spec = match["name"], match["spec"].strip()
+        if spec.startswith("@"):
+            spec = spec[1:]
+        elif spec[:2] in (">=", "==") and not any(c in spec[2:] for c in ",<>=!~"):
+            spec = spec[2:]
+        result[name] = spec.strip()
     return result

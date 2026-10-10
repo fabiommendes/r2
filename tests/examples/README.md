@@ -5,7 +5,7 @@ not collect anything here (`norecursedirs` in `pyproject.toml`), and ruff and
 pyright skip this tree.
 
 - `tasks/uv/`: uv projects with different task setups, for the project task
-  commands (`r2.core.tasks`). Tests copy them to a temp dir through the
+  commands (`r2.core.project`). Tests copy them to a temp dir through the
   `example_project` fixture in `tests/conftest.py`.
 - `roman/`: the same small library in Python, Rust and TypeScript, with a
   known catalog of tests. It is the baseline for the test analysis commands

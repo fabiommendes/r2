@@ -17,7 +17,7 @@ from r2.cli.plugins import app as plugins_app
 from r2.cli.threads import adr_app, issue_app
 from r2.core import console
 from r2.core.mode import configure
-from r2.core.tasks import get_project
+from r2.core.project import get_project
 
 __all__ = ["app", "build_app"]
 
