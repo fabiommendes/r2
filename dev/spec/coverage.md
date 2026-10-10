@@ -8,17 +8,12 @@ relatedTo: [cli]
 # Per-test coverage
 
 `r2 coverage` records which code each test runs and answers questions about
-the test suite from that record: which tests add nothing over a core suite,
+the test suite from that record: which tests add nothing over a baseline suite,
 which code only one test reaches, the smallest set of tests that keeps the
 coverage. The target use is pruning the many shallow tests that coding
-agents tend to write. A redundant test is a candidate for review, never an
-automatic deletion: a test can add no coverage and still be the only one
-that checks a result.
+agents tend to write. 
 
-Mutation testing, which confirms or rejects a candidate, is out of scope
-here and gets its own spec on top of the same test ids and selectors.
-
-The examples in `tests/examples/roman/` are the acceptance baseline: the
+The examples in `tests/examples/roman/` are the acceptance fixtures: the
 catalog in their README is the expected output of the analysis commands.
 
 ## Concepts
@@ -26,31 +21,31 @@ catalog in their README is the expected output of the analysis commands.
 1. A **runner** is a test tool r2 knows how to instrument. One project can
    have several (vitest and playwright in the same `package.json`).
 
-   | Runner | Language | Mechanism | Unit |
-   | --- | --- | --- | --- |
-   | `pytest` | Python | coverage.py dynamic contexts, one run | arc |
-   | `nextest` | Rust | one `.profraw` per test, `llvm-cov export` | region |
-   | `vitest` | TS | V8 coverage taken per test in a setup file | block |
-   | `playwright` | TS | page V8 coverage per test in a fixture | block |
+   | Runner       | Language | Mechanism                                  | Span kind |
+   | ------------ | -------- | ------------------------------------------ | --------- |
+   | `pytest`     | Python   | coverage.py dynamic contexts, one run      | arc       |
+   | `nextest`    | Rust     | one `.profraw` per test, `llvm-cov export` | region    |
+   | `vitest`     | TS       | V8 coverage taken per test in a setup file | block     |
+   | `playwright` | TS       | page V8 coverage per test in a fixture     | block     |
 
-2. A **unit** is the smallest piece of code the runner tells apart. Every
-   unit belongs to a source file and a line range, so any unit can be
+2. A **span** is the smallest piece of code the runner tells apart. Every
+   span belongs to a source file and a line range, so any span can be
    reduced to the lines it spans.
 3. A **test id** is the runner's own id: the pytest node id
    (`tests/test_examples.py::test_from_roman_iv`), the nextest id
    (`roman::examples to_roman_rejects_zero`), and `file > title` for vitest
    and playwright. Parametrized cases are separate tests.
-4. The **baseline** is the set of units that run outside any test: imports,
-   module level code, session fixtures. Every analysis treats the baseline
-   as covered by everyone, so importing a module never counts as coverage
-   a test adds.
+4. The **ambient spans** are the spans that run outside any test:
+   imports, module level code, session fixtures. Every analysis treats
+   them as covered by everyone, so importing a module never counts as
+   coverage a test adds.
 5. A **selector** picks tests by id. It is a glob (`*properties*`) matched
    against the full id; `runner:glob` restricts it to one runner
    (`vitest:*properties*`). Several selectors combine with "or".
-6. The **core** is the set of tests picked by the `--core` selectors. Only
-   the analyses that compare against something need it.
-7. A test **adds** a unit when it covers the unit and neither the core nor
-   the baseline does.
+6. The **baseline** is the set of tests picked by the `--baseline`
+   selectors. Only the analyses that compare against something need it.
+7. A test **adds** a span when it covers the span and neither the baseline nor
+   the ambient spans do.
 
 ## Coverage map
 
@@ -59,21 +54,21 @@ catalog in their README is the expected output of the analysis commands.
    detected project. The first write also creates `.r2/.gitignore`
    holding `*`.
 9. A map holds:
-   - `runner`, `unit` (`arc`, `region`, `block` or `line`), r2's format
+   - `runner`, `span_kind` (`arc`, `region`, `block` or `line`), r2's format
      `version`;
    - `created`, the git commit and whether the tree was dirty;
    - `files`: each measured source file with the hash of its content;
-   - `baseline`: the baseline units;
+   - `ambient`: the ambient spans;
    - `tests`: for each test id, its outcome (`passed`, `failed`,
-     `skipped`) and its units.
+     `skipped`) and its spans.
 
-   Units are written as `path:line:col-line:col`, with paths relative to
+   Spans are written as `path:line:col-line:col`, with paths relative to
    the project root.
 10. A map is **stale** when a measured file changed since it was written.
     The analysis commands still run on a stale map and print a warning
     with the changed files.
 11. A failing test is still recorded, with outcome `failed`. Analyses
-    include it and mark it in the output. A skipped test has no units.
+    include it and mark it in the output. A skipped test has no spans.
 
 ## Commands
 
@@ -92,12 +87,12 @@ All commands take `-C` and the global options from [cli.md](cli.md).
     and, if any is missing, fails with exit 1 listing each one with its
     install command. It never installs anything.
 
-    | Runner | Needs |
-    | --- | --- |
-    | `pytest` | `uv`; `pytest-cov` or `coverage` in the project, else run through `uv run --with coverage` |
-    | `nextest` | `cargo`, `cargo-nextest`, `llvm-tools-preview` (`llvm-profdata`, `llvm-cov`) |
-    | `vitest` | `npx`, `vitest` in `node_modules` |
-    | `playwright` | `npx`, `@playwright/test` in `node_modules`, a Chromium browser |
+    | Runner       | Needs                                                                                      |
+    | ------------ | ------------------------------------------------------------------------------------------ |
+    | `pytest`     | `uv`; `pytest-cov` or `coverage` in the project, else run through `uv run --with coverage` |
+    | `nextest`    | `cargo`, `cargo-nextest`, `llvm-tools-preview` (`llvm-profdata`, `llvm-cov`)               |
+    | `vitest`     | `npx`, `vitest` in `node_modules`                                                          |
+    | `playwright` | `npx`, `@playwright/test` in `node_modules`, a Chromium browser                            |
 
 15. `collect` never changes the project's files. Instrumentation goes
     through environment variables, command line flags and files under
@@ -109,60 +104,59 @@ All commands take `-C` and the global options from [cli.md](cli.md).
     collected), and shows the runner's last 30 lines of output.
 17. Collecting with selectors replaces the recorded tests that match them
     and keeps the others, so one test can be refreshed without running
-    the whole suite. The baseline is replaced on every run.
+    the whole suite. The ambient spans are replaced on every run.
 
 ### Analyses
 
-18. The analysis commands read the maps and never run tests. They read
+18. The analysis commands read the maps and do not run tests. They read
     every map unless `--runner` is given. A missing map is an error that
     points to `r2 coverage collect`.
-19. When maps with different units are read together (vitest blocks and
-    playwright blocks are the same unit; pytest arcs and vitest blocks are
-    not, but they never share files), each file is compared at the
-    coarsest unit any map uses for it, down to `line`. `--unit line`
-    forces lines everywhere.
+19. Spans are compared file by file. When two maps measure the same file
+    with different spans, that file is compared by lines. This only
+    happens between runners of the same language, since each language has
+    its own source files. `--span line` compares every file by lines.
 
-20. `r2 coverage redundant --core SELECTOR... [SELECTOR]...` lists the
-    tests outside the core that add no unit. With selectors, only those
+20. `r2 coverage redundant --baseline SELECTOR... [SELECTOR]...` lists the
+    tests outside the baseline that add no span. With selectors, only those
     tests are checked. Each line is the test id. With `--json`: a list of
-    `{"test", "runner", "outcome", "units"}`, where `units` is the count
-    of units the test covers.
-21. `r2 coverage adds --core SELECTOR... [SELECTOR]...` is the opposite:
-    each test outside the core that adds units, with the count, sorted by
-    the count, largest first. `-v` also lists the units, grouped by file
+    `{"test", "runner", "outcome", "spans"}`, where `spans` is the count
+    of spans the test covers.
+21. `r2 coverage adds --baseline SELECTOR... [SELECTOR]...` is the opposite:
+    each test outside the baseline that adds spans, with the count, sorted by
+    the count, largest first. `-v` also lists the spans, grouped by file
     as line ranges.
-22. `r2 coverage unique [SELECTOR]...` lists, for each test, the units no
-    other test covers, as `test: N units`. Tests with none are left out.
-    `-v` lists the units.
-23. `r2 coverage fragile [PATH]...` lists the units covered by exactly one
+22. `r2 coverage unique [SELECTOR]...` lists, for each test, the spans no
+    other test covers, as `test: N spans`. Tests with none are left out.
+    `-v` lists the spans.
+23. `r2 coverage fragile [PATH]...` lists the spans covered by exactly one
     test, grouped by file, with the test. With paths, only those files.
-24. `r2 coverage minimize [--core SELECTOR]... [SELECTOR]...` prints a
-    small set of tests that covers every unit the whole suite covers,
-    found with the greedy set cover: the core first, then at each step the
-    test that adds the most units. Ties go to the test with fewer units,
+24. `r2 coverage minimize [--baseline SELECTOR]... [SELECTOR]...` prints a
+    small set of tests that covers every span the whole suite covers,
+    found with the greedy set cover: the baseline first, then at each step the
+    test that adds the most spans. Ties go to the test with fewer spans,
     then to the id. The last line reads `kept 8 of 12 tests`. With
     `--json`: `{"kept": [...], "dropped": [...]}`.
-25. `r2 coverage show TEST` prints the units of one test, grouped by file
-    as line ranges, marking the ones the test adds when `--core` is given.
+25. `r2 coverage show TEST` prints the spans of one test, grouped by file
+    as line ranges, marking the ones the test adds when `--baseline` is given.
 
 ### Later
 
 Not part of this spec, but the map is designed for them:
 
-- `overlap`: a matrix of shared units between test files.
+- `overlap`: a matrix of shared spans between test files.
 - `impact DIFF`: the tests that cover the lines a diff touches.
 
 ## Code
 
 26. `r2.core.coverage` is a package:
 
-    | Module | Holds |
-    | --- | --- |
-    | `base.py` | `CoverageMap`, `Unit`, `TestId`, `CoverageRunner` |
-    | `analysis.py` | the analyses as pure functions on maps |
-    | `py.py` | `PytestCoverage` |
-    | `rs.py` | `NextestCoverage` |
-    | `ts.py` | `VitestCoverage`, `PlaywrightCoverage` |
+    | Module        | Holds                                             |
+    | ------------- | ------------------------------------------------- |
+    | `base.py`     | `CoverageMap`, `Span`, `TestId`, `CoverageRunner` |
+    | `analysis.py` | the analyses as pure functions on maps            |
+    | `py.py`       | `PytestCoverage`                                  |
+    | `rs.py`       | `NextestCoverage`                                 |
+    | `ts.py`       | `VitestCoverage`, `PlaywrightCoverage`            |
 
 27. `CoverageRunner` is an abstract class. A runner holds the project it
     works on (`UvProject`, `CargoProject`, `NpmProject`) and implements:
@@ -170,7 +164,7 @@ Not part of this spec, but the map is designed for them:
     ```python
     class CoverageRunner(ABC):
         name: ClassVar[str]
-        unit: ClassVar[UnitKind]
+        span: ClassVar[SpanKind]
         project: Project
 
         @classmethod
@@ -198,22 +192,22 @@ Run against copies of `tests/examples/roman/`:
 
 31. For each of `python/`, `rust/` and `ts/`, `collect` writes a map with
     all the tests of the catalog, the 2 property tests included.
-32. `redundant --core '*properties*'` prints exactly the tests the catalog
+32. `redundant --baseline '*properties*'` prints exactly the tests the catalog
     marks "redundant" for that language; `adds` prints the others. In
     `ts/`, the playwright tests are redundant on `src/roman.ts` but add
-    units in `src/main.ts`, so they show up in `adds`.
-33. `minimize --core '*properties*'` keeps the core and drops every test
+    spans in `src/main.ts`, so they show up in `adds`.
+33. `minimize --baseline '*properties*'` keeps the baseline and drops every test
     `redundant` lists, plus one of `to_roman_rejects_zero` and
     `to_roman_rejects_4000`.
 34. Running `collect` twice on an unchanged project gives the same tests
-    and units.
+    and spans.
 35. With a tool missing (for example `cargo-nextest` off the `PATH`),
     `collect` exits 1 and names the tool and its install command.
 
 ## Open points
 
-- Where the core lives besides the command line: a `[coverage] core`
-  entry in r2's per-project config would save typing `--core` on every
+- Where the baseline lives besides the command line: a `[coverage] baseline`
+  entry in r2's per-project config would save typing `--baseline` on every
   call.
 - The vitest and playwright mechanisms are the least proven. A spike
   confirms them before the TS runners are implemented.
