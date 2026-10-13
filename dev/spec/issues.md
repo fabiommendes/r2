@@ -5,62 +5,50 @@ tags: [issues, frontmatter, markdown, comments, oslc-cm]
 relatedTo: [issues-view, issue-form]
 ---
 
-# Issue files
+# Arquivos de issue
 
-Issues live in `dev/issues/<slug>.md`, one file per issue. A file is plain
-Markdown with YAML frontmatter. R2 reads any Markdown file in that folder
-(lenient read) and always writes the format below (strict write).
+As issues ficam em `dev/issues/<slug>.md`, um arquivo por issue. Um arquivo é Markdown simples com frontmatter em YAML. O R2 lê qualquer arquivo Markdown dessa pasta (leitura tolerante) e sempre escreve o formato abaixo (escrita estrita).
 
 ## Frontmatter
 
-`type` and `status` are always written. Every other key is optional and is
-left out when it holds its default, so a fresh issue stays short.
+`type` e `status` são sempre escritos. Qualquer outra chave é opcional e fica de fora quando tem o valor padrão, para que uma issue nova continue curta.
 
-The first four keys are the ones base reads. The others borrow their names
-from OSLC Change Management 3.0 and Dublin Core terms, so they can be mapped
-to RDF later with a JSON-LD context without touching the files.
+As quatro primeiras chaves são as que o base lê. As outras pegam os nomes do OSLC Change Management 3.0 e dos termos do Dublin Core, para que possam ser mapeadas para RDF depois, com um contexto JSON-LD, sem mexer nos arquivos.
 
-| Key | Values | Default | Source |
+| Chave | Valores | Padrão | Origem |
 | --- | --- | --- | --- |
-| `type` | `issue` | required | base |
-| `status` | see below | required, `backlog` on creation | base |
-| `tags` | list of strings | `[]` | base |
-| `relatedTo` | list of entity slugs or paths | `[]` | base |
-| `kind` | `defect`, `enhancement`, `task` | none | `oslc_cm:Defect`, `Enhancement`, `Task` |
+| `type` | `issue` | obrigatório | base |
+| `status` | ver abaixo | obrigatório, `backlog` na criação | base |
+| `tags` | lista de strings | `[]` | base |
+| `relatedTo` | lista de slugs de entidades ou caminhos | `[]` | base |
+| `kind` | `defect`, `enhancement`, `task` | nenhum | `oslc_cm:Defect`, `Enhancement`, `Task` |
 | `priority` | `low`, `normal`, `high`, `urgent` | `normal` | `oslc_cm:priority` |
 | `severity` | `trivial`, `minor`, `normal`, `major`, `critical` | `normal` | `oslc_cm:severity` |
-| `milestone` | milestone name | none | `oslc_cm:affectsPlanItem` |
-| `parent` | slug of another issue | none | `oslc_cm:parent` |
-| `blocks` | list of issue slugs | `[]` | |
-| `created` | date, `YYYY-MM-DD` | filled in on creation | `dcterms:created` |
-| `creator` | free text | none | `dcterms:creator` |
-| `closed` | date, `YYYY-MM-DD` | none | `oslc_cm:closeDate` |
+| `milestone` | nome do milestone | nenhum | `oslc_cm:affectsPlanItem` |
+| `parent` | slug de outra issue | nenhum | `oslc_cm:parent` |
+| `blocks` | lista de slugs de issues | `[]` | |
+| `created` | data, `YYYY-MM-DD` | preenchido na criação | `dcterms:created` |
+| `creator` | texto livre | nenhum | `dcterms:creator` |
+| `closed` | data, `YYYY-MM-DD` | nenhum | `oslc_cm:closeDate` |
 
-`milestone` limits the issue to one milestone; without it, the issue belongs
-to no milestone in particular.
+`milestone` limita a issue a um milestone. Sem ele, a issue não pertence a nenhum milestone em específico.
 
 ### Status
 
-The base lifecycle, plus two terminal states:
+O ciclo de vida do base, mais dois estados finais:
 
-- `backlog`, `todo`, `in_progress`, `blocked`, `deferred`, `in_review`: open.
-- `completed`, `wont_fix`, `deprecated`: closed.
+- `backlog`, `todo`, `in_progress`, `blocked`, `deferred`, `in_review`: abertos.
+- `completed`, `wont_fix`, `deprecated`: fechados.
 
-### Writing order
+### Ordem de escrita
 
-Keys are written in the order of the table. Lists use the flow style
-(`tags: [a, b]`). Keys r2 does not know are kept as they are, after the
-known ones.
+As chaves são escritas na ordem da tabela. Listas usam o estilo de fluxo (`tags: [a, b]`). Chaves que o r2 não conhece são mantidas como estão, depois das conhecidas.
 
-## Body
+## Corpo
 
-The body opens with a level 1 heading that holds the title, followed by the
-description.
+O corpo começa com um título de nível 1, que traz o título, seguido da descrição.
 
-A line holding only `---`, outside fenced code blocks, starts a comment. The
-comments read top to bottom, like a forum thread. A comment may start with a
-line `by: <who>` that tells who wrote it; the line is not part of its text.
-The description has no `by:` line: its author is `creator`.
+Uma linha que contém só `---`, fora de blocos de código, começa um comentário. Os comentários são lidos de cima para baixo, como um fórum. Um comentário pode começar com uma linha `by: <who>`, que diz quem escreveu; a linha não faz parte do texto. A descrição não tem linha `by:`: o autor dela é o `creator`.
 
 ```markdown
 ---
@@ -85,9 +73,9 @@ by: claude
 Found the cause: `reload()` resets the selection.
 ```
 
-## Lenient read
+## Leitura tolerante
 
-- A file without frontmatter is an issue with status `backlog`.
-- A file without an H1 takes its title from the file name.
-- Unknown keys and unknown values are kept and shown as they are.
-- A broken frontmatter is treated as part of the body.
+- Um arquivo sem frontmatter é uma issue com status `backlog`.
+- Um arquivo sem H1 pega o título do nome do arquivo.
+- Chaves e valores desconhecidos são mantidos e mostrados como estão.
+- Um frontmatter quebrado é tratado como parte do corpo.

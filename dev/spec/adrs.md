@@ -5,83 +5,65 @@ tags: [adr, decisions, frontmatter, markdown, madr]
 relatedTo: [issues, adr-view]
 ---
 
-# ADR files
+# Arquivos de ADR
 
-Architecture decision records live in `dev/adr/NNNN-<slug>.md`, one file per
-decision. `NNNN` is a zero-padded sequence number that starts at `0001`; it
-is the ADR's id (cited as "ADR-12") and is not repeated in the frontmatter.
-New ADRs take the highest number in the folder plus one.
+Os registros de decisão de arquitetura (ADRs) ficam em `dev/adr/NNNN-<slug>.md`, um arquivo por decisão. `NNNN` é um número de sequência com zeros à esquerda, que começa em `0001`. Ele é o id do ADR (citado como "ADR-12") e não se repete no frontmatter. Novos ADRs recebem o maior número da pasta mais um.
 
-A file is plain Markdown with YAML frontmatter. R2 reads any Markdown file in
-that folder (lenient read) and always writes the format below (strict write).
-The rules shared with issues (comments, writing order, lenient read) follow
-[issues](issues.md) unless this spec says otherwise.
+Um arquivo é Markdown simples com frontmatter em YAML. O r2 lê qualquer arquivo Markdown dessa pasta (leitura tolerante) e sempre escreve o formato abaixo (escrita estrita). As regras comuns com as issues (comentários, ordem de escrita, leitura tolerante) seguem [issues](issues.md), salvo quando esta especificação disser o contrário.
 
 ## Frontmatter
 
-`type` and `status` are always written. Every other key is optional and is
-left out when it holds its default.
+`type` e `status` são sempre escritos. Qualquer outra chave é opcional e fica de fora quando tem o valor padrão.
 
-The first four keys are the ones base reads. The others borrow their names
-from MADR and Dublin Core terms, so they can be mapped to RDF later with a
-JSON-LD context.
+As quatro primeiras chaves são as que o base lê. As outras pegam os nomes do MADR e dos termos do Dublin Core, para que possam ser mapeadas para RDF depois, com um contexto JSON-LD.
 
-| Key | Values | Default | Source |
+| Chave | Valores | Padrão | Origem |
 | --- | --- | --- | --- |
-| `type` | `adr` | required | base |
-| `status` | see below | required, `proposed` on creation | MADR |
-| `tags` | list of strings | `[]` | base |
-| `relatedTo` | list of entity slugs or paths | `[]` | base |
-| `created` | date, `YYYY-MM-DD` | filled in on creation | `dcterms:created` |
-| `decided` | date, `YYYY-MM-DD` | none | `dcterms:dateAccepted` |
-| `creator` | free text | none | `dcterms:creator` |
-| `deciders` | list of strings | `[]` | MADR `decision-makers` |
-| `supersedes` | list of ADR file stems | `[]` | `dcterms:replaces` |
-| `supersededBy` | ADR file stem | none | `dcterms:isReplacedBy` |
+| `type` | `adr` | obrigatório | base |
+| `status` | ver abaixo | obrigatório, `proposed` na criação | MADR |
+| `tags` | lista de strings | `[]` | base |
+| `relatedTo` | lista de slugs de entidades ou caminhos | `[]` | base |
+| `created` | data, `YYYY-MM-DD` | preenchido na criação | `dcterms:created` |
+| `decided` | data, `YYYY-MM-DD` | nenhum | `dcterms:dateAccepted` |
+| `creator` | texto livre | nenhum | `dcterms:creator` |
+| `deciders` | lista de strings | `[]` | MADR `decision-makers` |
+| `supersedes` | lista de nomes de arquivo de ADR (sem extensão) | `[]` | `dcterms:replaces` |
+| `supersededBy` | nome de arquivo de ADR (sem extensão) | nenhum | `dcterms:isReplacedBy` |
 
-`decided` holds the date the ADR left `proposed`, whether it was accepted or
-rejected.
+`decided` guarda a data em que o ADR saiu de `proposed`, seja aceito ou rejeitado.
 
-ADR references in `supersedes` and `supersededBy` use the file stem, number
-included (`0003-json-config`).
+As referências a ADRs em `supersedes` e `supersededBy` usam o nome do arquivo sem extensão, com o número (`0003-json-config`).
 
 ### Status
 
-The Nygard and MADR lifecycle:
+O ciclo de vida do Nygard e do MADR:
 
-- `proposed`: open.
-- `accepted`, `rejected`, `deprecated`, `superseded`: closed.
+- `proposed`: aberto.
+- `accepted`, `rejected`, `deprecated`, `superseded`: fechados.
 
-Unlike issues, ADRs do not use the base lifecycle: a decision is not worked
-on, it is proposed and then settled.
+Ao contrário das issues, os ADRs não usam o ciclo de vida base: uma decisão não é trabalhada. Ela é proposta e depois resolvida.
 
-### Superseding
+### Substituição
 
-Superseding writes both sides in one action:
+Substituir uma decisão escreve os dois lados numa só ação:
 
-- the new ADR lists the old one in `supersedes`;
-- the old ADR gets `status: superseded` and `supersededBy` pointing to the new
-  one.
+- o ADR novo lista o antigo em `supersedes`;
+- o ADR antigo recebe `status: superseded` e `supersededBy` apontando para o novo.
 
-The redundancy is deliberate: a reader of the old file sees where the decision
-went without any tool. When the two sides disagree on read, r2 trusts
-`supersedes` and shows the old ADR as superseded.
+A redundância é intencional: quem lê o arquivo antigo vê para onde a decisão foi sem nenhuma ferramenta. Quando os dois lados divergem na leitura, o r2 confia em `supersedes` e mostra o ADR antigo como substituído.
 
-## Body
+## Corpo
 
-The body opens with a level 1 heading that holds the title, followed by the
-MADR sections as level 2 headings, in this order:
+O corpo começa com um título de nível 1, que traz o título, seguido das seções do MADR como títulos de nível 2, nesta ordem:
 
-- `Context`: the problem and the forces at play.
-- `Options`: the options considered, with pros and cons.
-- `Decision`: the chosen option and why.
-- `Consequences`: what gets easier or harder.
+- `Context`: o problema e as forças em jogo.
+- `Options`: as opções consideradas, com prós e contras.
+- `Decision`: a opção escolhida e o motivo.
+- `Consequences`: o que fica mais fácil ou mais difícil.
 
-R2 writes these headings on creation. It does not enforce them on read.
+O r2 escreve esses títulos na criação. Na leitura, ele não os exige.
 
-Comments work as in issues: a line holding only `---`, outside fenced code
-blocks, starts a comment, optionally opened by a `by: <who>` line. They are
-meant for discussion while the ADR is `proposed`.
+Os comentários funcionam como nas issues: uma linha só com `---`, fora de blocos de código, começa um comentário, que pode ser aberto por uma linha `by: <who>`. Eles servem para discussão enquanto o ADR está `proposed`.
 
 ```markdown
 ---
@@ -118,15 +100,14 @@ by: claude
 TOML keeps comments, which JSON drops on rewrite.
 ```
 
-## Lenient read
+## Leitura tolerante
 
-- A file without frontmatter is an ADR with status `proposed`.
-- A file without an H1 takes its title from the file name, minus the number.
-- A file name without a number prefix is accepted; the ADR has no id.
-- Unknown keys and unknown values are kept and shown as they are.
-- A broken frontmatter is treated as part of the body.
+- Um arquivo sem frontmatter é um ADR com status `proposed`.
+- Um arquivo sem H1 pega o título do nome do arquivo, sem o número.
+- Um nome de arquivo sem prefixo numérico é aceito; o ADR não tem id.
+- Chaves e valores desconhecidos são mantidos e mostrados como estão.
+- Um frontmatter quebrado é tratado como parte do corpo.
 
-## Out of scope
+## Fora do escopo
 
-ADRs are not synced with base decision entities (`base decision log`). The
-ADR file is the only record.
+Os ADRs não são sincronizados com as entidades de decisão do base (`base decision log`). O arquivo do ADR é o único registro.

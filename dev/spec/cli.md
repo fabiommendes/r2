@@ -5,189 +5,116 @@ tags: [cli, agent-mode, glossary, issues, adrs]
 relatedTo: [glossary, issues, adrs]
 ---
 
-# Command line
+# Linha de comando
 
-The `r2` command serves two kinds of users: humans at a terminal and coding
-agents running shell commands. Both use the same commands; a global mode
-changes how r2 talks back, never what a command does.
+O comando `r2` atende dois tipos de usuário: pessoas num terminal e agentes de código que rodam comandos de shell. Os dois usam os mesmos comandos. Um modo global muda como o r2 responde, nunca o que um comando faz.
 
-## Modes
+## Modos
 
-1. Human mode is the default. Agent mode is on with `--agent` or when the
-   environment sets `R2_AGENT` to `1`, `true`, `yes` or `on`.
-2. In agent mode r2 never prompts. A command that would prompt fails with
-   exit code 1 and says which argument to pass instead.
-3. Agent mode changes the default verbosity (see Verbosity) and prints
-   plain text: no colors or styles, plain Click help and usage errors
-   instead of Rich boxes, and standard tracebacks. This holds for every
-   command, plugins included, without code in the commands. Output format
-   is chosen separately, with `--json`.
-3a. Agent mode sets `NO_COLOR=1` in the environment, unless it is set
-   already, so the programs r2 runs and Consoles that plugins create on
-   their own print plain text too.
-3b. Plugins print through `plugin.console` and `plugin.err`, which always
-   return r2's current consoles, and read `plugin.mode`.
+1. O modo humano é o padrão. O modo agente fica ligado com `--agent` ou quando o ambiente define `R2_AGENT` como `1`, `true`, `yes` ou `on`.
+2. No modo agente, o r2 nunca pergunta. Um comando que pediria confirmação falha com código de saída 1 e informa qual argumento passar.
+3. O modo agente muda o nível padrão de verbosidade (veja Verbosidade) e imprime texto puro: sem cores ou estilos, com a ajuda e os erros de uso do Click em vez das caixas do Rich, e com tracebacks padrão. Isso vale para todos os comandos, plugins incluídos, sem código nos comandos. O formato de saída é escolhido à parte, com `--json`.
+3a. No modo agente, o r2 define `NO_COLOR=1` no ambiente, a não ser que ele já esteja definido. Assim, os programas que o r2 roda e os consoles que os plugins criam por conta própria também imprimem texto puro.
+3b. Plugins imprimem por `plugin.console` e `plugin.err`, que sempre devolvem os consoles atuais do r2, e leem `plugin.mode`.
 
-## Global options
+## Opções globais
 
-4. Global options belong to the root `r2` command:
+4. As opções globais pertencem ao comando raiz `r2`:
 
-   | Option | Meaning |
+   | Opção | Significado |
    | --- | --- |
-   | `--agent` | agent mode |
-   | `-v`, `--verbose` | raise the verbosity by one, repeatable |
-   | `-q`, `--quiet` | lower the verbosity by one, repeatable |
-   | `-y`, `--yes` | pre-approve destructive commands |
-   | `--json` | JSON output for commands that read data |
-   | `-C <dir>` | run as if r2 started in dir, like `git -C` |
+   | `--agent` | modo agente |
+   | `-v`, `--verbose` | aumenta a verbosidade em um, repetível |
+   | `-q`, `--quiet` | diminui a verbosidade em um, repetível |
+   | `-y`, `--yes` | aprova previamente os comandos destrutivos |
+   | `--json` | saída em JSON para comandos que leem dados |
+   | `-C <dir>` | roda como se o r2 tivesse começado em dir, como `git -C` |
 
-5. Global options are accepted anywhere before `--`: `r2 -q glossary list`
-   and `r2 glossary list -q` are the same. The exceptions:
-   - a project or plugin command forwards its arguments to another
-     program, so only options before the command name are global (`r2 -q
-     test -v` runs the tests quietly and passes `-v` to the test runner);
-   - `-C` is only read before the command name, as in git.
-6. Options that only make sense for one command group stay on it, like the
-   `-f/--file` of `r2 glossary`.
+5. As opções globais são aceitas em qualquer lugar antes de `--`: `r2 -q glossary list` e `r2 glossary list -q` são a mesma coisa. As exceções:
+   - um comando de projeto ou de plugin repassa seus argumentos a outro programa, então só as opções antes do nome do comando são globais (`r2 -q test -v` roda os testes com pouca saída e passa `-v` ao runner de testes);
+   - `-C` só é lido antes do nome do comando, como no git.
+6. As opções que só fazem sentido para um grupo de comandos ficam nesse grupo, como o `-f/--file` de `r2 glossary`.
 
-## Verbosity
+## Verbosidade
 
-7. Verbosity is a number: the mode default (0 for humans, -1 for agents)
-   plus the count of `-v` minus the count of `-q`. So `-qv` is the mode
-   default, and `-vv` is two levels above it.
-8. Levels:
+7. A verbosidade é um número: o padrão do modo (0 para humanos, -1 para agentes) mais a quantidade de `-v` menos a quantidade de `-q`. Assim, `-qv` dá o padrão do modo, e `-vv` fica dois níveis acima dele.
+8. Níveis:
 
-   | Level | Name | Output |
-   | --- | --- | --- |
-   | -2 | silent | errors only |
-   | -1 | summary | one line per result; a failing program shows its last lines |
-   | 0 | normal | the full output |
-   | 1 | verbose | also the programs r2 runs, and where |
-   | 2 | debug | also debug logs |
+   | Nível | Nome | Saída |
+   | -2 | silencioso | só erros |
+   | -1 | resumo | uma linha por resultado; um programa que falha mostra as últimas linhas |
+   | 0 | normal | a saída completa |
+   | 1 | detalhado | também os programas que o r2 roda, e onde |
+   | 2 | depuração | também os logs de depuração |
 
-9. Each command clamps the verbosity to the levels it supports. Plugins
-   read it from `r2.core.mode.mode.verbosity`.
-10. A project command declared with `output = "summary"` runs with its
-    output captured below level 0: on success it prints `ok: <name>`; on
-    failure it prints `failed: <name> (exit N)` and, at level -1, the last
-    30 lines of output.
+9. Cada comando limita a verbosidade aos níveis que ele suporta. Os plugins a leem em `r2.core.mode.mode.verbosity`.
+10. Um comando de projeto declarado com `output = "summary"` roda com a saída capturada abaixo do nível 0: em caso de sucesso, imprime `ok: <name>`; em caso de falha, imprime `failed: <name> (exit N)` e, no nível -1, as últimas 30 linhas da saída.
 
-## Output and errors
+## Saída e erros
 
-11. Results go to stdout, one record per line, with no line wrapping.
-12. Errors and warnings go to stderr, as `error: <message>` and
-    `warning: <message>`.
-13. Exit codes: 0 on success; 1 when the command fails for a reason of the
-    domain (term not found, duplicate term, problems found by a check); 2
-    for usage errors (unknown option, missing argument).
-13a. A command group called without a subcommand (`r2 coverage`, or `r2`
-    with only global options) prints its help to stdout instead of an
-    error, and still exits 2. `r2` with no arguments at all opens the TUI.
-14. With `--json`, a command that reads data prints one JSON document to
-    stdout. Commands that only write ignore `--json`.
+11. Os resultados vão para stdout, um registro por linha, sem quebra de linha.
+12. Erros e avisos vão para stderr, como `error: <message>` e `warning: <message>`.
+13. Códigos de saída: 0 em caso de sucesso; 1 quando o comando falha por um motivo do domínio (termo não encontrado, termo duplicado, problemas encontrados por uma verificação); 2 para erros de uso (opção desconhecida, argumento faltando).
+13a. Um grupo de comandos chamado sem subcomando (`r2 coverage`, ou `r2` só com opções globais) imprime a ajuda em stdout em vez de um erro, e ainda sai com código 2. `r2` sem nenhum argumento abre a TUI.
+14. Com `--json`, um comando que lê dados imprime um documento JSON em stdout. Comandos que só escrevem ignoram `--json`.
 
-## Files
+## Arquivos
 
-15. Every file r2 writes is replaced atomically: the new text goes to a
-    temporary file in the same folder, which then replaces the target. A
-    reader sees the old file or the new one, never a half written one. The
-    file keeps its permissions, and a symlink keeps pointing to the same
-    file.
-16. A change that reads a file, edits it and writes it back holds an
-    exclusive lock on the file's folder for the whole cycle, so two r2
-    processes never overwrite each other's changes. The TUI applies its
-    changes to the file as it is on disk when saving, not to the copy it
-    displays.
-17. Creating a file (a new issue or ADR) holds the same lock while it picks
-    the file name, and never overwrites an existing file.
-18. Locks are advisory `flock` locks on the folder itself; r2 leaves no
-    lock files behind. Windows is not supported.
+15. Todo arquivo que o r2 escreve é substituído de forma atômica: o texto novo vai para um arquivo temporário na mesma pasta, que então substitui o alvo. Quem lê vê o arquivo antigo ou o novo, nunca um arquivo pela metade. O arquivo mantém as permissões, e um link simbólico continua apontando para o mesmo arquivo.
+16. Uma alteração que lê um arquivo, edita e grava de volta segura um lock exclusivo na pasta do arquivo durante todo o ciclo, para que dois processos do r2 nunca sobrescrevam as mudanças um do outro. A TUI aplica suas mudanças ao arquivo como está no disco ao salvar, e não à cópia que ela mostra.
+17. Criar um arquivo (uma nova issue ou ADR) segura o mesmo lock enquanto escolhe o nome do arquivo, e nunca sobrescreve um arquivo existente.
+18. Os locks são locks `flock` consultivos sobre a própria pasta; o r2 não deixa arquivos de lock. Windows não é suportado.
 
-## Glossary
+## Glossário
 
-The format is in [glossary.md](glossary.md).
+O formato está em [glossary.md](glossary.md).
 
-19. Every glossary command takes `-f/--file`. The default is `GLOSSARY.md`
-    at the project root: the closest folder, from the current one up, that
-    holds `.git`, or the current folder if none does.
-20. Reading commands accept any Markdown file. Writing commands refuse,
-    with exit code 1, a file whose frontmatter lacks `type: glossary`, and
-    point to `r2 glossary fmt`. `fmt` is the only command that converts a
-    file to the strict format.
+19. Todo comando de glossário aceita `-f/--file`. O padrão é `GLOSSARY.md` na raiz do projeto: a pasta mais próxima, a partir da atual e subindo, que tem `.git`, ou a pasta atual se nenhuma tiver.
+20. Os comandos de leitura aceitam qualquer arquivo Markdown. Os comandos de escrita recusam, com código de saída 1, um arquivo cujo frontmatter não tem `type: glossary`, e apontam para `r2 glossary fmt`. `fmt` é o único comando que converte um arquivo para o formato estrito.
 
-### Reading
+### Leitura
 
-21. `r2 glossary list [--tag TAG]` prints each term as `Name: summary`,
-    where the summary is the first sentence of the definition. `--tag`
-    keeps the terms with that tag, ignoring case.
-22. `r2 glossary show TERM` prints the term's section as it is written in
-    the file. An unknown term is an error.
-23. `r2 glossary find WORDS` prints the terms that match WORDS, the way the
-    TUI filter does: every word must start a word of the name, the
-    definition or a field. When a word matches an `avoid` entry, the line
-    reads `<avoided> -> Name`, telling which term to use instead. No match
-    is not an error.
-24. `r2 glossary check` reports, one per line, without changing the file:
-    the checks in [glossary.md](glossary.md#checks), plus a file without
-    `type: glossary` in its frontmatter. It exits 1 when it reports
-    anything.
-25. With `--json`:
-    - `list` and `find` print a list of terms;
-    - `show` prints one term;
-    - `check` prints a list of `{"term": ..., "problem": ...}`, where
-      `term` is null for problems of the whole file.
+21. `r2 glossary list [--tag TAG]` imprime cada termo como `Nome: resumo`, onde o resumo é a primeira frase da definição. `--tag` mantém os termos com aquela tag, sem diferenciar maiúsculas de minúsculas.
+22. `r2 glossary show TERM` imprime a seção do termo como ela está escrita no arquivo. Um termo desconhecido é um erro.
+23. `r2 glossary find WORDS` imprime os termos que batem com WORDS, do mesmo jeito que o filtro da TUI: cada palavra precisa começar uma palavra do nome, da definição ou de um campo. Quando uma palavra bate com uma entrada `avoid`, a linha fica `<avoided> -> Nome`, indicando qual termo usar no lugar. Não encontrar nada não é erro.
+24. `r2 glossary check` informa, uma por linha, sem alterar o arquivo: as verificações em [glossary.md](glossary.md#verificações), mais um arquivo sem `type: glossary` no frontmatter. Ele sai com código 1 quando informa algo.
+25. Com `--json`:
+    - `list` e `find` imprimem uma lista de termos;
+    - `show` imprime um termo;
+    - `check` imprime uma lista de `{"term": ..., "problem": ...}`, em que `term` é null para problemas do arquivo inteiro.
 
-    A term is `{"name": ..., "definition": ..., "fields": {...}}`, with the
-    fields as written. `find` adds `"avoided": [...]`, the avoided words
-    that matched.
+    Um termo é `{"name": ..., "definition": ..., "fields": {...}}`, com os campos como estão escritos. `find` acrescenta `"avoided": [...]`, com as palavras evitadas que bateram.
 
-### Writing
+### Escrita
 
-26. `r2 glossary add "Name: definition"` adds a term. Without a
-    definition, human mode prompts for it.
-27. `add` takes the fields as options:
-    - `--tag`, `--avoid`, `--related`, `--code`: repeatable, and each value
-      may hold several comma separated entries;
-    - `--field key=value`: any other field, such as a language (`--field
-      pt=termo`); repeatable.
-28. `r2 glossary set TERM` changes an existing term. It takes the options
-    of `add`, plus `--definition TEXT` and `--unset KEY` (repeatable). A
-    field option replaces the whole field; `--unset` removes it.
-29. `r2 glossary remove TERM` removes a term.
-30. `r2 glossary fmt` rewrites the file in the strict format, terms sorted.
-31. Term names match ignoring case. Adding a term that exists, or changing
-    or removing one that does not, is an error that leaves the file as it
-    was.
-32. Each write prints one line saying what changed, unless the verbosity
-    is -2.
+26. `r2 glossary add "Name: definition"` adiciona um termo. Sem definição, o modo humano pede a definição.
+27. `add` recebe os campos como opções:
+    - `--tag`, `--avoid`, `--related`, `--code`: repetíveis, e cada valor pode trazer várias entradas separadas por vírgula;
+    - `--field key=value`: qualquer outro campo, como um idioma (`--field pt=termo`); repetível.
+28. `r2 glossary set TERM` altera um termo existente. Ele recebe as opções de `add`, mais `--definition TEXT` e `--unset KEY` (repetível). Uma opção de campo substitui o campo inteiro; `--unset` remove o campo.
+29. `r2 glossary remove TERM` remove um termo.
+30. `r2 glossary fmt` reescreve o arquivo no formato estrito, com os termos ordenados.
+31. Nomes de termos batem sem diferenciar maiúsculas de minúsculas. Adicionar um termo que já existe, ou alterar ou remover um que não existe, é um erro que deixa o arquivo como estava.
+32. Cada escrita imprime uma linha dizendo o que mudou, a não ser que a verbosidade seja -2.
 
-## Issues and ADRs
+## Issues e ADRs
 
-The formats are in [issues.md](issues.md) and [adrs.md](adrs.md). `r2
-issue` works on `dev/issues` and `r2 adr` on `dev/adr`, both at the
-project root, with the same commands.
+Os formatos estão em [issues.md](issues.md) e [adrs.md](adrs.md). `r2 issue` trabalha em `dev/issues` e `r2 adr` em `dev/adr`, ambos na raiz do projeto, com os mesmos comandos.
 
-33. A thread is named by its id: the file name without `.md`, a unique
-    prefix of it, or, for numbered files, the number (`r2 adr show 3`). No
-    match, or several, is an error that lists the candidates.
-34. Arguments that take Markdown text read it from stdin when given `-`.
-35. The author of a thread or comment is `--by NAME`, else the
-    `R2_AUTHOR` environment variable, else the git `user.name`. The TUI
-    uses the same default.
-36. Commands:
+33. Uma thread é identificada pelo seu id: o nome do arquivo sem `.md`, um prefixo único dele ou, para arquivos numerados, o número (`r2 adr show 3`). Nenhum resultado, ou vários, é um erro que lista os candidatos.
+34. Argumentos que recebem texto em Markdown leem da entrada padrão quando recebem `-`.
+35. O autor de uma thread ou comentário é `--by NAME`; sem ele, a variável `R2_AUTHOR`; sem ela, o `user.name` do git. A TUI usa o mesmo padrão.
+36. Comandos:
 
-    | Command | Does |
+    | Comando | Faz |
     | --- | --- |
-    | `new TITLE [--body TEXT] [--tag T] [--by NAME]` | create a thread, print its path |
-    | `list [--status S] [--tag T] [--all]` | `id  status  title`, open threads by default |
-    | `show ID` | print the file |
-    | `comment ID TEXT [--by NAME]` | add a comment at the end |
-    | `status ID STATUS` | move to a status |
-    | `advance ID` | move to the next status of the workflow |
-    | `supersede NEW OLD` | ADRs only: NEW replaces OLD |
+    | `new TITLE [--body TEXT] [--tag T] [--by NAME]` | cria uma thread e imprime o caminho dela |
+    | `list [--status S] [--tag T] [--all]` | `id  status  title`, threads abertas por padrão |
+    | `show ID` | imprime o arquivo |
+    | `comment ID TEXT [--by NAME]` | adiciona um comentário no fim |
+    | `status ID STATUS` | move para um status |
+    | `advance ID` | move para o próximo status do fluxo |
+    | `supersede NEW OLD` | só ADRs: NEW substitui OLD |
 
-37. `new` picks the file name under the folder lock (requirement 17):
-    issues get a free slug, ADRs the next number.
-38. With `--json`, `list` prints a list of `{"id", "path", "title",
-    "status", "meta"}`, and `show` adds `"description"` and `"comments"`
-    (`{"by", "text"}`).
+37. `new` escolhe o nome do arquivo sob o lock da pasta (requisito 17): issues recebem um slug livre, e ADRs, o próximo número.
+38. Com `--json`, `list` imprime uma lista de `{"id", "path", "title", "status", "meta"}`, e `show` acrescenta `"description"` e `"comments"` (`{"by", "text"}`).

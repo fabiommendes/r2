@@ -5,17 +5,13 @@ tags: [glossary, ubiquitous-language, skos, markdown]
 relatedTo: [issues, adrs]
 ---
 
-# Glossary file
+# Arquivo de glossário
 
-A project keeps its glossary in `GLOSSARY.md`, at the project root. It holds
-the project's ubiquitous language: one term per concept, the words to avoid
-for it, and where it lives in the code. Humans, agents and the `r2 glossary`
-commands read and write the same file.
+O projeto guarda o glossário em `GLOSSARY.md`, na raiz do projeto. Ele registra a linguagem ubíqua do projeto: um termo por conceito, as palavras a evitar para cada um e onde ele está no código. Pessoas, agentes e os comandos `r2 glossary` leem e escrevem o mesmo arquivo.
 
-R2 reads any Markdown file at that path (lenient read) and always writes the
-format below (strict write).
+O r2 lê qualquer arquivo Markdown nesse caminho (leitura tolerante) e sempre escreve o formato abaixo (escrita estrita).
 
-## Layout
+## Estrutura
 
 ```markdown
 ---
@@ -45,64 +41,50 @@ a thread of comments.
 ...
 ```
 
-- The frontmatter follows base: `type: glossary` and `status` are written;
-  other keys are kept as they are.
-- A level 1 heading holds the title, `Glossary` by default.
-- The introduction runs up to a line holding only `---`.
-- Each term is a level 2 heading followed by its definition, in any Markdown
-  except level 2 headings.
-- Terms are sorted alphabetically, ignoring case.
+- O frontmatter segue a base: `type: glossary` e `status` são escritos; as outras chaves são mantidas como estão.
+- Um título de nível 1 traz o título, `Glossary` por padrão.
+- A introdução vai até uma linha que contém só `---`.
+- Cada termo é um título de nível 2, seguido da definição, em qualquer Markdown exceto títulos de nível 2.
+- Os termos são ordenados em ordem alfabética, sem diferenciar maiúsculas de minúsculas.
 
-## Fields
+## Campos
 
-A term may end with a list of fields. The list counts as fields only when it
-is the last block of the term and every item has the form `- key: value`,
-with a lowercase key. Any other list is part of the definition.
+Um termo pode terminar com uma lista de campos. A lista só conta como campos quando é o último bloco do termo e todo item tem a forma `- chave: valor`, com chave em minúsculas. Qualquer outra lista faz parte da definição.
 
-| Key | Value | Source |
+| Chave | Valor | Origem |
 | --- | --- | --- |
-| `tags` | comma separated words that group terms | |
-| `avoid` | comma separated words not to use for this concept | TBX `deprecatedTerm` |
-| `related` | comma separated names of other terms | `skos:related` |
-| `code` | identifiers or paths in the code that implement the term | |
-| language code (`pt`, `es`, ...) | the term in that language | `skos:prefLabel` with a language tag |
+| `tags` | palavras separadas por vírgula que agrupam termos | |
+| `avoid` | palavras separadas por vírgula que não devem ser usadas para este conceito | TBX `deprecatedTerm` |
+| `related` | nomes separados por vírgula de outros termos | `skos:related` |
+| `code` | identificadores ou caminhos no código que implementam o termo | |
+| código de idioma (`pt`, `es`, ...) | o termo nesse idioma | `skos:prefLabel` com uma tag de idioma |
 
-The term name is in the language of the code. A language field holds the
-name used in conversation or docs in another language; its key is an ISO
-639-1 code.
+O nome do termo fica no idioma do código. Um campo de idioma guarda o nome usado em conversas ou na documentação em outro idioma; a chave é um código ISO 639-1.
 
-Fields are written in the order of the table, language codes sorted, then
-unknown keys as they are. Empty fields are left out.
+Os campos são escritos na ordem da tabela, com os códigos de idioma em ordem alfabética, e depois as chaves desconhecidas, como estão. Campos vazios ficam de fora.
 
-`related` entries match term names ignoring case. Entries that match no term
-are kept.
+As entradas de `related` batem com os nomes dos termos sem diferenciar maiúsculas de minúsculas. Entradas que não batem com nenhum termo são mantidas.
 
-### Grouping
+### Agrupamento
 
-The glossary is flat: terms are not nested under headings. `tags` groups
-them, and a term may have several tags. Concept hierarchies (a Defect is a
-kind of Issue) are written in the definition.
+O glossário é plano: os termos não ficam aninhados sob títulos. `tags` agrupa os termos, e um termo pode ter várias tags. Hierarquias de conceitos (um Defect é um tipo de Issue) ficam na definição.
 
-## Checks
+## Verificações
 
-`r2 glossary check` reports, without changing the file:
+`r2 glossary check` informa os problemas abaixo, sem alterar o arquivo:
 
-- two terms with the same name;
-- an `avoid` word that is the name of another term;
-- a `related` entry that matches no term.
+- dois termos com o mesmo nome;
+- uma palavra de `avoid` que é o nome de outro termo;
+- uma entrada de `related` que não bate com nenhum termo.
 
-## Lenient read
+## Leitura tolerante
 
-- A file without frontmatter is read the same way.
-- Without an H1, the title is `Glossary`.
-- Without a `---` line, the introduction is the text before the first level
-  2 heading.
-- Unknown field keys are kept and written back.
-- A term without a definition is kept, with an empty one.
+- Um arquivo sem frontmatter é lido da mesma forma.
+- Sem um H1, o título é `Glossary`.
+- Sem uma linha `---`, a introdução é o texto antes do primeiro título de nível 2.
+- Chaves de campo desconhecidas são mantidas e gravadas de volta.
+- Um termo sem definição é mantido, com a definição vazia.
 
-## Future: polysemy
+## Futuro: polissemia
 
-A word that means different things in different contexts may later be
-written as one term per context, with the context in parentheses:
-`## Account (Billing)` and `## Account (Auth)`. Until then, parentheses are
-part of the term name.
+Uma palavra que tem significados diferentes em contextos diferentes pode ser escrita, no futuro, como um termo por contexto, com o contexto entre parênteses: `## Account (Billing)` e `## Account (Auth)`. Até lá, os parênteses fazem parte do nome do termo.
