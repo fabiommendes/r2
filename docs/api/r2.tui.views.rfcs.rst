@@ -1,0 +1,5 @@
+r2.tui.views.rfcs
+=================
+
+.. automodule:: r2.tui.views.rfcs
+   :members:

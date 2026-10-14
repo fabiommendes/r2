@@ -2,7 +2,7 @@
 type: spec
 status: active
 tags: [adr, decisions, frontmatter, markdown, madr]
-relatedTo: [issues, adr-view]
+relatedTo: [issues, adr-view, rfcs]
 ---
 
 # Arquivos de ADR

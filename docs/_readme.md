@@ -78,10 +78,11 @@ Reading accepts any Markdown file. Writing refuses a file without
 README; `fmt` converts such a file. Writes are atomic and hold a lock on the
 folder, so concurrent `r2` processes never lose each other's changes.
 
-**`r2 issue`, `r2 adr`**
+**`r2 issue`, `r2 adr`, `r2 rfc`**
 
-Work on the issues in `dev/issues` and the decision records in `dev/adr`
-(formats in `dev/spec/issues.md` and `dev/spec/adrs.md`).
+Work on the issues in `dev/issues`, the decision records in `dev/adr` and
+the feature designs (RFCs) in `dev/rfc` (formats in `dev/spec/issues.md`,
+`dev/spec/adrs.md` and `dev/spec/rfcs.md`).
 
 | Command | Does |
 | --- | --- |
@@ -92,6 +93,7 @@ Work on the issues in `dev/issues` and the decision records in `dev/adr`
 | `comment ID TEXT` | add a comment at the end |
 | `status ID STATUS` | move to a status |
 | `advance ID` | move to the next status of the workflow (`backlog`, `todo`, `in_progress`, `in_review`, `completed`) |
+| `r2 rfc new ... [--relatedTo R]` | also set `relatedTo`; without `--body`, the RFC starts with its sections |
 | `r2 adr supersede NEW OLD` | record that NEW replaces OLD |
 
 An id is the file name without `.md`, a unique prefix, or the number of an
@@ -382,7 +384,7 @@ the project of the directory it was started in.
 
 ### Views
 
-R2 has six tabs. Each one has a drawer on the left and content on the
+R2 has seven tabs. Each one has a drawer on the left and content on the
 right. Drag the bar between them to resize the drawer.
 
 1. **Live**: the files Claude read and the references it wrote in its last
@@ -408,7 +410,14 @@ right. Drag the bar between them to resize the drawer.
    accepted and rejected, edit its tags, record which older ADR it supersedes
    (both files are updated) or delete it. `relatedTo`, `supersedes` and
    `supersededBy` entries open the files they name.
-6. **Glossary**: the terms of `GLOSSARY.md`, grouped by their `tags`. `/`
+6. **RFCs**: the feature designs in `dev/rfc`, grouped by status, with the
+   same filter and comment thread as Issues. Press `n` to name the feature
+   to design; r2 writes `slug.md` with the Problem, Proposal, Alternatives,
+   Open questions and Outcome sections, and opens it in the editor. The
+   format is described in `dev/spec/rfcs.md`. Buttons under the RFC move it
+   from draft to accepted or rejected, edit its tags or delete it; `s` also
+   offers withdrawn. Leaving draft dates the decision.
+7. **Glossary**: the terms of `GLOSSARY.md`, grouped by their `tags`. `/`
    filters the terms by any word of their name, definition or fields, so
    typing a word to avoid finds the term to use instead. A term shows its
    definition under a bar with its fields; `related` entries jump to the
@@ -433,7 +442,7 @@ project has its own history, and an arrow dims when it has nowhere to go.
 
 | Key | Action |
 | --- | --- |
-| `1` to `4` | Switch to a view |
+| `1` to `7` | Switch to a view |
 | `←` `→` | Move between drawer and content, then to the previous or next view |
 | `f` | Toggle excerpt and whole file (Live view) |
 | `e` | Edit the current file in the editor |
@@ -442,10 +451,10 @@ project has its own history, and an arrow dims when it has nowhere to go.
 | `t` | Open a shell in the project root |
 | `$` | Run a shell command in the project root and show its output |
 | `p` | Pin the current project instead of following herdr focus |
-| `n` | Create an issue, an ADR or a glossary term |
-| `c` | Comment on the issue or ADR on display (Issues and ADRs views) |
-| `s` | Change the status of the issue or ADR on display (Issues and ADRs views) |
-| `/` | Search the file or document on display; in the Issues, ADRs and Glossary trees, filter them |
+| `n` | Create an issue, an ADR, an RFC or a glossary term |
+| `c` | Comment on the issue, ADR or RFC on display (Issues, ADRs and RFCs views) |
+| `s` | Change the status of the issue, ADR or RFC on display (Issues, ADRs and RFCs views) |
+| `/` | Search the file or document on display; in the Issues, ADRs, RFCs and Glossary trees, filter them |
 | `↑` `↓` | During a search, go to the previous or next match |
 | `Esc` | Clear the search |
 | `ctrl+shift+c` | Copy the selection in a file preview, where the terminal passes the key on |

@@ -85,7 +85,7 @@ Uma issue nova criada pela TUI, ou por `r2 issue new --kind` sem `--body`, come�
 | `enhancement` | `Context`, `Requirements`, `Out of scope` |
 | `task` e sem `kind` | `Context`, `Done when` |
 
-O corpo de uma `enhancement` é a spec da funcionalidade (ADR 0003): `Requirements` lista os requisitos `R1`, `R2`... e cada um traz seus critérios de aceitação. O modelo já traz um `R1` vazio. A proposta e a discussão de desenho ficam no RFC.
+O corpo de uma `enhancement` é a spec da funcionalidade (ADR 0003): `Requirements` lista os requisitos `R1`, `R2`... e cada um traz seus critérios de aceitação. O modelo já traz um `R1` vazio. A proposta e a discussão de desenho ficam no RFC ([rfcs.md](rfcs.md)).
 
 ## Plano
 
@@ -100,7 +100,7 @@ Pelo ADR 0003 do tooling-root, o agente que pega uma issue acrescenta à descri�
 
 O progresso do plano é a contagem de checkboxes marcadas e do total, escrita `1/2`. Conta toda checkbox de lista (`-`, `*`, `+` ou `1.`, seguido de `[ ]`, `[x]` ou `[X]`) na descrição, fora de blocos de código. O título da seção não importa, e as checkboxes dos comentários ficam de fora. Uma descrição sem checkboxes não tem progresso.
 
-`r2 issue list`, o `--json` de `list` e `show` e a árvore de issues da TUI mostram o progresso ([cli.md](cli.md#issues-e-adrs)). ADRs não têm plano.
+`r2 issue list`, o `--json` de `list` e `show` e a árvore de issues da TUI mostram o progresso ([cli.md](cli.md#issues-adrs-e-rfcs)). ADRs e RFCs não têm plano.
 
 ## Leitura tolerante
 

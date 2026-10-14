@@ -33,6 +33,7 @@ Modules
    r2.core.plugins.loader
    r2.core.plugins.manifest
    r2.core.r2_context
+   r2.core.rfcs
    r2.core.state
    r2.core.threads
    r2.integrations.claude.events
@@ -53,6 +54,7 @@ Modules
    r2.tui.views.issues
    r2.tui.views.live
    r2.tui.views.project
+   r2.tui.views.rfcs
    r2.tui.views.threads
    r2.tui.widgets
    r2.tui.widgets.command_box

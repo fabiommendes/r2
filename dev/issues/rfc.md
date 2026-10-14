@@ -1,6 +1,6 @@
 ---
 type: issue
-status: in_progress
+status: in_review
 tags: [rfc, threads, cli, tui]
 relatedTo: [tooling-root/dev/adr/0003-modelo-de-repositorio.md, adrs]
 kind: enhancement
@@ -56,6 +56,29 @@ issues e ADRs.
 - [x] A TUI ganha a aba RFCs, com o filtro, os comentários e os botões das
   outras threads, e resolve slugs de RFC em `relatedTo`.
 - [x] Testes do formato, da CLI e da TUI.
-- [ ] Escrever `dev/spec/rfcs.md` e atualizar `dev/spec/cli.md`,
+- [x] Escrever `dev/spec/rfcs.md` e atualizar `dev/spec/cli.md`,
   `dev/spec/issues.md` e o `README.md`.
-- [ ] Checagem completa verde (`task ci`).
+- [x] Checagem completa verde (`task ci`).
+
+---
+by: claude
+
+Escolhas:
+
+- Sem comando `accept`. Quem conduz o RFC cria cada ADR e issue com
+  `r2 adr new` e `r2 issue new` (e `status` para `accepted` ou `todo`),
+  escreve `Outcome` e só então muda o status do RFC. A spec registra isso em
+  `rfcs.md` e no requisito 37d de `cli.md`.
+- `advance` segue `draft`, `accepted`, `rejected` e volta a `draft`, como nos
+  ADRs. `withdrawn` só sai do menu de status e avança para `draft`.
+- Sair de `draft` grava `decided`; voltar a `draft` apaga a data, como nos
+  ADRs. O r2 não impede editar ou comentar um RFC decidido: a regra fica com
+  quem escreve, como nos ADRs fechados.
+- `r2 rfc new` aceita `--body`, `--tag`, `--relatedTo` e `--by`. Sem `--body`,
+  escreve as cinco seções vazias. As opções `--kind`, `--priority` e
+  `--milestone` ficam só nas issues.
+- O nome é um slug livre, com sufixo `-2` em caso de colisão, como nas issues.
+  A escolha do slug saiu de `issues.new_path` para `threads.slug_path`.
+- RFCs não têm plano: o `--json` não traz a chave `plan`.
+- A aba RFCs fica depois de ADRs, então Glossary passa de 6 para 7. Slugs de
+  RFC em `relatedTo` abrem o RFC, e os comentários aparecem como thread.

@@ -1,8 +1,8 @@
 ---
 type: spec
 status: active
-tags: [cli, agent-mode, glossary, issues, adrs, handoffs]
-relatedTo: [glossary, issues, adrs, handoffs]
+tags: [cli, agent-mode, glossary, issues, adrs, rfcs, handoffs]
+relatedTo: [glossary, issues, adrs, rfcs, handoffs]
 ---
 
 # Linha de comando
@@ -97,9 +97,9 @@ O formato está em [glossary.md](glossary.md).
 31. Nomes de termos batem sem diferenciar maiúsculas de minúsculas. Adicionar um termo que já existe, ou alterar ou remover um que não existe, é um erro que deixa o arquivo como estava.
 32. Cada escrita imprime uma linha dizendo o que mudou, a não ser que a verbosidade seja -2.
 
-## Issues e ADRs
+## Issues, ADRs e RFCs
 
-Os formatos estão em [issues.md](issues.md) e [adrs.md](adrs.md). `r2 issue` trabalha em `dev/issues` e `r2 adr` em `dev/adr`, ambos na raiz do projeto, com os mesmos comandos.
+Os formatos estão em [issues.md](issues.md), [adrs.md](adrs.md) e [rfcs.md](rfcs.md). `r2 issue` trabalha em `dev/issues`, `r2 adr` em `dev/adr` e `r2 rfc` em `dev/rfc`, todos na raiz do projeto, com os mesmos comandos.
 
 33. Uma thread é identificada pelo seu id: o nome do arquivo sem `.md`, um prefixo único dele ou, para arquivos numerados, o número (`r2 adr show 3`). Nenhum resultado, ou vários, é um erro que lista os candidatos.
 34. Argumentos que recebem texto em Markdown leem da entrada padrão quando recebem `-`.
@@ -110,6 +110,7 @@ Os formatos estão em [issues.md](issues.md) e [adrs.md](adrs.md). `r2 issue` tr
     | --- | --- |
     | `new TITLE [--body TEXT] [--tag T] [--by NAME]` | cria uma thread e imprime o caminho dela |
     | `new TITLE ... [--kind K] [--priority P] [--milestone M] [--relatedTo R]` | só issues: também preenche essas chaves |
+    | `new TITLE ... [--relatedTo R]` | só RFCs: também preenche `relatedTo` |
     | `list [--status S] [--tag T] [--all]` | `id  status  title`, threads abertas por padrão |
     | `show ID` | imprime o arquivo |
     | `comment ID TEXT [--by NAME]` | adiciona um comentário no fim |
@@ -117,12 +118,13 @@ Os formatos estão em [issues.md](issues.md) e [adrs.md](adrs.md). `r2 issue` tr
     | `advance ID` | move para o próximo status do fluxo |
     | `supersede NEW OLD` | só ADRs: NEW substitui OLD |
 
-37. `new` escolhe o nome do arquivo sob o lock da pasta (requisito 17): issues recebem um slug livre, e ADRs, o próximo número.
+37. `new` escolhe o nome do arquivo sob o lock da pasta (requisito 17): issues e RFCs recebem um slug livre, e ADRs, o próximo número.
 37a. `r2 issue new` aceita as chaves que o formulário da TUI preenche: `--kind` e `--priority` só aceitam os valores de [issues.md](issues.md#frontmatter), e um valor desconhecido é erro de uso (código 2); `--relatedTo`, como `--tag`, é repetível e aceita entradas separadas por vírgula. Valores padrão ficam fora do frontmatter.
 37b. Com `--kind` e sem `--body`, o corpo da issue é o modelo do `kind` ([issues.md](issues.md#modelos-de-corpo)), o mesmo que a TUI usa. Sem `--kind`, o corpo fica vazio.
 37c. `advance` segue o fluxo de [issues.md](issues.md#status): uma issue `in_progress` vai para `in_review`, e só depois para `completed`.
+37d. `r2 rfc new` sem `--body` escreve as seções de [rfcs.md](rfcs.md#corpo), como `r2 adr new` escreve as do MADR. `--relatedTo` funciona como em `r2 issue new`. Não há comando que gere stories, ADRs e issues a partir de um RFC aceito: quem conduz o RFC usa `r2 adr new` e `r2 issue new`.
 38. Com `--json`, `list` imprime uma lista de `{"id", "path", "title", "status", "meta"}`, e `show` acrescenta `"description"` e `"comments"` (`{"by", "text"}`).
-38a. Uma issue com plano ([issues.md](issues.md#plano)) tem o progresso no fim da linha de `r2 issue list`: `id  status  title  3/7`. No `--json` de `list` e `show`, as issues trazem `"plan": {"done": 3, "total": 7}`, ou `"plan": null` sem checkboxes. ADRs não têm a chave.
+38a. Uma issue com plano ([issues.md](issues.md#plano)) tem o progresso no fim da linha de `r2 issue list`: `id  status  title  3/7`. No `--json` de `list` e `show`, as issues trazem `"plan": {"done": 3, "total": 7}`, ou `"plan": null` sem checkboxes. ADRs e RFCs não têm a chave.
 
 ## Handoffs
 
