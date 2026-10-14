@@ -1,6 +1,6 @@
 ---
 type: issue
-status: backlog
+status: in_progress
 tags: [handoffs, cli]
 relatedTo: [tooling-root/dev/adr/0003-modelo-de-repositorio.md, skills/dev/issues/adr-0003.md]
 kind: enhancement
@@ -51,3 +51,17 @@ creator: claude
   mesmo.
 - `prune` apaga os handoffs `taken`, os criados há mais de 7 dias e os de issues
   fechadas. `--days N` muda o prazo.
+
+## Plano
+
+- [ ] Ler e editar handoffs em `r2/core/handoffs.py`: leitura tolerante do
+  formato, troca só da linha `status` ao marcar `taken`, critérios do `prune`.
+  A pasta é a do checkout principal (`git worktree list`), com volta para a
+  raiz do projeto fora do git.
+- [ ] `r2 handoff list | show | take | prune` em `r2/cli/handoffs.py`. `take`
+  sem id pega o `open` mais recente. Os comandos que escrevem criam o
+  `.gitignore` da pasta.
+- [ ] Testes do módulo e da CLI, inclusive numa worktree.
+- [ ] Escrever `dev/spec/handoffs.md` e atualizar `dev/spec/cli.md` e o
+  `README.md`.
+- [ ] Checagem completa verde (`task ci`).
