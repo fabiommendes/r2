@@ -24,7 +24,7 @@ agente retoma dali.
 ## Plano
 
 - [x] Contar as checkboxes da descrição em `r2/core/threads.py` (`- [x]`,
-  `- [x]`, com qualquer marcador de lista, fora de blocos de código). O
+  `- [ ]`, com qualquer marcador de lista, fora de blocos de código). O
   `Format` ganha um `progress` opcional, que só as issues definem.
 - [x] `r2 issue list` acrescenta `3/7` no fim da linha. O `--json` de `list` e
   `show` traz `"plan": {"done": 3, "total": 7}`, ou `null` sem checkboxes.
