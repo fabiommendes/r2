@@ -1,6 +1,6 @@
 ---
 type: issue
-status: backlog
+status: in_progress
 tags: [issues, plan, tui]
 relatedTo: [tooling-root/dev/adr/0003-modelo-de-repositorio.md, issues]
 kind: enhancement
@@ -19,3 +19,15 @@ agente retoma dali.
   título da seção pode seguir a língua do repositório (`## Plano` ou
   `## Plan`). Uma descrição sem checkboxes não tem progresso.
 - Atualizar `issues.md` com a seção.
+
+## Plano
+
+- [ ] Contar as checkboxes da descrição em `r2/core/threads.py` (`- [ ]`,
+  `- [x]`, com qualquer marcador de lista, fora de blocos de código). O
+  `Format` ganha um `progress` opcional, que só as issues definem.
+- [ ] `r2 issue list` acrescenta `3/7` no fim da linha. O `--json` de `list` e
+  `show` traz `"plan": {"done": 3, "total": 7}`, ou `null` sem checkboxes.
+- [ ] A TUI mostra `3/7` ao lado do título na árvore de issues.
+- [ ] Testes para a contagem, a CLI e a TUI.
+- [ ] Atualizar `dev/spec/issues.md` (seção do plano) e `dev/spec/cli.md`.
+- [ ] Checagem completa verde (`task ci`).
