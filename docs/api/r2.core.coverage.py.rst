@@ -1,0 +1,5 @@
+r2.core.coverage.py
+===================
+
+.. automodule:: r2.core.coverage.py
+   :members:

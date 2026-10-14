@@ -1,5 +1,0 @@
-r2.core.project
-===============
-
-.. automodule:: r2.core.project
-   :members:

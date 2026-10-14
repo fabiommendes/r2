@@ -1,0 +1,5 @@
+r2.core.coverage
+================
+
+.. automodule:: r2.core.coverage
+   :members:

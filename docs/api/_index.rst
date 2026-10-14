@@ -13,6 +13,11 @@ Modules
    r2.core.adrs
    r2.core.conf
    r2.core.console
+   r2.core.coverage
+   r2.core.coverage.analysis
+   r2.core.coverage.base
+   r2.core.coverage.py
+   r2.core.coverage.workspace
    r2.core.editor
    r2.core.files
    r2.core.git
@@ -26,7 +31,6 @@ Modules
    r2.core.plugins.discovery
    r2.core.plugins.loader
    r2.core.plugins.manifest
-   r2.core.project
    r2.core.r2_context
    r2.core.state
    r2.core.threads

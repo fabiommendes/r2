@@ -1,0 +1,5 @@
+r2.core.coverage.workspace
+==========================
+
+.. automodule:: r2.core.coverage.workspace
+   :members:
