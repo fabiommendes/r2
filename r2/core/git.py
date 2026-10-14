@@ -80,3 +80,25 @@ def user_name(root: Path) -> str:
     except (OSError, subprocess.TimeoutExpired):
         name = ""
     return name or os.environ.get("USER", "")
+
+
+def main_worktree(path: Path) -> Path | None:
+    """The main checkout of the repository that contains path.
+
+    It is the first entry of `git worktree list`, even when path is in
+    another worktree. Return None outside a repository.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "worktree", "list", "--porcelain"],
+            cwd=path,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    first = result.stdout.partition("\n")[0]
+    if result.returncode != 0 or not first.startswith("worktree "):
+        return None
+    return Path(first.removeprefix("worktree "))

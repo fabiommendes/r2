@@ -100,6 +100,19 @@ Markdown without fighting shell quoting:
 `r2 issue comment preview-bug - <<'EOF' ... EOF`. Comments and new threads
 are signed with `--by NAME`, else `$R2_AUTHOR`, else the git `user.name`.
 
+**`r2 handoff`**
+
+Work on the handoffs in `dev/handoffs` of the main checkout, even from
+another worktree (format in `dev/spec/handoffs.md`). A handoff holds the
+state of an interrupted session; the `handoff` skill writes it, outside git.
+
+| Command | Does |
+| --- | --- |
+| `list [--all]` | `id  status  created  title`, the most recent first; open ones by default |
+| `show ID` | print the file |
+| `take [ID]` | mark an open handoff as taken and print it; without ID, the latest open one |
+| `prune [--days N]` | remove the taken handoffs, those older than N days (default 7) and those of closed issues |
+
 **`r2 test`, `r2 build`, `r2 docs`**
 
 Run the default test, build or documentation task of the project in the

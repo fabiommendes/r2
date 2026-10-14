@@ -1,8 +1,8 @@
 ---
 type: spec
 status: active
-tags: [cli, agent-mode, glossary, issues, adrs]
-relatedTo: [glossary, issues, adrs]
+tags: [cli, agent-mode, glossary, issues, adrs, handoffs]
+relatedTo: [glossary, issues, adrs, handoffs]
 ---
 
 # Linha de comando
@@ -123,3 +123,22 @@ Os formatos estão em [issues.md](issues.md) e [adrs.md](adrs.md). `r2 issue` tr
 37c. `advance` segue o fluxo de [issues.md](issues.md#status): uma issue `in_progress` vai para `in_review`, e só depois para `completed`.
 38. Com `--json`, `list` imprime uma lista de `{"id", "path", "title", "status", "meta"}`, e `show` acrescenta `"description"` e `"comments"` (`{"by", "text"}`).
 38a. Uma issue com plano ([issues.md](issues.md#plano)) tem o progresso no fim da linha de `r2 issue list`: `id  status  title  3/7`. No `--json` de `list` e `show`, as issues trazem `"plan": {"done": 3, "total": 7}`, ou `"plan": null` sem checkboxes. ADRs não têm a chave.
+
+## Handoffs
+
+O formato está em [handoffs.md](handoffs.md). `r2 handoff` trabalha em `dev/handoffs` do checkout principal, mesmo quando roda em outra worktree.
+
+39. Um handoff é identificado pelo nome do arquivo sem `.md` ou por um prefixo único dele, como uma thread (requisito 33).
+40. Comandos:
+
+    | Comando | Faz |
+    | --- | --- |
+    | `list [--all]` | `id  status  created  title`, do mais recente ao mais antigo; só os `open` por padrão |
+    | `show ID` | imprime o arquivo |
+    | `take [ID]` | marca o handoff como `taken` e imprime o arquivo; sem ID, pega o `open` mais recente |
+    | `prune [--days N]` | apaga os `taken`, os mais velhos que N dias (padrão 7) e os de issues fechadas |
+
+41. `take` lê e muda o arquivo sob o lock da pasta (requisito 16). Um handoff que não está `open`, ou a falta de handoffs `open` quando não há ID, é um erro com código de saída 1.
+42. `prune` não pede confirmação: os handoffs são efêmeros. Ele imprime uma linha por handoff apagado, com o motivo, ou `Nothing to prune.`.
+43. `take` e `prune` criam `dev/handoffs/.gitignore` com `*` quando ele não existe. `list` e `show` não escrevem nada.
+44. Com `--json`, `list` imprime uma lista de `{"id", "path", "title", "status", "created", "meta"}`, e `show` e `take` imprimem um desses objetos com `"body"`. `created` vem no formato `YYYY-MM-DDTHH:MM`, e `meta` traz as chaves do frontmatter, menos `type` e `status`.

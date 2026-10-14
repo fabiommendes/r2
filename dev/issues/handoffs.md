@@ -1,6 +1,6 @@
 ---
 type: issue
-status: in_progress
+status: in_review
 tags: [handoffs, cli]
 relatedTo: [tooling-root/dev/adr/0003-modelo-de-repositorio.md, skills/dev/issues/adr-0003.md]
 kind: enhancement
@@ -54,14 +54,32 @@ creator: claude
 
 ## Plano
 
-- [ ] Ler e editar handoffs em `r2/core/handoffs.py`: leitura tolerante do
+- [x] Ler e editar handoffs em `r2/core/handoffs.py`: leitura tolerante do
   formato, troca só da linha `status` ao marcar `taken`, critérios do `prune`.
   A pasta é a do checkout principal (`git worktree list`), com volta para a
   raiz do projeto fora do git.
-- [ ] `r2 handoff list | show | take | prune` em `r2/cli/handoffs.py`. `take`
+- [x] `r2 handoff list | show | take | prune` em `r2/cli/handoffs.py`. `take`
   sem id pega o `open` mais recente. Os comandos que escrevem criam o
   `.gitignore` da pasta.
-- [ ] Testes do módulo e da CLI, inclusive numa worktree.
-- [ ] Escrever `dev/spec/handoffs.md` e atualizar `dev/spec/cli.md` e o
+- [x] Testes do módulo e da CLI, inclusive numa worktree.
+- [x] Escrever `dev/spec/handoffs.md` e atualizar `dev/spec/cli.md` e o
   `README.md`.
-- [ ] Checagem completa verde (`task ci`).
+- [x] Checagem completa verde (`task ci`).
+
+---
+by: claude
+
+Escolhas:
+
+- O r2 não cria handoffs: quem grava é a skill. Por isso o `.gitignore` da
+  pasta é criado pela skill no primeiro handoff e pelo r2 em `take` e `prune`,
+  os comandos que escrevem. `list` e `show` não escrevem nada.
+- `take` imprime o handoff depois de marcá-lo, para que o agente retome com um
+  comando só. Sem id, ele pega o `open` mais recente, como a skill.
+- Ao marcar `taken`, o r2 troca só a linha `status` e deixa o resto do arquivo
+  como a skill escreveu.
+- `prune` não pede confirmação (os handoffs são efêmeros) e só apaga pelo
+  `issue` quando a issue existe e está fechada.
+- Um `created` ausente ou inválido vale a data de modificação do arquivo.
+- Fora de um repositório git, a pasta fica na raiz do projeto, como nos outros
+  comandos.

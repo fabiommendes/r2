@@ -22,6 +22,7 @@ Modules
    r2.core.files
    r2.core.git
    r2.core.glossary
+   r2.core.handoffs
    r2.core.history
    r2.core.issues
    r2.core.links
