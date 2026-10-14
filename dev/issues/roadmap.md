@@ -1,6 +1,6 @@
 ---
 type: issue
-status: backlog
+status: in_progress
 tags: [roadmap, changelog, milestone, cli]
 relatedTo: [tooling-root/dev/adr/0003-modelo-de-repositorio.md, issues]
 kind: enhancement
@@ -25,3 +25,15 @@ issues é a única fonte. Repositórios públicos ainda querem o arquivo.
 - Onde fica a ordem e a data dos milestones? Ordenar os nomes como versões é o
   mínimo. Um arquivo `dev/milestones.toml` resolve datas, mas é mais um
   arquivo.
+
+## Plano
+
+- [ ] `r2/core/roadmap.py`: ordem natural dos milestones, o texto do
+  `ROADMAP.md` (issues abertas por milestone) e o rascunho do changelog
+  (issues fechadas do milestone por `kind`).
+- [ ] `r2 roadmap [--check]` e `r2 changelog --draft MILESTONE` em
+  `r2/cli/roadmap.py`.
+- [ ] Testes do módulo e da CLI.
+- [ ] Escrever `dev/spec/roadmap.md` e atualizar `dev/spec/cli.md` e o
+  `README.md`.
+- [ ] Checagem completa verde (`task ci`).
