@@ -79,6 +79,11 @@ class Issue(threads.Thread):
     def is_open(self) -> bool:
         return self.status not in CLOSED_STATUSES
 
+    @property
+    def plan(self) -> threads.Progress | None:
+        """The checkboxes ticked in the description, comments left out."""
+        return threads.progress(self.description)
+
 
 def slugify(title: str) -> str:
     """Turn a title into a file name stem: lowercase words joined by dashes."""
@@ -152,4 +157,5 @@ FORMAT = threads.Format(
     new_path=new_path,
     render=render,
     set_status=set_status,
+    progress=lambda issue: issue.plan,
 )

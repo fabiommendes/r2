@@ -137,6 +137,33 @@ def test_list_json(project: Path) -> None:
     assert data["meta"]["tags"] == ["x"]
 
 
+PLAN = "## Plan\n\n- [x] One.\n- [ ] Two.\n- [ ] Three.\n"
+
+
+def test_list_shows_the_progress_of_the_plan(project: Path) -> None:
+    new_issue("Planned", "--body", PLAN)
+    new_issue("Unplanned")
+    assert run("issue", "list").output == (
+        "planned  backlog  Planned  1/3\nunplanned  backlog  Unplanned\n"
+    )
+
+
+def test_list_and_show_json_have_the_plan_of_issues(project: Path) -> None:
+    new_issue("Planned", "--body", PLAN)
+    new_issue("Unplanned")
+    listed = json.loads(run("--json", "issue", "list").output)
+    assert [data["plan"] for data in listed] == [{"done": 1, "total": 3}, None]
+    shown = json.loads(run("--json", "issue", "show", "planned").output)
+    assert shown["plan"] == {"done": 1, "total": 3}
+
+
+def test_adrs_have_no_plan(project: Path) -> None:
+    run("adr", "new", "Use TOML", "--body", PLAN)
+    [data] = json.loads(run("--json", "adr", "list").output)
+    assert "plan" not in data
+    assert run("adr", "list").output.rstrip().endswith("Use TOML")
+
+
 def test_show_prints_the_file(project: Path) -> None:
     path = new_issue("One")
     assert run("issue", "show", "on").output == path.read_text()

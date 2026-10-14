@@ -230,11 +230,18 @@ class ThreadBrowser(MarkdownBrowser):
             node = tree.root.add(label, expand=expand)
             self._groups[node] = status
             for thread, path in items:
-                leaf = node.add_leaf(thread.title, data=path)
+                leaf = node.add_leaf(self.leaf_label(thread), data=path)
                 if path == self.current:
                     cursor = leaf
         if cursor is not None:
             tree.call_after_refresh(tree.move_cursor, cursor)
+
+    def leaf_label(self, thread: Thread) -> Text:
+        """The title of the thread, then the progress of its plan, if any."""
+        label = Text(thread.title)
+        if self.format.progress and (plan := self.format.progress(thread)):
+            label.append(f" {plan}", style="dim")
+        return label
 
     def on_tree_node_expanded(self, event: Tree.NodeExpanded[Path]) -> None:
         if status := self._groups.get(event.node):

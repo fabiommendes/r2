@@ -291,6 +291,20 @@ def test_advance_moves_the_issue_to_its_next_status(
     drive(test, monkeypatch)
 
 
+def test_the_tree_shows_the_progress_of_the_plan(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    issue, show = issue_on_display(tmp_path)
+    issue.write_text(issue.read_text() + "\n## Plan\n\n- [x] One.\n- [ ] Two.\n")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        browser = await show(app, pilot)
+        [group] = browser.query_one(Tree).root.children
+        assert [str(leaf.label) for leaf in group.children] == ["Bug 1/2"]
+
+    drive(test, monkeypatch)
+
+
 def test_tags_replaces_the_tags_of_the_issue(
     config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

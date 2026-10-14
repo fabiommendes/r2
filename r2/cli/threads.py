@@ -59,10 +59,13 @@ def thread_app(fmt: Format[Any], help: str) -> typer.Typer:
             rows.append((path, thread))
         rows.sort(key=lambda row: (fmt.status_order(row[1].status), row[0].stem))
         if mode.json:
-            emit_json([to_dict(path, thread) for path, thread in rows])
+            emit_json([to_dict(fmt, path, thread) for path, thread in rows])
             return
         for path, thread in rows:
-            typer.echo(f"{path.stem}  {thread.status}  {thread.title}")
+            line = f"{path.stem}  {thread.status}  {thread.title}"
+            if fmt.progress and (plan := fmt.progress(thread)):
+                line += f"  {plan}"
+            typer.echo(line)
 
     @app.command()
     def show(ident: Annotated[str, ident_arg]) -> None:
@@ -71,7 +74,7 @@ def thread_app(fmt: Format[Any], help: str) -> typer.Typer:
         """
         path = find(fmt, ident)
         if mode.json:
-            emit_json(to_dict(path, load_all(fmt)[path], comments=True))
+            emit_json(to_dict(fmt, path, load_all(fmt)[path], comments=True))
         else:
             typer.echo(path.read_text(encoding="utf-8", errors="replace"), nl=False)
 
@@ -261,7 +264,9 @@ def relative(path: Path) -> Path:
         return path
 
 
-def to_dict(path: Path, thread: Thread, comments: bool = False) -> dict[str, Any]:
+def to_dict(
+    fmt: Format[Any], path: Path, thread: Thread, comments: bool = False
+) -> dict[str, Any]:
     data: dict[str, Any] = {
         "id": path.stem,
         "path": str(relative(path)),
@@ -269,6 +274,9 @@ def to_dict(path: Path, thread: Thread, comments: bool = False) -> dict[str, Any
         "status": thread.status,
         "meta": thread.meta,
     }
+    if fmt.progress:
+        plan = fmt.progress(thread)
+        data["plan"] = plan and {"done": plan.done, "total": plan.total}
     if comments:
         data["description"] = thread.description
         data["comments"] = [

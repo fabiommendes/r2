@@ -21,6 +21,7 @@ FRONTMATTER_RE = re.compile(r"\A---\n(.*?\n)?---\n?", re.DOTALL)
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 BY_RE = re.compile(r"^by:\s*(.*?)\s*$")
 TITLE_RE = re.compile(r"^#\s+(.*?)\s*#*\s*$")
+CHECKBOX_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+\[([ xX])\](?:\s|$)")
 
 
 @dataclass
@@ -37,6 +38,17 @@ class Thread:
     comments: list[Comment] = field(default_factory=list)
     meta: dict[str, Any] = field(default_factory=dict)
     """Every frontmatter key but type and status, known or not."""
+
+
+@dataclass(frozen=True)
+class Progress:
+    """How many checkboxes of a plan are ticked."""
+
+    done: int
+    total: int
+
+    def __str__(self) -> str:
+        return f"{self.done}/{self.total}"
 
 
 def _keep(threads: Mapping[str, Any]) -> None:
@@ -67,6 +79,8 @@ class Format[T: Thread]:
     set_status: Callable[[T, str], None]
     reconcile: Callable[[Mapping[str, T]], None] = _keep
     """Fix the statuses of threads read together, keyed by file stem."""
+    progress: Callable[[T], Progress | None] | None = None
+    """The progress of the plan of a thread, for formats that have plans."""
 
     def status_order(self, status: str) -> tuple[int, str]:
         return status_order(status, self.statuses)
@@ -204,6 +218,26 @@ def _sections(text: str) -> list[str]:
         else:
             sections[-1].append(line)
     return ["\n".join(lines).strip("\n") for lines in sections]
+
+
+def progress(text: str) -> Progress | None:
+    """Count the ticked and total task list checkboxes in text.
+
+    Checkboxes in fenced code do not count. Return None when there are none.
+    """
+    done = total = 0
+    fence: str | None = None
+    for line in text.splitlines():
+        if match := FENCE_RE.match(line):
+            if fence is None:
+                fence = match.group(1)
+            elif match.group(1) == fence:
+                fence = None
+            continue
+        if fence is None and (match := CHECKBOX_RE.match(line)):
+            total += 1
+            done += match.group(1) != " "
+    return Progress(done, total) if total else None
 
 
 def _split_title(section: str) -> tuple[str, str]:

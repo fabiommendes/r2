@@ -92,7 +92,7 @@ Work on the issues in `dev/issues` and the decision records in `dev/adr`
 | --- | --- |
 | `new TITLE [--body TEXT] [--tag T]` | create one and print its path |
 | `r2 issue new ... [--kind K] [--priority P] [--milestone M] [--relatedTo R]` | also set these keys; `--kind` without `--body` starts from the template of the kind |
-| `list [--status S] [--tag T] [--all]` | `id  status  title`, open ones by default |
+| `list [--status S] [--tag T] [--all]` | `id  status  title`, open ones by default; issues with a plan end with its progress, `3/7` |
 | `show ID` | print the file |
 | `comment ID TEXT` | add a comment at the end |
 | `status ID STATUS` | move to a status |

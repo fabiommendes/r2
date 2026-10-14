@@ -13,7 +13,7 @@ from r2.core.issues import (
     status_order,
     template,
 )
-from r2.core.threads import Comment, append_stub, comment_stub, matches
+from r2.core.threads import Comment, Progress, append_stub, comment_stub, matches
 
 THREAD = """\
 ---
@@ -168,3 +168,32 @@ def test_enhancement_template_is_a_spec() -> None:
 
 def test_issues_without_kind_use_the_task_template() -> None:
     assert template(None) == template("task")
+
+
+PLANNED = """\
+# Show the plan
+
+- [x] Count.
+* [X] Print.
+1. [ ] Test.
+- [] Not a checkbox.
+
+```markdown
+- [ ] In code, so not counted.
+```
+
+---
+by: claude
+
+- [ ] In a comment, so not counted.
+"""
+
+
+def test_plan_counts_the_checkboxes_of_the_description_only() -> None:
+    plan = parse(PLANNED).plan
+    assert plan == Progress(done=2, total=3)
+    assert str(plan) == "2/3"
+
+
+def test_a_description_without_checkboxes_has_no_plan() -> None:
+    assert parse("# Plain\n\n- An item.\n").plan is None

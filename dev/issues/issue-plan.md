@@ -1,10 +1,11 @@
 ---
 type: issue
-status: in_progress
+status: completed
 tags: [issues, plan, tui]
 relatedTo: [tooling-root/dev/adr/0003-modelo-de-repositorio.md, issues]
 kind: enhancement
 created: 2026-10-14
+closed: 2026-10-14
 ---
 
 # Mostrar o progresso do plano de uma issue
@@ -22,12 +23,21 @@ agente retoma dali.
 
 ## Plano
 
-- [ ] Contar as checkboxes da descrição em `r2/core/threads.py` (`- [ ]`,
+- [x] Contar as checkboxes da descrição em `r2/core/threads.py` (`- [x]`,
   `- [x]`, com qualquer marcador de lista, fora de blocos de código). O
   `Format` ganha um `progress` opcional, que só as issues definem.
-- [ ] `r2 issue list` acrescenta `3/7` no fim da linha. O `--json` de `list` e
+- [x] `r2 issue list` acrescenta `3/7` no fim da linha. O `--json` de `list` e
   `show` traz `"plan": {"done": 3, "total": 7}`, ou `null` sem checkboxes.
-- [ ] A TUI mostra `3/7` ao lado do título na árvore de issues.
-- [ ] Testes para a contagem, a CLI e a TUI.
-- [ ] Atualizar `dev/spec/issues.md` (seção do plano) e `dev/spec/cli.md`.
-- [ ] Checagem completa verde (`task ci`).
+- [x] A TUI mostra `3/7` ao lado do título na árvore de issues.
+- [x] Testes para a contagem, a CLI e a TUI.
+- [x] Atualizar `dev/spec/issues.md` (seção do plano) e `dev/spec/cli.md`.
+- [x] Checagem completa verde (`task ci`).
+
+---
+by: claude
+
+Escolhas: o progresso vai no fim da linha de `r2 issue list`, para que o
+começo `id  status  title` continue igual para quem já lê a saída. No JSON, as
+issues sempre trazem a chave `plan` (`null` sem checkboxes) e os ADRs não a
+trazem. Na árvore da TUI, o título passa a ser texto puro (antes era lido como
+markup do Rich), com o progresso em cinza ao lado.

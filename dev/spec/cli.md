@@ -122,3 +122,4 @@ Os formatos estão em [issues.md](issues.md) e [adrs.md](adrs.md). `r2 issue` tr
 37b. Com `--kind` e sem `--body`, o corpo da issue é o modelo do `kind` ([issues.md](issues.md#modelos-de-corpo)), o mesmo que a TUI usa. Sem `--kind`, o corpo fica vazio.
 37c. `advance` segue o fluxo de [issues.md](issues.md#status): uma issue `in_progress` vai para `in_review`, e só depois para `completed`.
 38. Com `--json`, `list` imprime uma lista de `{"id", "path", "title", "status", "meta"}`, e `show` acrescenta `"description"` e `"comments"` (`{"by", "text"}`).
+38a. Uma issue com plano ([issues.md](issues.md#plano)) tem o progresso no fim da linha de `r2 issue list`: `id  status  title  3/7`. No `--json` de `list` e `show`, as issues trazem `"plan": {"done": 3, "total": 7}`, ou `"plan": null` sem checkboxes. ADRs não têm a chave.
