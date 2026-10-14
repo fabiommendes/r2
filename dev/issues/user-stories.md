@@ -1,6 +1,6 @@
 ---
 type: issue
-status: backlog
+status: in_progress
 tags: [stories, tests, cli, tui]
 relatedTo: [tooling-root/dev/adr/0003-modelo-de-repositorio.md, codehood/codehood/docs/user-stories/README.md]
 kind: enhancement
@@ -81,3 +81,24 @@ teste de story `todo` gera aviso, não erro.
 - Gerar um relatório de cobertura em arquivo (o `coverage.md` do codehood) ou
   só imprimir?
 - Uma visão na TUI, ao lado de issues e ADRs?
+
+## Plano
+
+- [ ] `r2/core/stories.py`: leitura tolerante e escrita estrita dos arquivos
+  de stories, ID `<papel>: <slug>`, configuração da pasta de stories e das
+  pastas de teste e2e (`[config.stories]` no manifesto do projeto).
+- [ ] Descoberta estática dos testes e2e: título em vitest/playwright, marker
+  `story` no pytest. Sem rodar o runner.
+- [ ] `check`: stories `implemented`/`partial` sem teste, testes que citam
+  story inexistente ou nenhuma, slugs repetidos, `--no-duplicates`, aviso para
+  teste de story `todo`; modos `--missing`, `--covered`, `--stale`; resumo da
+  cobertura impresso.
+- [ ] `r2 story list | show | new | set | remove | fmt | check` em
+  `r2/cli/stories.py`.
+- [ ] Fixture de aceitação com um recorte do codehood em `tests/examples/`, e
+  testes do formato, da descoberta e da CLI.
+- [ ] Escrever `dev/spec/stories.md` e atualizar `dev/spec/cli.md` e o
+  `README.md`.
+- [ ] Issues em `backlog` para o trabalho adiado (TUI, nextest, arquivo de
+  cobertura).
+- [ ] Checagem completa verde (`task ci`).
