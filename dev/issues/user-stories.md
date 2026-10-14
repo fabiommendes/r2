@@ -1,6 +1,6 @@
 ---
 type: issue
-status: in_progress
+status: in_review
 tags: [stories, tests, cli, tui]
 relatedTo: [tooling-root/dev/adr/0003-modelo-de-repositorio.md, codehood/codehood/docs/user-stories/README.md]
 kind: enhancement
@@ -97,8 +97,54 @@ teste de story `todo` gera aviso, não erro.
   `r2/cli/stories.py`.
 - [x] Fixture de aceitação com um recorte do codehood em `tests/examples/`, e
   testes do formato, da descoberta e da CLI.
-- [ ] Escrever `dev/spec/stories.md` e atualizar `dev/spec/cli.md` e o
+- [x] Escrever `dev/spec/stories.md` e atualizar `dev/spec/cli.md` e o
   `README.md`.
-- [ ] Issues em `backlog` para o trabalho adiado (TUI, nextest, arquivo de
+- [x] Issues em `backlog` para o trabalho adiado (TUI, nextest, arquivo de
   cobertura).
-- [ ] Checagem completa verde (`task ci`).
+- [x] Checagem completa verde (`task ci`).
+
+---
+by: claude
+
+Escolhas:
+
+- O código fica no pacote `r2/core/stories/` (`doc.py`, `tests.py`,
+  `check.py`) e a CLI em `r2/cli/stories.py`. A spec está em
+  `dev/spec/stories.md`, com os comandos no `dev/spec/cli.md` (requisitos 45 a
+  50).
+- O slug remove acentos antes (`Configuração` vira `configuracao`). Nos títulos
+  ASCII do codehood, o resultado é o mesmo do script dele.
+- A descoberta dos testes é estática: o r2 lê os arquivos e não roda nenhum
+  runner, nem as listagens (`playwright test --list`, `pytest --collect-only`).
+  Assim o `check` roda sem `node_modules` e sem o ambiente do projeto. O custo:
+  títulos montados em tempo de execução (template com `${}`, `test.each`) e
+  markers com valor não literal não são vistos.
+- Os testes e2e são escolhidos por pasta: `--tests`, depois `tests` em
+  `[config.stories]` do manifesto do projeto (`r2.toml` ou `[tool.r2]`),
+  depois `test/stories` ou `tests/stories`. Todo teste nessas pastas precisa
+  citar uma story. Escolher por runner ficou para a issue
+  `stories-coverage-file`.
+- A raiz do projeto é a de `r2 coverage` (pasta com `pyproject.toml`,
+  `Cargo.toml` ou `package.json`), não a do git: no codehood, o app fica em
+  `codehood/codehood`.
+- Um status desconhecido conta como `partial` e precisa de teste. `deprecated`
+  é tratado como `todo`: não precisa de teste, e um teste dele gera aviso.
+- Dois arquivos com o mesmo `role` são erro, e o segundo é ignorado.
+- `fmt` sempre escreve `status`, também `todo`. O codehood fica com um bloco a
+  mais em cada story sem status.
+- `--missing`, `--covered` e `--stale` são opções de `check`, como no codehood.
+  A cobertura é impressa por papel no fim do `check`; não há `coverage.md`.
+- `set --section` move a story para o fim da seção; não há como escolher a
+  posição.
+
+No codehood real (só leitura), `r2 story check` sai com 1 e informa 9 stories
+`cli` sem teste (3 de admin, 6 de instructor). A cobertura bate com o
+`coverage.md` dele: admin 9 de 16, instructor 16 de 27, student 20 de 21.
+`--stale` não lista nada.
+
+Trabalho adiado, em `backlog`: `stories-tui`, `stories-nextest` e
+`stories-coverage-file`.
+
+Achado fora do escopo: `r2 issue new` com título acentuado gera slugs como
+`vis-o-de-...` (`threads.slugify` descarta as letras acentuadas). Renomeei os
+arquivos à mão.

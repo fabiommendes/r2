@@ -1,8 +1,8 @@
 ---
 type: spec
 status: active
-tags: [cli, agent-mode, glossary, issues, adrs, rfcs, handoffs]
-relatedTo: [glossary, issues, adrs, rfcs, handoffs]
+tags: [cli, agent-mode, glossary, issues, adrs, rfcs, handoffs, stories]
+relatedTo: [glossary, issues, adrs, rfcs, handoffs, stories]
 ---
 
 # Linha de comando
@@ -144,3 +144,28 @@ O formato está em [handoffs.md](handoffs.md). `r2 handoff` trabalha em `dev/han
 42. `prune` não pede confirmação: os handoffs são efêmeros. Ele imprime uma linha por handoff apagado, com o motivo, ou `Nothing to prune.`.
 43. `take` e `prune` criam `dev/handoffs/.gitignore` com `*` quando ele não existe. `list` e `show` não escrevem nada.
 44. Com `--json`, `list` imprime uma lista de `{"id", "path", "title", "status", "created", "meta"}`, e `show` e `take` imprimem um desses objetos com `"body"`. `created` vem no formato `YYYY-MM-DDTHH:MM`, e `meta` traz as chaves do frontmatter, menos `type` e `status`.
+
+## Stories
+
+O formato, a descoberta dos testes e2e e as verificações estão em [stories.md](stories.md). `r2 story` trabalha em `docs/user-stories` da raiz do projeto, ou na pasta de `--dir`.
+
+45. Uma story é identificada por `<papel>: <slug>` ou por `<papel>: <título>` (requisito 11 de [stories.md](stories.md#identificador)). Um argumento sem papel é erro de uso (código 2); uma story que não existe é erro com código 1.
+46. Comandos:
+
+    | Comando | Faz |
+    | --- | --- |
+    | `list [--role R] [--status S]` | `id  status  title`, na ordem dos arquivos |
+    | `show ID` | imprime a story no formato estrito |
+    | `new "ROLE: Title" [--section S] [--status S] [--url U] [--relatedTo R] [--body TEXT]` | adiciona a story no arquivo do papel, criando o arquivo se preciso |
+    | `set ID [--title T] [--section S] [--status S] [--url U] [--relatedTo R] [--body TEXT] [--unset KEY]` | altera a story; `--section` a move para o fim da seção |
+    | `remove ID` | remove a story |
+    | `fmt [ROLE]...` | reescreve os arquivos no formato estrito; sem papéis, todos |
+    | `check [--no-duplicates] [--missing \| --covered \| --stale] [--tests PATH]` | as verificações de [stories.md](stories.md#verificações) |
+
+47. `new` sem `--section` põe a story na última seção do arquivo. Uma seção que não existe é criada no fim. Um ID que já existe no arquivo é erro, também em `set --title`.
+48. `--status` só aceita `todo`, `partial`, `implemented` e `deprecated`; outro valor é erro de uso. `--relatedTo` é repetível, aceita entradas separadas por vírgula e substitui a lista inteira. `--body` lê da entrada padrão com `-` (requisito 34).
+49. As escritas seguem os requisitos 15 a 17 e o requisito 14 de [stories.md](stories.md#leitura-tolerante-e-escrita-estrita), e imprimem uma linha dizendo o que mudou, a não ser que a verbosidade seja -2.
+50. Com `--json`:
+    - `list` imprime uma lista de `{"id", "role", "section", "title", "status", "meta", "narrative", "path"}`, e `show` imprime um desses objetos;
+    - `check` imprime `{"errors", "warnings", "coverage"}`; cada problema é `{"kind", "subject", "message"}` e cada linha de cobertura é `{"role", "stories", "tested", "need_test"}`;
+    - `check --missing` e `--covered` imprimem a lista de stories, cada uma com `"tests"`, os locais `arquivo:linha` dos testes que a citam; `--stale` imprime uma lista de `{"path", "line", "name", "cites"}`.

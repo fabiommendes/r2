@@ -115,6 +115,36 @@ state of an interrupted session; the `handoff` skill writes it, outside git.
 | `take [ID]` | mark an open handoff as taken and print it; without ID, the latest open one |
 | `prune [--days N]` | remove the taken handoffs, those older than N days (default 7) and those of closed issues |
 
+**`r2 story`**
+
+Work on the user stories in `docs/user-stories/<role>.md` and check that
+they and the e2e tests cite each other (format in `dev/spec/stories.md`). A
+story is identified by `role: slug of the title`, such as `student: log-in`;
+commands also accept the title, `student: Log in`.
+
+| Command | Does |
+| --- | --- |
+| `list [--role R] [--status S]` | `id  status  title` |
+| `show ID` | print the story |
+| `new "ROLE: Title" [--section S] [--status S] [--url U] [--relatedTo R] [--body TEXT]` | add a story to the file of its role |
+| `set ID [--title T] [--section S] [--status S] [--url U] [--relatedTo R] [--body TEXT] [--unset KEY]` | change a story |
+| `remove ID` | remove a story |
+| `fmt [ROLE]...` | rewrite story files in the strict format |
+| `check [--no-duplicates] [--tests PATH]` | stories that need a test and have none, tests that cite no existing story, duplicate ids; exits 1 on problems and prints the coverage per role |
+| `check --missing`, `--covered`, `--stale` | only list the untested stories, the tested ones, or the tests that cite no existing story |
+
+A vitest or playwright test cites a story by its title,
+`test("student: log in", ...)`; a pytest test with
+`@pytest.mark.story("student: log in")`. r2 reads the test files and runs no
+test runner. E2e tests live in `test/stories` or `tests/stories`, or where
+the project manifest (`r2.toml` or `[tool.r2]`) says:
+
+```toml
+[config.stories]
+dir = "docs/user-stories"
+tests = ["e2e"]
+```
+
 **`r2 test`, `r2 build`, `r2 docs`**
 
 Run the default test, build or documentation task of the project in the
