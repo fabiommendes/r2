@@ -16,6 +16,7 @@ from textual.widgets import Button, Input, Label, RichLog, TabbedContent, Tree
 from r2.core.adrs import load as load_adr
 from r2.core.glossary import parse as parse_glossary
 from r2.core.issues import Issue, load
+from r2.core.rfcs import load as load_rfc
 from r2.tui.app import R2App
 from r2.tui.views.glossary import GlossaryView
 from r2.tui.widgets.command_box import CommandBox, CommandRun
@@ -740,3 +741,118 @@ def test_new_term_is_added_sorted_and_opened_in_the_editor(
     commands = drive(test, monkeypatch)
     assert [t.name for t in parse_glossary(path.read_text()).terms] == ["Thread"]
     assert commands == [["my-editor", "+12", str(path)]]
+
+
+def rfc_file(folder: Path, slug: str, status: str, extra: str = "") -> Path:
+    path = folder / f"{slug}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    title = slug.replace("-", " ").capitalize()
+    path.write_text(f"---\ntype: rfc\nstatus: {status}\n{extra}---\n\n# {title}\n")
+    return path
+
+
+async def show_rfc(app: R2App, pilot: Pilot[None], path: Path) -> MarkdownBrowser:
+    app.query_one(TabbedContent).active = "rfcs"
+    await pilot.pause()
+    browser = app.query_one("#rfcs MarkdownBrowser", MarkdownBrowser)
+    await browser.open(path)
+    await pilot.pause()
+    return browser
+
+
+def rfc_button(app: R2App, command: str) -> Button:
+    return app.query_one(f"#rfcs CommandBar #command-{command}", Button)
+
+
+def test_new_rfc_takes_a_slug_and_opens_the_editor(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("R2_EDITOR", "my-editor")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        app.query_one(TabbedContent).active = "rfcs"
+        await pilot.pause()
+        await pilot.press("n")
+        await pilot.pause()
+        assert isinstance(app.screen, Ask)
+        await pilot.press(*"One layout", "enter")
+        await pilot.pause()
+
+    commands = drive(test, monkeypatch)
+    created = tmp_path / "dev" / "rfc" / "one-layout.md"
+    rfc = load_rfc(created)
+    assert (rfc.title, rfc.status) == ("One layout", "draft")
+    assert "## Open questions" in rfc.description
+    assert commands[-1][-1] == str(created)
+
+
+def test_advance_accepts_a_draft_rfc_and_dates_it(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    path = rfc_file(tmp_path / "dev" / "rfc", "one-layout", "draft")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        await show_rfc(app, pilot, path)
+        assert str(rfc_button(app, "advance").label) == "accepted →"
+        rfc_button(app, "advance").press()
+        await pilot.pause(0.2)
+        assert load_rfc(path).status == "accepted"
+        assert "decided" in load_rfc(path).meta
+
+    drive(test, monkeypatch)
+
+
+def test_the_rfc_tree_folds_the_decided_ones(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    folder = tmp_path / "dev" / "rfc"
+    draft = rfc_file(folder, "new-design", "draft")
+    rfc_file(folder, "old-design", "withdrawn")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        browser = await show_rfc(app, pilot, draft)
+        groups = {
+            str(node.label).split()[0]: node.is_expanded
+            for node in browser.query_one(Tree).root.children
+        }
+        assert groups == {"draft": True, "withdrawn": False}
+
+    drive(test, monkeypatch)
+
+
+def test_clicking_a_related_rfc_opens_it(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    rfc = rfc_file(tmp_path / "dev" / "rfc", "one-layout", "accepted")
+    issue = tmp_path / "dev" / "issues" / "new.md"
+    issue.parent.mkdir(parents=True)
+    issue.write_text(
+        "---\ntype: issue\nstatus: todo\nrelatedTo: [one-layout]\n---\n\n# New\n"
+    )
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        app.query_one(TabbedContent).active = "issues"
+        await pilot.pause()
+        browser = app.query_one("#issues MarkdownBrowser", MarkdownBrowser)
+        await browser.open(issue)
+        await pilot.pause()
+        await pilot.click("#issues MetaBar", offset=(13, 2))
+        await pilot.pause()
+        assert app.query_one(TabbedContent).active == "rfcs"
+        rfcs = app.query_one("#rfcs MarkdownBrowser", MarkdownBrowser)
+        assert rfcs.current == rfc
+
+    drive(test, monkeypatch)
+
+
+def test_the_comments_of_an_rfc_show_as_a_thread(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    path = rfc_file(tmp_path / "dev" / "rfc", "one-layout", "draft")
+    path.write_text(path.read_text() + "\n---\nby: fabio\n\nWhy not YAML?\n")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        await show_rfc(app, pilot, path)
+        assert len(app.query("#rfcs CommentThread Collapsible")) == 1
+
+    drive(test, monkeypatch)

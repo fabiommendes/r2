@@ -1,6 +1,6 @@
 """Threads: Markdown files with YAML frontmatter, a title and comments.
 
-Issues and ADRs share this layout (see dev/spec/issues.md). A thread opens
+Issues, ADRs and RFCs share this layout (see dev/spec/issues.md). A thread opens
 with a frontmatter holding its type and status, then a level 1 heading with
 the title and a description. Lines holding only --- start comments.
 """
@@ -132,6 +132,17 @@ def slugify(title: str, fallback: str) -> str:
     """Turn a title into a file name stem: lowercase words joined by dashes."""
     words = re.findall(r"[a-z0-9]+", title.lower())
     return "-".join(words) or fallback
+
+
+def slug_path(folder: Path, title: str, fallback: str) -> Path:
+    """Return folder/slug.md for title, numbered if that file already exists."""
+    slug = slugify(title, fallback)
+    path = folder / f"{slug}.md"
+    number = 2
+    while path.exists():
+        path = folder / f"{slug}-{number}.md"
+        number += 1
+    return path
 
 
 def split_frontmatter(text: str) -> tuple[dict[str, Any] | None, str]:

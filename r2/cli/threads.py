@@ -1,5 +1,5 @@
 #
-# Command groups for threads: `r2 issue` and `r2 adr`. See dev/spec/cli.md.
+# Command groups for threads: `r2 issue`, `r2 adr` and `r2 rfc`. See dev/spec/cli.md.
 #
 import json
 import sys
@@ -8,14 +8,14 @@ from typing import Annotated, Any
 
 import typer
 
-from r2.core import adrs, issues
+from r2.core import adrs, issues, rfcs
 from r2.core.files import create
 from r2.core.messages import error, success
 from r2.core.mode import mode
 from r2.core.r2_context import find_root
 from r2.core.threads import AUTHOR_ENV, Comment, Format, Thread, default_author
 
-__all__ = ["AUTHOR_ENV", "adr_app", "author", "issue_app"]
+__all__ = ["AUTHOR_ENV", "adr_app", "author", "issue_app", "rfc_app"]
 
 title_arg = typer.Argument(help="Title.")
 ident_arg = typer.Argument(help="File name without .md, a unique prefix, or a number.")
@@ -27,6 +27,10 @@ text_help = "Markdown text, or - to read it from stdin."
 body_opt = typer.Option("--body", help=f"Description. {text_help}")
 kind_opt = typer.Option(
     "--kind", help="Kind. Without --body, the body starts from its template."
+)
+related_opt = typer.Option(
+    "--relatedTo",
+    help="Related entity slugs or paths, repeatable or comma separated.",
 )
 
 
@@ -131,6 +135,7 @@ def thread_app(fmt: Format[Any], help: str) -> typer.Typer:
 
 issue_app = thread_app(issues.FORMAT, "Manage the issues in dev/issues.")
 adr_app = thread_app(adrs.FORMAT, "Manage the decision records in dev/adr.")
+rfc_app = thread_app(rfcs.FORMAT, "Manage the feature designs (RFCs) in dev/rfc.")
 
 
 @issue_app.command("new")
@@ -142,13 +147,7 @@ def issue_new(
     milestone: Annotated[
         str | None, typer.Option("--milestone", help="Only for this milestone.")
     ] = None,
-    related: Annotated[
-        list[str] | None,
-        typer.Option(
-            "--relatedTo",
-            help="Related entity slugs or paths, repeatable or comma separated.",
-        ),
-    ] = None,
+    related: Annotated[list[str] | None, related_opt] = None,
     tag: Annotated[list[str] | None, tag_opt] = None,
     by: Annotated[str | None, by_opt] = None,
 ) -> None:
@@ -178,6 +177,21 @@ def adr_new(
     Create a decision record and print its path.
     """
     create_thread(adrs.FORMAT, title, body, {"tags": entries(tag or [])}, by)
+
+
+@rfc_app.command("new")
+def rfc_new(
+    title: Annotated[str, title_arg],
+    body: Annotated[str | None, body_opt] = None,
+    related: Annotated[list[str] | None, related_opt] = None,
+    tag: Annotated[list[str] | None, tag_opt] = None,
+    by: Annotated[str | None, by_opt] = None,
+) -> None:
+    """
+    Create a draft RFC and print its path.
+    """
+    meta = {"tags": entries(tag or []), "relatedTo": entries(related or [])}
+    create_thread(rfcs.FORMAT, title, body, meta, by)
 
 
 @adr_app.command()

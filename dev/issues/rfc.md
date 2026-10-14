@@ -48,14 +48,14 @@ issues e ADRs.
 
 ## Plano
 
-- [ ] `r2/core/rfcs.py`: o formato do RFC sobre `r2/core/threads.py`, com os
+- [x] `r2/core/rfcs.py`: o formato do RFC sobre `r2/core/threads.py`, com os
   status, as chaves, as seções da criação e a data `decided`. O slug livre de
   `issues.new_path` passa para `threads`, para issues e RFCs usarem o mesmo.
-- [ ] `r2 rfc` em `r2/cli/threads.py`: os comandos comuns e um `new` com
+- [x] `r2 rfc` em `r2/cli/threads.py`: os comandos comuns e um `new` com
   `--body`, `--tag`, `--relatedTo` e `--by`.
-- [ ] A TUI ganha a aba RFCs, com o filtro, os comentários e os botões das
+- [x] A TUI ganha a aba RFCs, com o filtro, os comentários e os botões das
   outras threads, e resolve slugs de RFC em `relatedTo`.
-- [ ] Testes do formato, da CLI e da TUI.
+- [x] Testes do formato, da CLI e da TUI.
 - [ ] Escrever `dev/spec/rfcs.md` e atualizar `dev/spec/cli.md`,
   `dev/spec/issues.md` e o `README.md`.
 - [ ] Checagem completa verde (`task ci`).

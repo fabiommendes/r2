@@ -122,13 +122,7 @@ def template(kind: str | None) -> str:
 
 def new_path(folder: Path, title: str) -> Path:
     """Return folder/slug.md for title, numbered if that file already exists."""
-    slug = slugify(title)
-    path = folder / f"{slug}.md"
-    number = 2
-    while path.exists():
-        path = folder / f"{slug}-{number}.md"
-        number += 1
-    return path
+    return threads.slug_path(folder, title, "issue")
 
 
 def status_order(status: str) -> tuple[int, str]:

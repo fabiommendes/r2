@@ -1,4 +1,4 @@
-"""Views of threads (issues, ADRs) kept as markdown files in the project."""
+"""Views of threads (issues, ADRs, RFCs) kept as markdown files in the project."""
 
 import contextlib
 from collections import Counter
@@ -14,7 +14,7 @@ from textual.containers import Vertical
 from textual.widgets import Input, Tree
 from textual.widgets.tree import TreeNode
 
-from r2.core import adrs, issues
+from r2.core import adrs, issues, rfcs
 from r2.core.editor import uses_gui_editor
 from r2.core.files import create, update
 from r2.core.links import Link
@@ -51,6 +51,8 @@ STATUS_COLORS = {
     "accepted": "success",
     "rejected": "error",
     "superseded": "panel",
+    "draft": "warning",
+    "withdrawn": "panel",
 }
 OTHER_STATUS_COLOR = "secondary"
 
@@ -62,7 +64,7 @@ def status_pill(value: Any, colors: dict[str, str]) -> Text:
 
 
 # Folders where a bare slug in relatedTo and similar keys is looked up.
-THREAD_FOLDERS = [issues.FOLDER, adrs.FOLDER]
+THREAD_FOLDERS = [issues.FOLDER, adrs.FOLDER, rfcs.FOLDER]
 
 LINK_MARK = " ↗"
 
@@ -70,7 +72,7 @@ LINK_MARK = " ↗"
 def resolve_related(root: Path, ref: str) -> Path | None:
     """The Markdown file a relatedTo entry names, if it exists.
 
-    An entry is either the file stem of an issue or an ADR, or a path
+    An entry is either the file stem of an issue, an ADR or an RFC, or a path
     relative to the project root.
     """
     if ref.endswith(".md"):

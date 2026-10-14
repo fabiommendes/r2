@@ -10,6 +10,7 @@ from r2.tui.views.glossary import GlossaryView
 from r2.tui.views.issues import IssuesView
 from r2.tui.views.live import LiveView
 from r2.tui.views.project import ProjectView
+from r2.tui.views.rfcs import RfcsView
 
 VIEWS: list[type[View]] = [
     LiveView,
@@ -17,6 +18,7 @@ VIEWS: list[type[View]] = [
     DocsView,
     IssuesView,
     AdrsView,
+    RfcsView,
     GlossaryView,
 ]
 

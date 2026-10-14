@@ -1,5 +1,5 @@
 """
-Tests for the `r2 issue` and `r2 adr` command groups (dev/spec/cli.md).
+Tests for the `r2 issue`, `r2 adr` and `r2 rfc` command groups (dev/spec/cli.md).
 
 They drive the root app in-process, in a temporary project with a .git
 folder so the project root is found, and assert on the files on disk.
@@ -14,7 +14,7 @@ import pytest
 from typer.testing import CliRunner
 
 from r2.cli.app import app
-from r2.core import adrs, issues
+from r2.core import adrs, issues, rfcs
 
 runner = CliRunner()
 
@@ -108,6 +108,34 @@ def test_new_adrs_are_numbered(project: Path) -> None:
     result = run("adr", "new", "Use YAML")
     assert result.output.strip() == "dev/adr/0002-use-yaml.md"
     assert adrs.load(Path("dev/adr/0002-use-yaml.md")).status == "proposed"
+
+
+def new_rfc(title: str, *args: str) -> Path:
+    result = run("rfc", "new", title, *args)
+    assert result.exit_code == 0, result.output
+    return Path(result.output.strip())
+
+
+def test_new_rfc_is_a_draft_with_the_sections(project: Path) -> None:
+    path = new_rfc("One layout", "--tag", "layout", "--relatedTo", "a.md, b")
+    assert path == Path("dev/rfc/one-layout.md")
+    rfc = rfcs.load(path)
+    assert (rfc.title, rfc.status) == ("One layout", "draft")
+    assert rfc.meta["tags"] == ["layout"]
+    assert rfc.meta["relatedTo"] == ["a.md", "b"]
+    assert rfc.meta["creator"] == "claude"
+    assert rfc.description.startswith("## Problem\n\n## Proposal")
+
+
+def test_new_rfc_body_replaces_the_sections(project: Path) -> None:
+    body = "## Problem\n\nX.\n"
+    result = run("rfc", "new", "One layout", "--body", "-", input=body)
+    path = Path(result.output.strip())
+    assert rfcs.load(path).description == "## Problem\n\nX."
+
+
+def test_new_rfc_has_no_issue_options(project: Path) -> None:
+    assert run("rfc", "new", "Design", "--kind", "task").exit_code == 2
 
 
 def test_by_beats_the_environment(project: Path) -> None:
@@ -243,6 +271,33 @@ def test_supersede_marks_both_adrs(project: Path) -> None:
     old = adrs.load(Path("dev/adr/0001-old-way.md"))
     assert new.meta["supersedes"] == ["0001-old-way"]
     assert (old.status, old.meta["supersededBy"]) == ("superseded", "0002-new-way")
+
+
+def test_rfc_lifecycle_dates_the_decision(project: Path) -> None:
+    path = new_rfc("One layout")
+    new_rfc("Other design")
+    assert run("rfc", "list").output == (
+        "one-layout  draft  One layout\nother-design  draft  Other design\n"
+    )
+    result = run("rfc", "advance", "one")
+    assert result.exit_code == 0, result.output
+    rfc = rfcs.load(path)
+    assert rfc.status == "accepted"
+    assert "decided" in rfc.meta
+    assert run("rfc", "list").output == "other-design  draft  Other design\n"
+    run("rfc", "status", "other", "withdrawn")
+    assert run("rfc", "list", "--status", "withdrawn").output == (
+        "other-design  withdrawn  Other design\n"
+    )
+
+
+def test_rfc_comment_and_json(project: Path) -> None:
+    new_rfc("One layout", "--body", "- [ ] Not a plan.")
+    run("rfc", "comment", "one", "Why not YAML?", "--by", "fabio")
+    shown = json.loads(run("--json", "rfc", "show", "one").output)
+    assert shown["status"] == "draft"
+    assert shown["comments"] == [{"by": "fabio", "text": "Why not YAML?"}]
+    assert "plan" not in shown
 
 
 def test_an_adr_cannot_supersede_itself(project: Path) -> None:

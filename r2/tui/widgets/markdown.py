@@ -25,7 +25,7 @@ from r2.tui.widgets.search import SearchBar, describe, find_spans
 from r2.tui.widgets.splitter import Splitter
 
 # Frontmatter types whose files hold a comment thread.
-THREAD_TYPES = {"issue", "adr"}
+THREAD_TYPES = {"issue", "adr", "rfc"}
 
 # Comments of an issue shown open; older ones start collapsed.
 OPEN_COMMENTS = 3
@@ -101,7 +101,7 @@ class UpperH1(MarkdownH1):
 class FrontmatterMarkdown(Markdown):
     """Markdown that renders the body only and reports the frontmatter apart.
 
-    For threads (issues and ADRs), the body stops at the description; the
+    For threads (issues, ADRs and RFCs), the body stops at the description; the
     comments are reported apart too, so they can be shown as a thread.
     """
 

@@ -1,4 +1,4 @@
-"""Modal menu that picks the status of an issue or an ADR."""
+"""Modal menu that picks the status of a thread: an issue, an ADR or an RFC."""
 
 from textual.app import ComposeResult
 from textual.binding import Binding
