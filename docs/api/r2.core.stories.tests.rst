@@ -1,0 +1,14 @@
+r2.core.stories.tests
+=====================
+
+.. automodule:: r2.core.stories.tests
+
+.. autoclass:: r2.core.stories.tests.StoryTest
+   :members:
+   :member-order: bysource
+
+.. autofunction:: r2.core.stories.tests.find_tests
+
+.. autofunction:: r2.core.stories.tests.python_tests
+
+.. autofunction:: r2.core.stories.tests.script_tests

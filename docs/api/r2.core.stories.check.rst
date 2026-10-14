@@ -1,0 +1,32 @@
+r2.core.stories.check
+=====================
+
+.. automodule:: r2.core.stories.check
+
+.. autoclass:: r2.core.stories.check.Layout
+   :members:
+   :member-order: bysource
+
+.. autoclass:: r2.core.stories.check.Problem
+   :members:
+   :member-order: bysource
+
+.. autoclass:: r2.core.stories.check.Report
+   :members:
+   :member-order: bysource
+
+.. autoclass:: r2.core.stories.check.StoryRef
+   :members:
+   :member-order: bysource
+
+.. autofunction:: r2.core.stories.check.check
+
+.. autofunction:: r2.core.stories.check.layout
+
+.. autofunction:: r2.core.stories.check.load
+
+.. autofunction:: r2.core.stories.check.project_root
+
+.. autofunction:: r2.core.stories.check.run
+
+.. autofunction:: r2.core.stories.check.story_paths

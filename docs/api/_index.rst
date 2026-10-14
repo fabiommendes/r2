@@ -35,6 +35,10 @@ Modules
    r2.core.r2_context
    r2.core.rfcs
    r2.core.state
+   r2.core.stories
+   r2.core.stories.check
+   r2.core.stories.doc
+   r2.core.stories.tests
    r2.core.threads
    r2.integrations.claude.events
    r2.integrations.claude.notify

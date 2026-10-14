@@ -16,6 +16,7 @@ from r2.cli.coverage import app as coverage_app
 from r2.cli.glossary import app as glossary_app
 from r2.cli.handoffs import handoff_app
 from r2.cli.plugins import app as plugins_app
+from r2.cli.stories import story_app
 from r2.cli.threads import adr_app, issue_app, rfc_app
 from r2.core import console
 from r2.core.mode import configure
@@ -185,6 +186,7 @@ app.add_typer(issue_app, name="issue")
 app.add_typer(adr_app, name="adr")
 app.add_typer(rfc_app, name="rfc")
 app.add_typer(handoff_app, name="handoff")
+app.add_typer(story_app, name="story")
 app.add_typer(plugins_app, name="plugins")
 
 

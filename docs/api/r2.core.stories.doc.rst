@@ -1,0 +1,28 @@
+r2.core.stories.doc
+===================
+
+.. automodule:: r2.core.stories.doc
+
+.. autodata:: r2.core.stories.doc.KNOWN_STATUSES
+
+.. autoclass:: r2.core.stories.doc.Section
+   :members:
+   :member-order: bysource
+
+.. autoclass:: r2.core.stories.doc.Story
+   :members:
+   :member-order: bysource
+
+.. autoclass:: r2.core.stories.doc.StoryFile
+   :members:
+   :member-order: bysource
+
+.. autofunction:: r2.core.stories.doc.is_strict
+
+.. autofunction:: r2.core.stories.doc.parse
+
+.. autofunction:: r2.core.stories.doc.parse_id
+
+.. autofunction:: r2.core.stories.doc.slugify
+
+.. autofunction:: r2.core.stories.doc.story_id

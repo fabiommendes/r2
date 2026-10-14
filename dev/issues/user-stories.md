@@ -84,18 +84,18 @@ teste de story `todo` gera aviso, não erro.
 
 ## Plano
 
-- [ ] `r2/core/stories.py`: leitura tolerante e escrita estrita dos arquivos
+- [x] `r2/core/stories/`: leitura tolerante e escrita estrita dos arquivos
   de stories, ID `<papel>: <slug>`, configuração da pasta de stories e das
   pastas de teste e2e (`[config.stories]` no manifesto do projeto).
-- [ ] Descoberta estática dos testes e2e: título em vitest/playwright, marker
+- [x] Descoberta estática dos testes e2e: título em vitest/playwright, marker
   `story` no pytest. Sem rodar o runner.
-- [ ] `check`: stories `implemented`/`partial` sem teste, testes que citam
+- [x] `check`: stories `implemented`/`partial` sem teste, testes que citam
   story inexistente ou nenhuma, slugs repetidos, `--no-duplicates`, aviso para
   teste de story `todo`; modos `--missing`, `--covered`, `--stale`; resumo da
   cobertura impresso.
-- [ ] `r2 story list | show | new | set | remove | fmt | check` em
+- [x] `r2 story list | show | new | set | remove | fmt | check` em
   `r2/cli/stories.py`.
-- [ ] Fixture de aceitação com um recorte do codehood em `tests/examples/`, e
+- [x] Fixture de aceitação com um recorte do codehood em `tests/examples/`, e
   testes do formato, da descoberta e da CLI.
 - [ ] Escrever `dev/spec/stories.md` e atualizar `dev/spec/cli.md` e o
   `README.md`.

@@ -10,6 +10,9 @@ pyright skip this tree.
 - `roman/`: the same small library in Python, Rust and TypeScript, with a
   known catalog of tests. It is the baseline for the test analysis commands
   (per-test coverage, redundancy, mutation testing). See `roman/README.md`.
+- `stories/codehood/`: a slice of the codehood user stories (the admin role)
+  and its playwright story tests, copied as is. It is the acceptance fixture
+  of `r2 story`; the tests copy it to a temp dir before writing.
 
 Group new examples by the feature they exercise first, and by language or
 tool second.
