@@ -1,8 +1,8 @@
 ---
 type: spec
 status: active
-tags: [cli, agent-mode, glossary, issues, adrs, rfcs, handoffs, stories]
-relatedTo: [glossary, issues, adrs, rfcs, handoffs, stories]
+tags: [cli, agent-mode, glossary, issues, adrs, rfcs, handoffs, stories, roadmap]
+relatedTo: [glossary, issues, adrs, rfcs, handoffs, stories, roadmap]
 ---
 
 # Linha de comando
@@ -169,3 +169,12 @@ O formato, a descoberta dos testes e2e e as verificações estão em [stories.md
     - `list` imprime uma lista de `{"id", "role", "section", "title", "status", "meta", "narrative", "path"}`, e `show` imprime um desses objetos;
     - `check` imprime `{"errors", "warnings", "coverage"}`; cada problema é `{"kind", "subject", "message"}` e cada linha de cobertura é `{"role", "stories", "tested", "need_test"}`;
     - `check --missing` e `--covered` imprimem a lista de stories, cada uma com `"tests"`, os locais `arquivo:linha` dos testes que a citam; `--stale` imprime uma lista de `{"path", "line", "name", "cites"}`.
+
+## Roadmap e changelog
+
+O formato do `ROADMAP.md` e do rascunho está em [roadmap.md](roadmap.md). Os dois comandos leem as issues de `dev/issues` na raiz do projeto.
+
+51. `r2 roadmap` escreve `ROADMAP.md` na raiz do projeto (requisito 15) e imprime `Wrote ROADMAP.md.`. Quando o arquivo já tem o texto gerado, ele não escreve e imprime `ROADMAP.md is up to date.`.
+52. `r2 roadmap --check` não escreve nada. Ele sai com código 1, com um erro que manda rodar `r2 roadmap`, quando o arquivo não existe ou difere do texto gerado, e com 0 quando bate. Assim ele pode rodar no lint.
+53. `r2 changelog --draft MILESTONE` imprime em stdout o rascunho do milestone. `--draft` é obrigatório: sem ele, é erro de uso (código 2). Um milestone que nenhuma issue usa, aberta ou fechada, é erro com código 1 que lista os milestones conhecidos. As issues abertas do milestone, que ficam fora do rascunho, saem num aviso em stderr.
+54. Com `--json`, `changelog` imprime `{"milestone", "sections"}`, em que cada seção é `{"title", "issues"}` e cada issue é `{"id", "title", "kind"}`. `roadmap` só escreve e ignora `--json` (requisito 14).

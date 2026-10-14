@@ -34,6 +34,7 @@ Modules
    r2.core.plugins.manifest
    r2.core.r2_context
    r2.core.rfcs
+   r2.core.roadmap
    r2.core.state
    r2.core.stories
    r2.core.stories.check

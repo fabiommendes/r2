@@ -150,6 +150,20 @@ dir = "docs/user-stories"
 tests = ["e2e"]
 ```
 
+**`r2 roadmap`, `r2 changelog`**
+
+Generate files from the `milestone` key of the issues in `dev/issues`, the
+only source of the plan (format in `dev/spec/roadmap.md`).
+
+| Command | Does |
+| --- | --- |
+| `roadmap` | write `ROADMAP.md`: the open issues grouped by milestone, milestones in version order (`0.9.0` before `0.10.0`) |
+| `roadmap --check` | write nothing; exit 1 when `ROADMAP.md` is missing or out of date, for the lint step |
+| `changelog --draft MILESTONE` | print the completed issues of the milestone under `Added` (enhancement), `Fixed` (defect) and `Other`, as a start for `CHANGELOG.md` |
+
+Issues without a milestone stay out of the roadmap. The issue titles are
+copied as written.
+
 **`r2 test`, `r2 build`, `r2 docs`**
 
 Run the default test, build or documentation task of the project in the
