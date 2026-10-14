@@ -1,6 +1,6 @@
 ---
 type: issue
-status: backlog
+status: in_progress
 tags: [rfc, threads, cli, tui]
 relatedTo: [tooling-root/dev/adr/0003-modelo-de-repositorio.md, adrs]
 kind: enhancement
@@ -45,3 +45,17 @@ issues e ADRs.
 
 - Um comando `accept` que cria os ADRs e as issues listados em `Outcome`, ou o
   agente cria cada um com `r2 adr new` e `r2 issue new`?
+
+## Plano
+
+- [ ] `r2/core/rfcs.py`: o formato do RFC sobre `r2/core/threads.py`, com os
+  status, as chaves, as seções da criação e a data `decided`. O slug livre de
+  `issues.new_path` passa para `threads`, para issues e RFCs usarem o mesmo.
+- [ ] `r2 rfc` em `r2/cli/threads.py`: os comandos comuns e um `new` com
+  `--body`, `--tag`, `--relatedTo` e `--by`.
+- [ ] A TUI ganha a aba RFCs, com o filtro, os comentários e os botões das
+  outras threads, e resolve slugs de RFC em `relatedTo`.
+- [ ] Testes do formato, da CLI e da TUI.
+- [ ] Escrever `dev/spec/rfcs.md` e atualizar `dev/spec/cli.md`,
+  `dev/spec/issues.md` e o `README.md`.
+- [ ] Checagem completa verde (`task ci`).
