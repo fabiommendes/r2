@@ -109,6 +109,7 @@ Os formatos estão em [issues.md](issues.md) e [adrs.md](adrs.md). `r2 issue` tr
     | Comando | Faz |
     | --- | --- |
     | `new TITLE [--body TEXT] [--tag T] [--by NAME]` | cria uma thread e imprime o caminho dela |
+    | `new TITLE ... [--kind K] [--priority P] [--milestone M] [--relatedTo R]` | só issues: também preenche essas chaves |
     | `list [--status S] [--tag T] [--all]` | `id  status  title`, threads abertas por padrão |
     | `show ID` | imprime o arquivo |
     | `comment ID TEXT [--by NAME]` | adiciona um comentário no fim |
@@ -117,4 +118,7 @@ Os formatos estão em [issues.md](issues.md) e [adrs.md](adrs.md). `r2 issue` tr
     | `supersede NEW OLD` | só ADRs: NEW substitui OLD |
 
 37. `new` escolhe o nome do arquivo sob o lock da pasta (requisito 17): issues recebem um slug livre, e ADRs, o próximo número.
+37a. `r2 issue new` aceita as chaves que o formulário da TUI preenche: `--kind` e `--priority` só aceitam os valores de [issues.md](issues.md#frontmatter), e um valor desconhecido é erro de uso (código 2); `--relatedTo`, como `--tag`, é repetível e aceita entradas separadas por vírgula. Valores padrão ficam fora do frontmatter.
+37b. Com `--kind` e sem `--body`, o corpo da issue é o modelo do `kind` ([issues.md](issues.md#modelos-de-corpo)), o mesmo que a TUI usa. Sem `--kind`, o corpo fica vazio.
+37c. `advance` segue o fluxo de [issues.md](issues.md#status): uma issue `in_progress` vai para `in_review`, e só depois para `completed`.
 38. Com `--json`, `list` imprime uma lista de `{"id", "path", "title", "status", "meta"}`, e `show` acrescenta `"description"` e `"comments"` (`{"by", "text"}`).

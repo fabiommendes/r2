@@ -12,15 +12,7 @@ from textual.reactive import reactive
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, Static
 
-from r2.core.issues import KINDS, PRIORITIES, SEVERITIES, Issue, new_issue
-
-# Body skeleton for each kind, so the editor opens on a structure to fill in.
-TEMPLATES = {
-    "defect": ["Steps to reproduce", "Expected", "Actual"],
-    "enhancement": ["Motivation", "Proposal"],
-    "task": ["Context", "Done when"],
-}
-DEFAULT_TEMPLATE = ["Context", "Done when"]
+from r2.core.issues import KINDS, PRIORITIES, SEVERITIES, Issue, new_issue, template
 
 # Style of each kind, priority and severity value; missing values use the
 # default text color.
@@ -36,11 +28,6 @@ STYLES = {
     "major": "$text-warning",
     "critical": "bold $text-error",
 }
-
-
-def template(kind: str | None) -> str:
-    sections = TEMPLATES.get(kind or "", DEFAULT_TEMPLATE)
-    return "\n\n".join(f"## {section}\n\n" for section in sections).rstrip() + "\n"
 
 
 def split_list(text: str) -> list[str]:

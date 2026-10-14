@@ -1,10 +1,11 @@
 ---
 type: issue
-status: in_progress
+status: completed
 tags: [issues, cli, tui]
 relatedTo: [tooling-root/dev/adr/0003-modelo-de-repositorio.md, issues, cli]
 kind: task
 created: 2026-10-14
+closed: 2026-10-14
 ---
 
 # Alinhar o fluxo de issues ao ADR 0003
@@ -30,14 +31,14 @@ humano (`enhancement` ou sem `kind`). O r2 diverge em três pontos.
 
 ## Plano
 
-- [ ] `NEXT_STATUS`: `in_progress` avança para `in_review`, e `in_review` para
+- [x] `NEXT_STATUS`: `in_progress` avança para `in_review`, e `in_review` para
   `completed`.
-- [ ] Mover os modelos de corpo para `r2/core/issues.py`, para que a TUI e a CLI
+- [x] Mover os modelos de corpo para `r2/core/issues.py`, para que a TUI e a CLI
   usem os mesmos. `enhancement` passa a ter `Context`, `Requirements` (com um
   `R1` de exemplo e seus critérios de aceitação) e `Out of scope`.
-- [ ] `r2 issue new` aceita `--kind`, `--priority`, `--milestone` e
+- [x] `r2 issue new` aceita `--kind`, `--priority`, `--milestone` e
   `--relatedTo`. Com `--kind` e sem `--body`, o corpo é o modelo do `kind`.
   `r2 adr new` não ganha essas opções.
-- [ ] Testes para o `advance`, as opções novas e os modelos.
-- [ ] Atualizar `dev/spec/issues.md`, `dev/spec/cli.md` e a tabela do `README.md`.
-- [ ] Checagem completa verde (`task ci`).
+- [x] Testes para o `advance`, as opções novas e os modelos.
+- [x] Atualizar `dev/spec/issues.md`, `dev/spec/cli.md` e a tabela do `README.md`.
+- [x] Checagem completa verde (`task ci`).

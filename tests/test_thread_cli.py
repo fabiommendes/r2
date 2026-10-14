@@ -57,6 +57,48 @@ def test_new_issue_reads_the_body_from_stdin(project: Path) -> None:
     assert issues.load(path).description == "Line one.\n\nTwo."
 
 
+def test_new_issue_takes_the_form_metadata(project: Path) -> None:
+    path = new_issue(
+        "Add a filter",
+        "--kind", "enhancement",
+        "--priority", "high",
+        "--milestone", "v1",
+        "--relatedTo", "issues, cli",
+        "--relatedTo", "tui",
+    )  # fmt: skip
+    meta = issues.load(path).meta
+    assert meta["kind"] == "enhancement"
+    assert meta["priority"] == "high"
+    assert meta["milestone"] == "v1"
+    assert meta["relatedTo"] == ["issues", "cli", "tui"]
+
+
+def test_new_issue_with_a_kind_starts_from_its_template(project: Path) -> None:
+    path = new_issue("Add a filter", "--kind", "enhancement")
+    expected = issues.template("enhancement").strip("\n")
+    assert issues.load(path).description == expected
+
+
+def test_new_issue_body_beats_the_template(project: Path) -> None:
+    path = new_issue("Crash", "--kind", "defect", "--body", "It crashes.")
+    assert issues.load(path).description == "It crashes."
+
+
+def test_new_issue_without_kind_has_no_body(project: Path) -> None:
+    path = new_issue("Crash")
+    assert issues.load(path).description == ""
+
+
+def test_new_issue_rejects_unknown_kinds_as_usage_errors(project: Path) -> None:
+    result = run("issue", "new", "Crash", "--kind", "bug")
+    assert result.exit_code == 2
+    assert not Path("dev/issues").exists()
+
+
+def test_new_adr_has_no_issue_options(project: Path) -> None:
+    assert run("adr", "new", "Way", "--kind", "task").exit_code == 2
+
+
 def test_new_issue_never_reuses_a_name(project: Path) -> None:
     assert new_issue("Same") != new_issue("Same")
 
@@ -153,6 +195,15 @@ def test_advance_follows_the_workflow(project: Path) -> None:
     result = run("issue", "advance", "one")
     assert result.exit_code == 0, result.output
     assert issues.load(path).status == "todo"
+
+
+def test_advance_passes_through_review(project: Path) -> None:
+    path = new_issue("One")
+    run("issue", "status", "one", "in_progress")
+    run("issue", "advance", "one")
+    assert issues.load(path).status == "in_review"
+    run("issue", "advance", "one")
+    assert issues.load(path).status == "completed"
 
 
 def test_supersede_marks_both_adrs(project: Path) -> None:

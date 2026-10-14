@@ -40,6 +40,8 @@ O ciclo de vida do base, mais dois estados finais:
 - `backlog`, `todo`, `in_progress`, `blocked`, `deferred`, `in_review`: abertos.
 - `completed`, `wont_fix`, `deprecated`: fechados.
 
+O significado de cada status para agentes está no ADR 0003 do tooling-root. O fluxo principal, que `r2 issue advance` e o botão da TUI seguem, é `backlog`, `todo`, `in_progress`, `in_review`, `completed`: um trabalho pronto espera revisão em `in_review` antes de fechar. Os outros passos de `advance`: `blocked` vai para `deferred`, `deferred` para `wont_fix`, e uma issue fechada volta para `backlog`.
+
 ### Ordem de escrita
 
 As chaves são escritas na ordem da tabela. Listas usam o estilo de fluxo (`tags: [a, b]`). Chaves que o r2 não conhece são mantidas como estão, depois das conhecidas.
@@ -72,6 +74,18 @@ by: claude
 
 Found the cause: `reload()` resets the selection.
 ```
+
+## Modelos de corpo
+
+Uma issue nova criada pela TUI, ou por `r2 issue new --kind` sem `--body`, começa com o esqueleto do seu `kind`. Os títulos ficam em inglês, como o código:
+
+| `kind` | Seções |
+| --- | --- |
+| `defect` | `Steps to reproduce`, `Expected`, `Actual` |
+| `enhancement` | `Context`, `Requirements`, `Out of scope` |
+| `task` e sem `kind` | `Context`, `Done when` |
+
+O corpo de uma `enhancement` é a spec da funcionalidade (ADR 0003): `Requirements` lista os requisitos `R1`, `R2`... e cada um traz seus critérios de aceitação. O modelo já traz um `R1` vazio. A proposta e a discussão de desenho ficam no RFC.
 
 ## Leitura tolerante
 

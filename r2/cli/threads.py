@@ -17,42 +17,22 @@ from r2.core.threads import AUTHOR_ENV, Comment, Format, Thread, default_author
 
 __all__ = ["AUTHOR_ENV", "adr_app", "author", "issue_app"]
 
+title_arg = typer.Argument(help="Title.")
 ident_arg = typer.Argument(help="File name without .md, a unique prefix, or a number.")
 by_opt = typer.Option(
     "--by", help=f"Author. Default: ${AUTHOR_ENV}, then git user.name."
 )
 tag_opt = typer.Option("--tag", help="Tags, repeatable or comma separated.")
 text_help = "Markdown text, or - to read it from stdin."
+body_opt = typer.Option("--body", help=f"Description. {text_help}")
+kind_opt = typer.Option(
+    "--kind", help="Kind. Without --body, the body starts from its template."
+)
 
 
 def thread_app(fmt: Format[Any], help: str) -> typer.Typer:
     """The commands shared by every kind of thread."""
     app = typer.Typer(help=help, no_args_is_help=True)
-
-    @app.command()
-    def new(
-        title: Annotated[str, typer.Argument(help="Title.")],
-        body: Annotated[
-            str | None, typer.Option("--body", help=f"Description. {text_help}")
-        ] = None,
-        tag: Annotated[list[str] | None, tag_opt] = None,
-        by: Annotated[str | None, by_opt] = None,
-    ) -> None:
-        """
-        Create a thread and print its path.
-        """
-        title = title.strip()
-        error("The title cannot be empty.", not title)
-        meta: dict[str, Any] = {"creator": author(by)}
-        if tags := entries(tag or []):
-            meta["tags"] = tags
-        thread = fmt.new(title, **meta)
-        if body is not None:
-            thread.description = read_text(body)
-        path = create(
-            folder(fmt), lambda folder: fmt.new_path(folder, title), fmt.render(thread)
-        )
-        typer.echo(relative(path))
 
     @app.command("list")
     def list_(
@@ -150,6 +130,53 @@ issue_app = thread_app(issues.FORMAT, "Manage the issues in dev/issues.")
 adr_app = thread_app(adrs.FORMAT, "Manage the decision records in dev/adr.")
 
 
+@issue_app.command("new")
+def issue_new(
+    title: Annotated[str, title_arg],
+    body: Annotated[str | None, body_opt] = None,
+    kind: Annotated[issues.Kind | None, kind_opt] = None,
+    priority: Annotated[issues.Priority | None, typer.Option("--priority")] = None,
+    milestone: Annotated[
+        str | None, typer.Option("--milestone", help="Only for this milestone.")
+    ] = None,
+    related: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--relatedTo",
+            help="Related entity slugs or paths, repeatable or comma separated.",
+        ),
+    ] = None,
+    tag: Annotated[list[str] | None, tag_opt] = None,
+    by: Annotated[str | None, by_opt] = None,
+) -> None:
+    """
+    Create an issue and print its path.
+    """
+    meta: dict[str, Any] = {
+        "tags": entries(tag or []),
+        "relatedTo": entries(related or []),
+        "kind": kind,
+        "priority": priority,
+        "milestone": milestone.strip() if milestone else None,
+    }
+    if body is None and kind is not None:
+        body = issues.template(kind)
+    create_thread(issues.FORMAT, title, body, meta, by)
+
+
+@adr_app.command("new")
+def adr_new(
+    title: Annotated[str, title_arg],
+    body: Annotated[str | None, body_opt] = None,
+    tag: Annotated[list[str] | None, tag_opt] = None,
+    by: Annotated[str | None, by_opt] = None,
+) -> None:
+    """
+    Create a decision record and print its path.
+    """
+    create_thread(adrs.FORMAT, title, body, {"tags": entries(tag or [])}, by)
+
+
 @adr_app.command()
 def supersede(
     new: Annotated[str, typer.Argument(help="The ADR that replaces the other.")],
@@ -170,6 +197,26 @@ def supersede(
 #
 # HELPERS
 #
+def create_thread(
+    fmt: Format[Any],
+    title: str,
+    body: str | None,
+    meta: dict[str, Any],
+    by: str | None,
+) -> None:
+    """Write a new thread with the given keys, leaving out empty ones."""
+    title = title.strip()
+    error("The title cannot be empty.", not title)
+    meta = {key: value for key, value in meta.items() if value}
+    thread = fmt.new(title, creator=author(by), **meta)
+    if body is not None:
+        thread.description = read_text(body)
+    path = create(
+        folder(fmt), lambda folder: fmt.new_path(folder, title), fmt.render(thread)
+    )
+    typer.echo(relative(path))
+
+
 def author(by: str | None) -> str:
     """The author of a change: --by, then $R2_AUTHOR, then git user.name."""
     return by.strip() if by is not None else default_author(find_root(Path.cwd()))

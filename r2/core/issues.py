@@ -7,7 +7,7 @@ Markdown file passes as an issue; writing always produces the strict format.
 import datetime
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, get_args
 
 from r2.core import threads
 
@@ -24,11 +24,12 @@ OPEN_STATUSES = [
 CLOSED_STATUSES = ["completed", "wont_fix", "deprecated"]
 STATUSES = OPEN_STATUSES + CLOSED_STATUSES
 
-# The status the next step of the workflow moves an issue to.
+# The status the next step of the workflow moves an issue to. Finished work
+# waits in in_review before it closes (tooling-root ADR 0003).
 NEXT_STATUS = {
     "backlog": "todo",
     "todo": "in_progress",
-    "in_progress": "completed",
+    "in_progress": "in_review",
     "blocked": "deferred",
     "deferred": "wont_fix",
     "in_review": "completed",
@@ -37,9 +38,22 @@ NEXT_STATUS = {
     "deprecated": "backlog",
 }
 
-KINDS = ["defect", "enhancement", "task"]
-PRIORITIES = ["low", "normal", "high", "urgent"]
+Kind = Literal["defect", "enhancement", "task"]
+Priority = Literal["low", "normal", "high", "urgent"]
+KINDS: list[str] = list(get_args(Kind))
+PRIORITIES: list[str] = list(get_args(Priority))
 SEVERITIES = ["trivial", "minor", "normal", "major", "critical"]
+
+# Body skeleton for each kind, so a new issue starts on a structure to fill
+# in. The body of an enhancement is its spec.
+TEMPLATES = {
+    "defect": "## Steps to reproduce\n\n## Expected\n\n## Actual\n",
+    "enhancement": (
+        "## Context\n\n## Requirements\n\n- R1.\n  - Acceptance:\n\n## Out of scope\n"
+    ),
+    "task": "## Context\n\n## Done when\n",
+}
+DEFAULT_TEMPLATE = TEMPLATES["task"]
 
 # Optional keys in writing order, with the default that leaves them out.
 DEFAULTS: dict[str, Any] = {
@@ -94,6 +108,11 @@ def new_issue(
     """Create an issue in the backlog, dated today."""
     created = today or datetime.date.today()
     return Issue(title=title, meta={**meta, "created": created})
+
+
+def template(kind: str | None) -> str:
+    """The body skeleton of a new issue of kind, or of one without a kind."""
+    return TEMPLATES.get(kind or "", DEFAULT_TEMPLATE)
 
 
 def new_path(folder: Path, title: str) -> Path:

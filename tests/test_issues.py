@@ -3,6 +3,7 @@ import datetime
 import yaml
 
 from r2.core.issues import (
+    NEXT_STATUS,
     Issue,
     new_issue,
     parse,
@@ -10,6 +11,7 @@ from r2.core.issues import (
     set_status,
     slugify,
     status_order,
+    template,
 )
 from r2.core.threads import Comment, append_stub, comment_stub, matches
 
@@ -149,3 +151,20 @@ def test_set_status_dates_closing_and_clears_it_on_reopening() -> None:
     assert issue.meta["closed"] == datetime.date(2026, 1, 2)
     set_status(issue, "todo")
     assert "closed" not in issue.meta
+
+
+def test_advance_sends_finished_work_to_review_before_closing() -> None:
+    # tooling-root ADR 0003: in_review waits for the review.
+    assert NEXT_STATUS["in_progress"] == "in_review"
+    assert NEXT_STATUS["in_review"] == "completed"
+
+
+def test_enhancement_template_is_a_spec() -> None:
+    body = parse(f"# T\n\n{template('enhancement')}").description
+    headings = [line for line in body.splitlines() if line.startswith("## ")]
+    assert headings == ["## Context", "## Requirements", "## Out of scope"]
+    assert "R1." in body
+
+
+def test_issues_without_kind_use_the_task_template() -> None:
+    assert template(None) == template("task")
