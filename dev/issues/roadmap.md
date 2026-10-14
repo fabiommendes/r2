@@ -28,12 +28,12 @@ issues é a única fonte. Repositórios públicos ainda querem o arquivo.
 
 ## Plano
 
-- [ ] `r2/core/roadmap.py`: ordem natural dos milestones, o texto do
+- [x] `r2/core/roadmap.py`: ordem natural dos milestones, o texto do
   `ROADMAP.md` (issues abertas por milestone) e o rascunho do changelog
   (issues fechadas do milestone por `kind`).
-- [ ] `r2 roadmap [--check]` e `r2 changelog --draft MILESTONE` em
+- [x] `r2 roadmap [--check]` e `r2 changelog --draft MILESTONE` em
   `r2/cli/roadmap.py`.
-- [ ] Testes do módulo e da CLI.
+- [x] Testes do módulo e da CLI.
 - [ ] Escrever `dev/spec/roadmap.md` e atualizar `dev/spec/cli.md` e o
   `README.md`.
 - [ ] Checagem completa verde (`task ci`).

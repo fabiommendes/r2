@@ -16,6 +16,7 @@ from r2.cli.coverage import app as coverage_app
 from r2.cli.glossary import app as glossary_app
 from r2.cli.handoffs import handoff_app
 from r2.cli.plugins import app as plugins_app
+from r2.cli.roadmap import changelog, roadmap_command
 from r2.cli.stories import story_app
 from r2.cli.threads import adr_app, issue_app, rfc_app
 from r2.core import console
@@ -180,6 +181,8 @@ def docs(path: Annotated[Path | None, path_opt] = None) -> None:
     project.docs()
 
 
+app.command("roadmap")(roadmap_command)
+app.command()(changelog)
 app.add_typer(coverage_app, name="coverage")
 app.add_typer(glossary_app, name="glossary")
 app.add_typer(issue_app, name="issue")
