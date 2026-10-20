@@ -4,11 +4,9 @@ import asyncio
 from pathlib import Path
 
 from textual.app import App, ComposeResult
-from textual.content import Content
-from textual.widgets import Collapsible, MarkdownViewer
-from textual.widgets._markdown import MarkdownFence, MarkdownParagraph
+from textual.widgets import Collapsible
 
-from r2.tui.widgets.markdown import MarkdownPane, match_row, shown_text
+from r2.tui.widgets.markdown import DocumentViewer, MarkdownPane
 from r2.tui.widgets.search import SearchBar
 
 FILLER = "\n\n".join(f"Paragraph {n} of filler text." for n in range(40))
@@ -44,18 +42,11 @@ def run(path: Path, test) -> None:  # type: ignore[no-untyped-def]
         app = PaneApp(path)
         async with app.run_test(size=(60, 20)) as pilot:
             await pilot.pause()
+            await app.query_one("FrontmatterMarkdown").rendered()  # type: ignore[attr-defined]
             app.query_one(MarkdownPane)._focus_document()
             await test(app, pilot)
 
     asyncio.run(main())
-
-
-def test_match_row_follows_wrapping() -> None:
-    content = Content("aaaa bbbb cccc")
-    assert match_row(content, 9, 0, wrap=True) == 0
-    assert match_row(content, 9, 5, wrap=True) == 0
-    assert match_row(content, 9, 10, wrap=True) == 1
-    assert match_row(Content("a\nb\nneedle"), 3, 4, wrap=False) == 2
 
 
 def test_searches_the_rendered_text_and_moves_between_matches(tmp_path: Path) -> None:
@@ -64,25 +55,27 @@ def test_searches_the_rendered_text_and_moves_between_matches(tmp_path: Path) ->
 
     async def test(app: PaneApp, pilot) -> None:  # type: ignore[no-untyped-def]
         pane = app.query_one(MarkdownPane)
-        viewer = app.query_one(MarkdownViewer)
+        viewer = app.query_one(DocumentViewer)
         await pilot.press("slash", *"needle", "enter")
         await pilot.pause()
         assert not app.query_one(SearchBar).display
         # The link target is not shown, so it does not match.
         assert len(pane.matches) == 2
         assert viewer.scroll_offset.y == 0
+        document, row, start, end = pane.matches[0]
+        assert document.highlights[row][0][:2] == (start, end)
         await pilot.press("down")
         await pilot.pause()
-        block = pane.matches[1][0]
-        assert isinstance(block, MarkdownFence)
+        document, row, _, _ = pane.matches[1]
+        assert "needle = 2" in document.plain[row]
         assert viewer.scroll_offset.y > 0
-        assert block.region.overlaps(viewer.content_region)
+        screen_y = document.content_region.y + row
+        assert viewer.content_region.y <= screen_y < viewer.content_region.bottom
         await pilot.press("down")
         assert pane.match_index == 0
         await pilot.press("escape")
         assert pane.matches == []
-        assert "needle" in block._content.plain
-        assert block._content.spans == block._highlighted_code.spans
+        assert document.highlights == {}
 
     run(path, test)
 
@@ -93,7 +86,7 @@ def test_arrows_scroll_without_a_search(tmp_path: Path) -> None:
 
     async def test(app: PaneApp, pilot) -> None:  # type: ignore[no-untyped-def]
         await pilot.press("down", "down")
-        assert app.query_one(MarkdownViewer).scroll_offset.y == 2
+        assert app.query_one(DocumentViewer).scroll_offset.y == 2
 
     run(path, test)
 
@@ -127,15 +120,16 @@ def test_searches_table_headers_and_cells(tmp_path: Path) -> None:
 
     async def test(app: PaneApp, pilot) -> None:  # type: ignore[no-untyped-def]
         pane = app.query_one(MarkdownPane)
-        viewer = app.query_one(MarkdownViewer)
+        viewer = app.query_one(DocumentViewer)
         await pilot.press("slash", *"needle", "enter")
         await pilot.pause()
-        cells = [w for w, _, _ in pane.matches[:2]]
-        assert [w.has_class("header") for w in cells] == [True, False]
-        assert isinstance(pane.matches[2][0], MarkdownParagraph)
+        document, header, _, _ = pane.matches[0]
+        _, cell, _, _ = pane.matches[1]
+        assert "Name" in document.plain[header]
+        assert "the needle" in document.plain[cell]
+        assert "After needle" in document.plain[pane.matches[2][1]]
         assert viewer.scroll_offset.y > 0
-        assert cells[0].region.overlaps(viewer.content_region)
-        await pilot.press("escape")
-        assert all(shown_text(w).spans == [] for w in cells)
+        screen_y = document.content_region.y + header
+        assert viewer.content_region.y <= screen_y < viewer.content_region.bottom
 
     run(path, test)

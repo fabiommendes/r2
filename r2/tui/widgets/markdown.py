@@ -6,20 +6,17 @@ from typing import Any
 from urllib.parse import urlparse
 
 from textual.app import ComposeResult
-from textual.await_complete import AwaitComplete
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
-from textual.content import Content
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.geometry import Region
 from textual.message import Message
 from textual.widget import Widget
-from textual.widgets import Collapsible, Label, Markdown, MarkdownViewer, Static, Tree
-from textual.widgets._markdown import MarkdownBlock, MarkdownFence, MarkdownH1
-from textual.widgets.markdown import MarkdownTableOfContents
+from textual.widgets import Collapsible, Static, Tree
 
 from r2.core.threads import Comment, Thread, parse, split_frontmatter
 from r2.tui import theme
 from r2.tui.widgets.commands import CommandBar, CommandProvider
+from r2.tui.widgets.document import MarkdownDocument
 from r2.tui.widgets.meta import FieldRenderer, MetaBar
 from r2.tui.widgets.search import SearchBar, describe, find_spans
 from r2.tui.widgets.splitter import Splitter
@@ -30,82 +27,36 @@ THREAD_TYPES = {"issue", "adr", "rfc"}
 # Comments of an issue shown open; older ones start collapsed.
 OPEN_COMMENTS = 3
 
-# Widgets with text to search: the blocks, and the table cells, which are
-# plain Statics the table builds from its row blocks without mounting them.
-SEARCHED = "MarkdownBlock, MarkdownTableContent > Static"
-
-TextMatch = tuple[Widget, int, int]
-"""A search match as a block or cell and the span in its text."""
+TextMatch = tuple[MarkdownDocument, int, int, int]
+"""A search match as a document, a row of it and the span in the row text."""
 
 
-def shown_text(widget: Widget) -> Content:
-    """The text a block or table cell shows now."""
-    if isinstance(widget, MarkdownBlock):
-        return widget._content
-    assert isinstance(widget, Static)
-    content = widget.content
-    return content if isinstance(content, Content) else Content(str(content))
+def display_width(document: MarkdownDocument) -> int:
+    """Width the document has, or will have once its hidden ancestors show."""
+    gutter = 0
+    widget: Widget = document
+    while not widget.size.width and isinstance(widget.parent, Widget):
+        gutter += widget.styles.gutter.width
+        widget = widget.parent
+    return max(widget.size.width - gutter, 1)
 
 
-def rendered_text(widget: Widget) -> Content:
-    """The text a block or table cell shows, before any search highlight."""
-    # A fence keeps its text in a label, and _content is empty until a
-    # theme change sets it.
-    if isinstance(widget, MarkdownFence):
-        return widget._highlighted_code
-    return shown_text(widget)
+def read_document(path: Path) -> str:
+    """The text of the file at path, or a note on why it cannot be read."""
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return f"*`{path}` is not UTF-8 text.*"
+    except OSError as error:
+        return f"*Cannot read `{path}`: {error.strerror or error}.*"
 
 
-def show_text(widget: Widget, content: Content) -> None:
-    """Make a block or table cell show content."""
-    if isinstance(widget, MarkdownBlock):
-        widget.set_content(content)
-    else:
-        assert isinstance(widget, Static)
-        widget.update(content)
-
-
-def text_widget(widget: Widget) -> Widget:
-    """The widget that draws the text of a block or table cell."""
-    if isinstance(widget, MarkdownFence):
-        return widget.query_one(Label)
-    return widget
-
-
-def match_row(content: Content, width: int, start: int, wrap: bool) -> int:
-    """Row of the text drawn at width where the character at start lands."""
-    if not wrap:
-        return content.plain.count("\n", 0, start)
-    plain = content.plain
-    row = position = 0
-    for row, line in enumerate(content.wrap(max(width, 1))):
-        # Wrapping drops the spaces at the breaks, so look each line up.
-        found = plain.find(line.plain, position) if line.plain else position
-        if found > start:
-            return max(row - 1, 0)
-        position = max(found, position)
-    return row
-
-
-class UpperH1(MarkdownH1):
-    """Level 1 heading in upper case."""
-
-    def set_content(self, content: Content) -> None:
-        upper = content.plain.upper()
-        # Upper casing may change the length (ß becomes SS), breaking spans.
-        if len(upper) == len(content.plain):
-            content = Content(upper, list(content.spans))
-        super().set_content(content)
-
-
-class FrontmatterMarkdown(Markdown):
+class FrontmatterMarkdown(MarkdownDocument):
     """Markdown that renders the body only and reports the frontmatter apart.
 
     For threads (issues, ADRs and RFCs), the body stops at the description; the
     comments are reported apart too, so they can be shown as a thread.
     """
-
-    BLOCKS = {**Markdown.BLOCKS, "h1": UpperH1}
 
     class Parsed(Message):
         def __init__(self, meta: dict[str, Any] | None, comments: list[Comment]):
@@ -113,7 +64,7 @@ class FrontmatterMarkdown(Markdown):
             self.meta = meta
             self.comments = comments
 
-    def update(self, markdown: str) -> AwaitComplete:
+    def update(self, markdown: str) -> None:
         meta, body = split_frontmatter(markdown)
         comments: list[Comment] = []
         if meta is not None and meta.get("type") in THREAD_TYPES:
@@ -121,7 +72,7 @@ class FrontmatterMarkdown(Markdown):
             body = f"# {thread.title}\n\n{thread.description}"
             comments = [c for c in thread.comments if c.text.strip()]
         self.post_message(self.Parsed(meta, comments))
-        return super().update(body)
+        super().update(body)
 
 
 class CommentThread(Vertical):
@@ -147,11 +98,8 @@ class CommentThread(Vertical):
         background: $panel;
         color: $text-muted;
     }
-    CommentThread Markdown {
-        margin: 0;
-    }
-    CommentThread MarkdownBlock:last-child {
-        margin-bottom: 0;
+    CommentThread MarkdownDocument {
+        padding: 0;
     }
     """
 
@@ -160,7 +108,7 @@ class CommentThread(Vertical):
         first_open = len(comments) - OPEN_COMMENTS
         self.mount_all(
             Collapsible(
-                Markdown(comment.text),
+                MarkdownDocument(comment.text),
                 title=f"#{number}  {comment.author or 'comment'}",
                 collapsed=number <= first_open,
             )
@@ -168,36 +116,83 @@ class CommentThread(Vertical):
         )
 
 
-class DocumentViewer(MarkdownViewer):
-    """Markdown viewer that follows local links and opens web links in the browser."""
+class DocumentViewer(VerticalScroll, can_focus=False, can_focus_children=True):
+    """Scrolls a document and its comments, following the links in them.
+
+    Local links open in the viewer; web links open in the browser.
+    """
+
+    DEFAULT_CSS = """
+    DocumentViewer {
+        height: 1fr;
+        scrollbar-gutter: stable;
+        background: $surface;
+    }
+    """
+
+    class Navigated(Message):
+        """A link took the viewer to another document."""
+
+    location: Path | None = None
+    """The file on display."""
 
     def compose(self) -> ComposeResult:
-        # Same as MarkdownViewer, with the frontmatter-aware document.
-        markdown = FrontmatterMarkdown(open_links=False)
-        markdown.can_focus = True
-        yield markdown
+        yield FrontmatterMarkdown()
         yield CommentThread()
-        yield MarkdownTableOfContents(markdown)
 
     def on_frontmatter_markdown_parsed(
         self, message: FrontmatterMarkdown.Parsed
     ) -> None:
         self.query_one(CommentThread).show(message.comments)
 
-    async def _on_markdown_link_clicked(self, message: Markdown.LinkClicked) -> None:
+    async def go(self, location: str | Path) -> None:
+        """Show the file at location and the heading its #anchor points to.
+
+        A location with only an anchor stays in the file on display.
+        """
+        target, _, anchor = str(location).partition("#")
+        document = self.query_one(FrontmatterMarkdown)
+        if target:
+            path = Path(target)
+            self.location = path
+            document.update(read_document(path))
+            self.scroll_home(animate=False)
+        if anchor:
+            await document.rendered()
+            row = document.row_of(anchor)
+            if row is not None:
+                self.call_after_refresh(self.scroll_to_row, document, row)
+
+    def scroll_to_row(self, widget: Widget, row: int, *, center: bool = False) -> None:
+        """Scroll until a row of a widget in the viewer shows, at the top or
+        at the center."""
+        y = widget.content_region.y - self.content_region.y + self.scroll_offset.y
+        if center:
+            self.scroll_to_region(Region(0, y + row, 1, 1), center=True, animate=False)
+        else:
+            self.scroll_to(y=y + row, animate=False)
+
+    async def on_markdown_document_link_clicked(
+        self, message: MarkdownDocument.LinkClicked
+    ) -> None:
         message.stop()
         if urlparse(message.href).scheme in ("http", "https", "mailto"):
             self.app.open_url(message.href)
-        else:
+        elif message.href.startswith("#"):
             await self.go(message.href)
+        else:
+            # Links are relative to the file that holds them.
+            parent = self.location.parent if self.location else Path()
+            await self.go(parent / message.href)
+            self.post_message(self.Navigated())
 
 
 class MarkdownPane(Vertical):
     """A rendered Markdown document under a bar with its frontmatter.
 
     / searches the text as shown, not the Markdown source, so markup and
-    link targets do not match. A match cut off by the ellipsis of a narrow
-    table cell counts but stays hidden.
+    link targets do not match, and neither does a match the wrapping splits
+    between two rows.
     """
 
     COMPONENT_CLASSES = {"markdown-pane--match", "markdown-pane--current"}
@@ -250,13 +245,11 @@ class MarkdownPane(Vertical):
         self.matches: list[TextMatch] = []
         self.match_index = -1
         """Index of the selected match, or -1 before the first one."""
-        self._painted: dict[Widget, tuple[Content, Content]] = {}
-        """Blocks and cells with highlights, mapped to their text before and after."""
 
     def compose(self) -> ComposeResult:
         yield MetaBar(self.meta_fields)
         yield CommandBar(self.commands)
-        yield DocumentViewer(show_table_of_contents=False, open_links=False)
+        yield DocumentViewer()
         yield Static(id="search-state")
         yield SearchBar()
 
@@ -273,24 +266,25 @@ class MarkdownPane(Vertical):
         event.stop()
         self._focus_document()
 
-    def on_input_submitted(self, event: SearchBar.Submitted) -> None:
+    async def on_input_submitted(self, event: SearchBar.Submitted) -> None:
         if not isinstance(event.input, SearchBar):
             return
         event.stop()
         event.input.close()
         self._focus_document()
         if event.value:
+            await self.query_one(FrontmatterMarkdown).rendered()
             self.search(event.value)
 
     def search(self, pattern: str) -> int:
         """Highlight pattern, show its first match and return the count."""
         self.action_clear_search()
         self.pattern = pattern
-        viewer = self.query_one(DocumentViewer)
-        for widget in viewer.query(SEARCHED):
-            text = rendered_text(widget).plain
-            for start, end in find_spans(text, pattern):
-                self.matches.append((widget, start, end))
+        for document in self.query_one(DocumentViewer).query(MarkdownDocument):
+            rows = document.render_at(display_width(document))
+            for row, text in enumerate(rows):
+                for start, end in find_spans(text, pattern):
+                    self.matches.append((document, row, start, end))
         if self.matches:
             self._select(0)
         else:
@@ -301,25 +295,32 @@ class MarkdownPane(Vertical):
         self._select((self.match_index + step) % len(self.matches))
 
     def action_clear_search(self) -> None:
-        for widget, (before, after) in self._painted.items():
-            # Skip blocks the document dropped or rendered again since.
-            if widget.is_attached and shown_text(widget) is after:
-                show_text(widget, before)
-        self._painted.clear()
+        for document in self.query(MarkdownDocument):
+            if document.highlights:
+                document.highlights = {}
+                document.refresh()
         self.pattern = ""
         self.matches = []
         self.match_index = -1
         self._show_state()
 
-    def on_markdown_viewer_navigator_updated(self) -> None:
+    def on_document_viewer_navigated(self) -> None:
         # Another document is on display, so the matches point nowhere.
         self.action_clear_search()
+
+    def on_markdown_document_reflowed(self, event: MarkdownDocument.Reflowed) -> None:
+        # The rows moved, so the matches must be found again.
+        if self.matches:
+            index = self.match_index
+            self.search(self.pattern)
+            if self.matches and index > 0:
+                self._select(min(index, len(self.matches) - 1))
 
     def _select(self, index: int) -> None:
         self.match_index = index
         self._paint()
-        block = self.matches[index][0]
-        for collapsible in block.ancestors_with_self:
+        document = self.matches[index][0]
+        for collapsible in document.ancestors_with_self:
             if isinstance(collapsible, Collapsible):
                 collapsible.collapsed = False
         self._show_state()
@@ -327,41 +328,21 @@ class MarkdownPane(Vertical):
 
     def _paint(self) -> None:
         """Highlight every match, the current one apart."""
-        match_style = self.get_visual_style("markdown-pane--match")
-        current_style = self.get_visual_style("markdown-pane--current")
-        styled: dict[Widget, Content] = {}
-        for index, (widget, start, end) in enumerate(self.matches):
-            if widget not in styled:
-                styled[widget] = self._original(widget)
+        match_style = self.get_component_rich_style("markdown-pane--match")
+        current_style = self.get_component_rich_style("markdown-pane--current")
+        for document in self.query(MarkdownDocument):
+            document.highlights = {}
+        for index, (document, row, start, end) in enumerate(self.matches):
             style = current_style if index == self.match_index else match_style
-            styled[widget] = styled[widget].stylize(style, start, end)
-        for widget, after in styled.items():
-            before = self._original(widget)
-            show_text(widget, after)
-            # Blocks may change the content they are given, so keep theirs.
-            self._painted[widget] = (before, shown_text(widget))
-
-    def _original(self, widget: Widget) -> Content:
-        """The text of a block or cell without the highlights painted on it."""
-        if widget in self._painted:
-            return self._painted[widget][0]
-        return rendered_text(widget)
+            document.highlights.setdefault(row, []).append((start, end, style))
+        for document in self.query(MarkdownDocument):
+            document.refresh()
 
     def _scroll_to_current(self) -> None:
         if not self.matches:
             return
-        block, start, _ = self.matches[self.match_index]
-        viewer = self.query_one(DocumentViewer)
-        widget = text_widget(block)
-        region = widget.content_region
-        row = match_row(
-            rendered_text(block),
-            region.width,
-            start,
-            wrap=not isinstance(block, MarkdownFence),
-        )
-        y = region.y - viewer.content_region.y + viewer.scroll_offset.y + row
-        viewer.scroll_to_region(Region(0, y, 1, 1), center=True, animate=False)
+        document, row, _, _ = self.matches[self.match_index]
+        self.query_one(DocumentViewer).scroll_to_row(document, row, center=True)
 
     def _show_state(self) -> None:
         state = self.query_one("#search-state", Static)
@@ -387,7 +368,7 @@ class MarkdownPane(Vertical):
         """Show no document."""
         self.current = None
         self.action_clear_search()
-        await self.query_one(FrontmatterMarkdown).update("")
+        self.query_one(FrontmatterMarkdown).update("")
 
     async def reload(self) -> None:
         """Show the current document as it is now."""
