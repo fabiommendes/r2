@@ -3,9 +3,18 @@
 import asyncio
 from pathlib import Path
 
+from rich.theme import Theme
 from textual.app import App, ComposeResult
 
-from r2.tui.widgets.document import FIRST_ROWS, MarkdownDocument, parse, slugs
+from r2.tui.widgets.document import (
+    FIRST_ROWS,
+    Look,
+    MarkdownDocument,
+    Rendered,
+    parse,
+    render_blocks,
+    slugs,
+)
 from r2.tui.widgets.markdown import DocumentViewer, FrontmatterMarkdown, MarkdownPane
 
 FILLER = "\n\n".join(f"Paragraph {n} of filler text." for n in range(40))
@@ -28,6 +37,30 @@ def run(test, size: tuple[int, int] = (60, 20)) -> None:  # type: ignore[no-unty
 def test_anchors_follow_github_slugs() -> None:
     blocks = parse("# Intro\n\ntext\n\n## Two words!\n\n# Intro\n")
     assert slugs(blocks) == {"intro": 0, "two-words": 2, "intro-1": 3}
+
+
+def rendered_rows(markdown: str, width: int = 40) -> list[str]:
+    rendered = Rendered(width, Look(Theme({}), "monokai", "#000000"))
+    render_blocks(rendered, parse(markdown))
+    return [row.rstrip() for row in rendered.plain]
+
+
+def test_code_has_one_blank_row_above_and_below() -> None:
+    rows = rendered_rows("Text\n\n```python\nx = 1\n```\n\nAfter\n")
+    assert rows == ["Text", "", "", " x = 1", "", "", "After"]
+
+
+def test_tables_draw_a_grid_and_align_columns() -> None:
+    rows = rendered_rows("Text\n\n| Name | Value |\n| --- | ---: |\n| alpha | 1 |\n")
+    assert rows == [
+        "Text",
+        "",
+        "╭───────┬───────╮",
+        "│ Name  │ Value │",
+        "├───────┼───────┤",
+        "│ alpha │     1 │",
+        "╰───────┴───────╯",
+    ]
 
 
 def test_a_long_document_renders_the_rest_in_the_background(tmp_path: Path) -> None:

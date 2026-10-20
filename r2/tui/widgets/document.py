@@ -14,11 +14,13 @@ from typing import ClassVar
 
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
+from rich import box
 from rich import markdown as rich_markdown
 from rich.console import Console, ConsoleOptions, JustifyMethod, RenderResult
 from rich.segment import Segment
 from rich.style import Style
 from rich.syntax import Syntax
+from rich.table import Table as RichTable
 from rich.theme import Theme
 from textual import events, work
 from textual.app import App
@@ -77,9 +79,27 @@ class CodeBlock(rich_markdown.CodeBlock):
             self.lexer_name,
             theme=self.theme,
             word_wrap=True,
-            padding=(1, 2),
+            padding=(1, 1),
             background_color=self.background,
         )
+
+
+class Table(rich_markdown.TableElement):
+    """Table in a grid, with its columns aligned as the Markdown asks."""
+
+    def __rich_console__(
+        self, console: Console, options: ConsoleOptions
+    ) -> RenderResult:
+        table = RichTable(box=box.ROUNDED, style="markdown.table.border")
+        if self.header is not None and self.header.row is not None:
+            for column in self.header.row.cells:
+                heading = column.content.copy()
+                heading.stylize("markdown.table.header")
+                table.add_column(heading, justify=heading.justify or "default")
+        if self.body is not None:
+            for row in self.body.rows:
+                table.add_row(*(cell.content for cell in row.cells))
+        yield table
 
 
 class Blocks(rich_markdown.Markdown):
@@ -90,6 +110,7 @@ class Blocks(rich_markdown.Markdown):
         "heading_open": Heading,
         "fence": CodeBlock,
         "code_block": CodeBlock,
+        "table_open": Table,
     }
 
     def __init__(self, tokens: list[Token], code_theme: str, fence_background: str):
@@ -168,8 +189,11 @@ def blend(color: str, background: Color) -> Color:
 def look(app: App[object]) -> Look:
     """The Rich theme of the Markdown styles, after the app theme."""
     variables = app.theme_variables
-    background = Color.parse(variables["background"])
+    # The document is drawn on the surface of its viewer.
+    background = Color.parse(variables["surface"])
     foreground = Color.parse(variables["foreground"])
+    dark = app.current_theme.dark
+    fence = background.blend(Color(0, 0, 0) if dark else Color(255, 255, 255), 0.25)
 
     def color(name: str) -> Style:
         return Style(color=blend(variables[name], background).rich_color)
@@ -178,8 +202,7 @@ def look(app: App[object]) -> Look:
     styles: dict[str, Style] = {
         "markdown.link": color("text-primary") + Style(underline=True),
         "markdown.link_url": color("text-primary") + Style(underline=True),
-        "markdown.code": color("text-accent")
-        + Style(bgcolor=blend(variables["surface"], background).rich_color),
+        "markdown.code": color("text-accent") + Style(bgcolor=fence.rich_color),
         "markdown.block_quote": muted,
         "markdown.hr": muted,
         "markdown.item.bullet": color("text-primary") + Style(bold=True),
@@ -194,8 +217,6 @@ def look(app: App[object]) -> Look:
             back = blend(variables[f"{name}-background"], background)
             style += Style(bgcolor=back.rich_color)
         styles[f"markdown.h{level}"] = style
-    dark = app.current_theme.dark
-    fence = background.blend(Color(0, 0, 0) if dark else Color(255, 255, 255), 0.25)
     return Look(Theme(styles), "monokai" if dark else "default", fence.hex)
 
 
@@ -222,9 +243,11 @@ def render_blocks(
         lines = console.render_lines(
             Blocks(block, look.code_theme, look.fence_background), options, pad=False
         )
-        # Rich opens a list with a blank row of its own; blocks keep one apart.
-        while lines and not "".join(segment.text for segment in lines[0]).strip():
-            del lines[0]
+        # Rich opens lists and tables with a blank row of its own; blocks keep
+        # one apart. Code keeps its padding.
+        if block[0].type not in ("fence", "code_block"):
+            while lines and not "".join(s.text for s in lines[0]).strip():
+                del lines[0]
         if not lines:
             rendered.starts.append(len(rendered.lines))
             continue
@@ -404,11 +427,12 @@ class MarkdownDocument(Widget, can_focus=True):
     def render_line(self, y: int) -> Strip:
         width = self.size.width
         if self._rendered is None or y >= len(self._rendered.lines):
-            return Strip.blank(width, PLAIN)
+            return Strip.blank(width, self.rich_style)
         strip = self._rendered.lines[y]
         if y in self.highlights:
             strip = paint(strip, self.highlights[y])
-        return strip.crop_extend(0, width, PLAIN)
+        # Rich leaves the colors of plain text unset; the widget's fill them.
+        return strip.crop_extend(0, width, PLAIN).apply_style(self.rich_style)
 
     def on_click(self, event: events.Click) -> None:
         href = event.style.link
