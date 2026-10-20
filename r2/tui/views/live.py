@@ -10,6 +10,8 @@ from textual.widgets import OptionList
 from r2.core.links import Link
 from r2.core.r2_context import ProjectContext
 from r2.tui.views.base import View
+from r2.tui.views.project import MARKDOWN_SUFFIXES
+from r2.tui.widgets.markdown import MarkdownPane
 from r2.tui.widgets.preview import FilePreview
 from r2.tui.widgets.splitter import Splitter
 
@@ -26,6 +28,9 @@ class LiveView(View):
     }
     LiveView > FilePreview {
         width: 1fr;
+    }
+    LiveView > MarkdownPane {
+        display: none;
     }
     """
 
@@ -44,6 +49,7 @@ class LiveView(View):
         yield OptionList()
         yield Splitter(self.ID)
         yield FilePreview()
+        yield MarkdownPane()
 
     def set_context(self, context: ProjectContext) -> None:
         super().set_context(context)
@@ -60,14 +66,16 @@ class LiveView(View):
             links = self.context.links
             options.highlighted = links.index(selected) if selected in links else 0
         else:
-            self.query_one(FilePreview).show(None)
+            self.query_one(MarkdownPane).display = False
+            preview = self.query_one(FilePreview)
+            preview.display = True
+            preview.show(None)
 
     def _prompt(self, link: Link) -> Text:
-        """Show the file name first, so truncation only hides the directory."""
+        """Show the file name, and its directory dimmed in the line below."""
         assert self.context is not None
         label = Path(link.label(self.context.root))
-        directory = "" if str(label.parent) == "." else f"  {label.parent}"
-        return Text.assemble(label.name, (directory, "dim"))
+        return Text.assemble(label.name, "\n", (str(label.parent), "dim"))
 
     def current_link(self) -> Link | None:
         if self.context is None:
@@ -82,7 +90,29 @@ class LiveView(View):
             return
         link = self.context.links[event.option_index]
         self.context.view_state[self.ID] = link
-        self.query_one(FilePreview).show(link, link.label(self.context.root))
+        self._show(link)
+
+    def _show(self, link: Link) -> None:
+        """Render whole Markdown files; show the others, and line ranges, in
+        the file preview."""
+        assert self.context is not None
+        preview = self.query_one(FilePreview)
+        pane = self.query_one(MarkdownPane)
+        markdown = link.start is None and link.path.suffix.lower() in MARKDOWN_SUFFIXES
+        preview.display = not markdown
+        pane.display = markdown
+        if markdown:
+            # Clear the preview, so its excerpt toggle does not linger.
+            preview.show(None)
+            self.run_worker(pane.open(link.path), exclusive=True, group="markdown")
+        else:
+            preview.show(link, link.label(self.context.root))
+
+    def reload(self) -> None:
+        super().reload()
+        pane = self.query_one(MarkdownPane)
+        if pane.display:
+            self.run_worker(pane.reload(), exclusive=True, group="markdown")
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         self.post_message(self.Navigated())

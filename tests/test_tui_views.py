@@ -11,17 +11,28 @@ from pathlib import Path
 import pytest
 from textual import events
 from textual.pilot import Pilot
-from textual.widgets import Button, Input, Label, RichLog, TabbedContent, Tree
+from textual.widgets import (
+    Button,
+    Input,
+    Label,
+    OptionList,
+    RichLog,
+    TabbedContent,
+    Tree,
+)
 
 from r2.core.adrs import load as load_adr
 from r2.core.glossary import parse as parse_glossary
 from r2.core.issues import Issue, load
+from r2.core.links import Link
 from r2.core.rfcs import load as load_rfc
 from r2.tui.app import R2App
 from r2.tui.views.glossary import GlossaryView
+from r2.tui.views.live import LiveView
 from r2.tui.widgets.command_box import CommandBox, CommandRun
 from r2.tui.widgets.issue_form import Cycle, IssueForm
-from r2.tui.widgets.markdown import FrontmatterMarkdown, MarkdownBrowser
+from r2.tui.widgets.markdown import FrontmatterMarkdown, MarkdownBrowser, MarkdownPane
+from r2.tui.widgets.preview import FilePreview
 from r2.tui.widgets.prompts import Ask, Confirm
 from r2.tui.widgets.status_menu import Pick, StatusMenu
 
@@ -873,5 +884,67 @@ def test_the_comments_of_an_rfc_show_as_a_thread(
     async def test(app: R2App, pilot: Pilot[None]) -> None:
         await show_rfc(app, pilot, path)
         assert len(app.query("#rfcs CommentThread Collapsible")) == 1
+
+    drive(test, monkeypatch)
+
+
+def show_live_link(
+    app: R2App, link: Link
+) -> Callable[[Pilot[None]], Awaitable[LiveView]]:
+    """A coroutine that puts link in the Live view and highlights it."""
+
+    async def show(pilot: Pilot[None]) -> LiveView:
+        assert app.context is not None
+        app.context.add_links([link])
+        app.query_one(TabbedContent).active = "live"
+        await pilot.pause()
+        view = app.query_one(LiveView)
+        view.links_changed()
+        await pilot.pause(0.1)
+        return view
+
+    return show
+
+
+def test_a_live_link_shows_the_file_name_over_its_folder(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    code = tmp_path / "pkg" / "mod.py"
+    code.parent.mkdir()
+    code.write_text("x = 1\n")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        await show_live_link(app, Link(code, 1))(pilot)
+        prompt = app.query_one("#live OptionList", OptionList).get_option_at_index(0)
+        assert str(prompt.prompt) == "mod.py:1\npkg"
+
+    drive(test, monkeypatch)
+
+
+def test_a_whole_markdown_file_renders_in_the_live_view(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    doc = tmp_path / "notes.md"
+    doc.write_text("# Notes\n")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        view = await show_live_link(app, Link(doc))(pilot)
+        assert view.query_one(MarkdownPane).display
+        assert not view.query_one(FilePreview).display
+        assert view.query_one(MarkdownPane).current == doc
+
+    drive(test, monkeypatch)
+
+
+def test_a_markdown_line_shows_as_text_in_the_live_view(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    doc = tmp_path / "notes.md"
+    doc.write_text("# Notes\n")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        view = await show_live_link(app, Link(doc, 1))(pilot)
+        assert view.query_one(FilePreview).display
+        assert not view.query_one(MarkdownPane).display
 
     drive(test, monkeypatch)
