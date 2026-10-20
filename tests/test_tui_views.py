@@ -369,6 +369,25 @@ def test_entering_the_issue_focuses_the_document_not_the_commands(
     drive(test, monkeypatch)
 
 
+def test_a_doc_deleted_behind_the_tree_shows_why_it_cannot_be_read(
+    config: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    doc = tmp_path / "docs" / "guide.md"
+    doc.parent.mkdir()
+    doc.write_text("# Guide\n")
+
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        app.query_one(TabbedContent).active = "docs"
+        await pilot.pause()
+        doc.unlink()
+        select_doc(app, "docs", doc)
+        await pilot.pause()
+        document = app.query_one("#docs FrontmatterMarkdown", FrontmatterMarkdown)
+        assert "Cannot read" in "\n".join(document.render_at(80))
+
+    drive(test, monkeypatch)
+
+
 def select_doc(app: R2App, view: str, path: Path) -> None:
     """Select the tree leaf of path, as Enter does."""
     tree = app.query_one(f"#{view} Tree", Tree)

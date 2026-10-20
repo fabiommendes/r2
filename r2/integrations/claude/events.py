@@ -58,9 +58,13 @@ async def tail(
         if size < position:
             position, pending = 0, b""
         if size > position:
-            with path.open("rb") as file:
-                file.seek(position)
-                chunk = file.read()
+            # The log may go away between the stat and the open.
+            try:
+                with path.open("rb") as file:
+                    file.seek(position)
+                    chunk = file.read()
+            except FileNotFoundError:
+                chunk = b""
             position += len(chunk)
             *lines, pending = (pending + chunk).split(b"\n")
             for line in lines:
