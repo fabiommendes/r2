@@ -51,7 +51,9 @@ def test_code_has_one_blank_row_above_and_below() -> None:
 
 
 def test_tables_draw_a_grid_and_align_columns() -> None:
-    rows = rendered_rows("Text\n\n| Name | Value |\n| --- | ---: |\n| alpha | 1 |\n")
+    rows = rendered_rows(
+        "Text\n\n| Name | Value |\n| --- | ---: |\n| alpha | 1 |\n| beta | 22 |\n"
+    )
     assert rows == [
         "Text",
         "",
@@ -59,6 +61,8 @@ def test_tables_draw_a_grid_and_align_columns() -> None:
         "│ Name  │ Value │",
         "├───────┼───────┤",
         "│ alpha │     1 │",
+        "├───────┼───────┤",
+        "│ beta  │    22 │",
         "╰───────┴───────╯",
     ]
 

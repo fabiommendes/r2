@@ -22,7 +22,7 @@ from rich.style import Style
 from rich.syntax import Syntax
 from rich.table import Table as RichTable
 from rich.theme import Theme
-from textual import events, work
+from textual import work
 from textual.app import App
 from textual.color import Color
 from textual.message import Message
@@ -90,7 +90,9 @@ class Table(rich_markdown.TableElement):
     def __rich_console__(
         self, console: Console, options: ConsoleOptions
     ) -> RenderResult:
-        table = RichTable(box=box.ROUNDED, style="markdown.table.border")
+        table = RichTable(
+            box=box.ROUNDED, style="markdown.table.border", show_lines=True
+        )
         if self.header is not None and self.header.row is not None:
             for column in self.header.row.cells:
                 heading = column.content.copy()
@@ -220,6 +222,22 @@ def look(app: App[object]) -> Look:
     return Look(Theme(styles), "monokai" if dark else "default", fence.hex)
 
 
+def clickable(style: Style | None) -> Style:
+    """Style with its link turned into a click action of the document.
+
+    Textual would hand a link to the terminal as an OSC 8 hyperlink, and the
+    terminal may take the click for itself; a relative path means nothing to
+    it anyway.
+    """
+    if style is None:
+        return PLAIN
+    if not style.link:
+        return style
+    return style.update_link(None) + Style.from_meta(
+        {"@click": f"link({style.link!r})"}
+    )
+
+
 def render_blocks(
     rendered: Rendered, blocks: list[list[Token]], until: int | None = None
 ) -> int:
@@ -257,7 +275,7 @@ def render_blocks(
         rendered.starts.append(len(rendered.lines))
         for line in lines:
             rendered.lines.append(
-                Strip([Segment(t, s or PLAIN, c) for t, s, c in line])
+                Strip([Segment(t, clickable(s), c) for t, s, c in line])
             )
             rendered.plain.append("".join(segment.text for segment in line))
         rendered.after_rule = block[-1].type == "hr"
@@ -434,8 +452,5 @@ class MarkdownDocument(Widget, can_focus=True):
         # Rich leaves the colors of plain text unset; the widget's fill them.
         return strip.crop_extend(0, width, PLAIN).apply_style(self.rich_style)
 
-    def on_click(self, event: events.Click) -> None:
-        href = event.style.link
-        if href:
-            event.stop()
-            self.post_message(self.LinkClicked(self, href))
+    def action_link(self, href: str) -> None:
+        self.post_message(self.LinkClicked(self, href))
