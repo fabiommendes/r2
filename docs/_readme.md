@@ -475,7 +475,8 @@ inline when the terminal supports it.
 
 The top bar shows the project, its git branch, and whether the worktree is
 clean, has staged changes or has unstaged changes. Click the `⭘` icon on its
-left to open the command palette, where you can also change the theme.
+left to open the command palette, where you can also change the theme, and
+click the project to pin it, as `p` does.
 
 The `‹` and `›` arrows at its right end go back and forward through the places
 you visited, across tabs, like a browser. Tab switches, documents picked in a

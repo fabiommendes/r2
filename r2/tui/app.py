@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
+from rich.cells import cell_len
 from rich.text import Text
 from textual import events
 from textual.app import App, ComposeResult, SuspendNotSupported, SystemCommand
@@ -67,14 +68,20 @@ FORWARD_ARROW = "›"
 
 
 class Powerline(Static):
-    """The powerline segments, whose first one opens the command palette."""
+    """The powerline segments: the first one opens the command palette, the
+    project one pins the project."""
 
     # The palette segment: the icon padded by spaces, plus the arrow.
     PALETTE_WIDTH = len(PALETTE_ICON) + 3
 
-    def on_click(self, event: events.Click) -> None:
+    project_width = 0
+    """Cells of the project segment, set by whoever writes the segments."""
+
+    async def on_click(self, event: events.Click) -> None:
         if event.x < self.PALETTE_WIDTH:
             self.app.action_command_palette()
+        elif event.x < self.PALETTE_WIDTH + self.project_width:
+            await self.app.run_action("toggle_pin")
 
 
 class ArrowButton(Static):
@@ -119,8 +126,11 @@ class TopBar(Horizontal):
         yield ArrowButton(BACK_ARROW, "back", id="back")
         yield ArrowButton(FORWARD_ARROW, "forward", id="forward")
 
-    def update(self, content: Text) -> None:
-        self.query_one(Powerline).update(content)
+    def update(self, content: Text, project: str) -> None:
+        """Show content, whose second segment is the project."""
+        powerline = self.query_one(Powerline)
+        powerline.project_width = cell_len(project) + 3
+        powerline.update(content)
 
     def set_history(self, can_go_back: bool, can_go_forward: bool) -> None:
         """Dim the arrows that lead nowhere."""
@@ -144,7 +154,7 @@ class R2App(App[None]):
 
     BINDINGS = [
         Binding("q", "quit", "Quit"),
-        Binding("p", "toggle_pin", "Pin project"),
+        Binding("p", "toggle_pin", "Pin project", show=False),
         Binding("e", "edit", "Edit"),
         Binding("o", "open", "Open"),
         Binding("i", "ide", "IDE"),
@@ -248,9 +258,10 @@ class R2App(App[None]):
 
     def _update_subtitle(self) -> None:
         colors = self.get_css_variables()
+        project = self.context.name if self.context else ""
         segments = [
             (PALETTE_ICON, colors[PALETTE_COLOR]),
-            (self.context.name if self.context else "", colors[PROJECT_COLOR]),
+            (project, colors[PROJECT_COLOR]),
         ]
         if self.git_status is not None:
             branch = f"{theme.BRANCH_SYMBOL} {self.git_status.branch}"
@@ -258,7 +269,7 @@ class R2App(App[None]):
             segments.append((branch, colors[worktree]))
         if self.pinned:
             segments.append(("pinned", colors[PINNED_COLOR]))
-        self.query_one(TopBar).update(theme.powerline(*segments))
+        self.query_one(TopBar).update(theme.powerline(*segments), project)
 
     def _on_theme_changed(self, _: object) -> None:
         if self.theme != self.ui_state.theme:

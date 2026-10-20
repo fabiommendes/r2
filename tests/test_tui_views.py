@@ -26,7 +26,7 @@ from r2.core.glossary import parse as parse_glossary
 from r2.core.issues import Issue, load
 from r2.core.links import Link
 from r2.core.rfcs import load as load_rfc
-from r2.tui.app import R2App
+from r2.tui.app import Powerline, R2App
 from r2.tui.views.glossary import GlossaryView
 from r2.tui.views.live import LiveView
 from r2.tui.widgets.command_box import CommandBox, CommandRun
@@ -946,5 +946,21 @@ def test_a_markdown_line_shows_as_text_in_the_live_view(
         view = await show_live_link(app, Link(doc, 1))(pilot)
         assert view.query_one(FilePreview).display
         assert not view.query_one(MarkdownPane).display
+
+    drive(test, monkeypatch)
+
+
+def test_clicking_the_project_in_the_top_bar_toggles_the_pin(
+    config: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def test(app: R2App, pilot: Pilot[None]) -> None:
+        assert not app.active_bindings["p"].binding.show
+        project = Powerline.PALETTE_WIDTH + 1
+        await pilot.click(Powerline, offset=(project, 0))
+        await pilot.pause()
+        assert app.pinned
+        await pilot.click(Powerline, offset=(project, 0))
+        await pilot.pause()
+        assert not app.pinned
 
     drive(test, monkeypatch)
