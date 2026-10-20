@@ -14,11 +14,11 @@ from textual.containers import Vertical
 from textual.widgets import Input, Tree
 from textual.widgets.tree import TreeNode
 
-from r2.core import adrs, issues, rfcs
 from r2.core.editor import uses_gui_editor
 from r2.core.files import create, update
 from r2.core.links import Link
 from r2.core.r2_context import ProjectContext
+from r2.core.references import THREAD_FOLDERS
 from r2.core.threads import (
     Format,
     Thread,
@@ -62,9 +62,6 @@ def status_pill(value: Any, colors: dict[str, str]) -> Text:
     # A click opens the status menu.
     return clickable(theme.pill(str(value).replace("_", " "), color), "status")
 
-
-# Folders where a bare slug in relatedTo and similar keys is looked up.
-THREAD_FOLDERS = [issues.FOLDER, adrs.FOLDER, rfcs.FOLDER]
 
 LINK_MARK = " ↗"
 

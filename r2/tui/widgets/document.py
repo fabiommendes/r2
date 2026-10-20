@@ -9,6 +9,7 @@ draws only the rows on screen.
 import asyncio
 import io
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import ClassVar
 
@@ -34,6 +35,9 @@ FIRST_ROWS = 100
 
 # Textual's line filters expect a style on every segment, never None.
 PLAIN = Style()
+
+type Resolve = Callable[[str], str | None]
+"""Finds the target of the text of a code span, or None if it names nothing."""
 
 Highlight = tuple[int, int, Style]
 """Start and end of a span in the text of a row, and the style painted on it."""
@@ -146,12 +150,31 @@ class Rendered:
     """Whether every block is rendered."""
 
 
-def parse(markdown: str) -> list[list[Token]]:
-    """Split markdown into its top level blocks, as tokens."""
+def link_code(token: Token, resolve: Resolve) -> None:
+    """Turn the code spans of an inline token that resolve into links."""
+    children: list[Token] = []
+    for child in token.children or []:
+        href = resolve(child.content) if child.type == "code_inline" else None
+        if href is None:
+            children.append(child)
+            continue
+        children.append(Token("link_open", "a", 1, attrs={"href": href}))
+        children.append(child)
+        children.append(Token("link_close", "a", -1))
+    token.children = children
+
+
+def parse(markdown: str, resolve: Resolve | None = None) -> list[list[Token]]:
+    """Split markdown into its top level blocks, as tokens.
+
+    Code spans that resolve become links to what they name.
+    """
     parser = MarkdownIt("gfm-like").enable("strikethrough").enable("table")
     blocks: list[list[Token]] = []
     block: list[Token] = []
     for token in parser.parse(markdown):
+        if resolve is not None and token.type == "inline":
+            link_code(token, resolve)
         block.append(token)
         if token.level == 0 and token.nesting <= 0:
             blocks.append(block)
@@ -334,9 +357,17 @@ class MarkdownDocument(Widget, can_focus=True):
         def control(self) -> "MarkdownDocument":
             return self.document
 
-    def __init__(self, markdown: str = "", *, id: str | None = None) -> None:
+    def __init__(
+        self,
+        markdown: str = "",
+        *,
+        resolve: Resolve | None = None,
+        id: str | None = None,
+    ) -> None:
         super().__init__(id=id)
-        self._blocks = parse(markdown)
+        self.resolve = resolve
+        """Finds the targets of code spans; set before update to link them."""
+        self._blocks = parse(markdown, resolve)
         self._anchors = slugs(self._blocks)
         self._rendered: Rendered | None = None
         self._done = asyncio.Event()
@@ -359,7 +390,7 @@ class MarkdownDocument(Widget, can_focus=True):
 
     def update(self, markdown: str) -> None:
         """Show markdown, rendering its first screen before return."""
-        self._blocks = parse(markdown)
+        self._blocks = parse(markdown, self.resolve)
         self._anchors = slugs(self._blocks)
         self.highlights = {}
         self._rendered = None

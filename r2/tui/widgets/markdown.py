@@ -13,10 +13,11 @@ from textual.message import Message
 from textual.widget import Widget
 from textual.widgets import Collapsible, Static, Tree
 
+from r2.core.references import resolve_reference
 from r2.core.threads import Comment, Thread, parse, split_frontmatter
 from r2.tui import theme
 from r2.tui.widgets.commands import CommandBar, CommandProvider
-from r2.tui.widgets.document import MarkdownDocument
+from r2.tui.widgets.document import MarkdownDocument, Resolve
 from r2.tui.widgets.meta import FieldRenderer, MetaBar
 from r2.tui.widgets.search import SearchBar, describe, find_spans
 from r2.tui.widgets.splitter import Splitter
@@ -103,12 +104,13 @@ class CommentThread(Vertical):
     }
     """
 
-    def show(self, comments: list[Comment]) -> None:
+    def show(self, comments: list[Comment], resolve: Resolve | None = None) -> None:
+        """Show comments, linking their code spans that resolve."""
         self.remove_children()
         first_open = len(comments) - OPEN_COMMENTS
         self.mount_all(
             Collapsible(
-                MarkdownDocument(comment.text),
+                MarkdownDocument(comment.text, resolve=resolve),
                 title=f"#{number}  {comment.author or 'comment'}",
                 collapsed=number <= first_open,
             )
@@ -133,17 +135,31 @@ class DocumentViewer(VerticalScroll, can_focus=False, can_focus_children=True):
     class Navigated(Message):
         """A link took the viewer to another document."""
 
+    class OpenFile(Message):
+        """A link points to a file that is not Markdown, for the app to show."""
+
+        def __init__(self, path: Path) -> None:
+            super().__init__()
+            self.path = path
+
     location: Path | None = None
     """The file on display."""
 
     def compose(self) -> ComposeResult:
-        yield FrontmatterMarkdown()
+        yield FrontmatterMarkdown(resolve=self.resolve)
         yield CommentThread()
+
+    def resolve(self, ref: str) -> str | None:
+        """The file a code span in the document on display names, if any."""
+        if self.location is None:
+            return None
+        path = resolve_reference(ref, self.location)
+        return None if path is None else str(path)
 
     def on_frontmatter_markdown_parsed(
         self, message: FrontmatterMarkdown.Parsed
     ) -> None:
-        self.query_one(CommentThread).show(message.comments)
+        self.query_one(CommentThread).show(message.comments, self.resolve)
 
     async def go(self, location: str | Path) -> None:
         """Show the file at location and the heading its #anchor points to.
@@ -183,8 +199,12 @@ class DocumentViewer(VerticalScroll, can_focus=False, can_focus_children=True):
         else:
             # Links are relative to the file that holds them.
             parent = self.location.parent if self.location else Path()
-            await self.go(parent / message.href)
-            self.post_message(self.Navigated())
+            target = parent / message.href
+            if target.suffix.lower() == ".md" or "#" in message.href:
+                await self.go(target)
+                self.post_message(self.Navigated())
+            else:
+                self.post_message(self.OpenFile(target))
 
 
 class MarkdownPane(Vertical):

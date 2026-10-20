@@ -11,7 +11,7 @@ from textual.widgets import Input, TabbedContent, TabPane, Tree
 from r2.core.links import Link
 from r2.core.r2_context import ProjectContext
 from r2.tui.widgets.commands import CommandBar
-from r2.tui.widgets.markdown import MarkdownBrowser
+from r2.tui.widgets.markdown import DocumentViewer, MarkdownBrowser
 from r2.tui.widgets.preview import FilePreview
 from r2.tui.widgets.splitter import Splitter
 
@@ -103,6 +103,10 @@ class View(Widget):
         """
         if link is not None and link.path.exists():
             await self.show_file(link.path)
+
+    def on_document_viewer_open_file(self, event: DocumentViewer.OpenFile) -> None:
+        event.stop()
+        self.post_message(self.OpenFile(event.path))
 
     def on_markdown_browser_selected(self, event: MarkdownBrowser.Selected) -> None:
         event.stop()
