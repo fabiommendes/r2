@@ -3,6 +3,7 @@ type: adr
 status: accepted
 created: 2026-10-13
 decided: 2026-10-13
+supersedes: [0005-typescript-with-a-rust-seam]
 ---
 
 # incorporar o reportlab ao r2
