@@ -150,7 +150,7 @@ class DocumentViewer(VerticalScroll, can_focus=False, can_focus_children=True):
         yield CommentThread()
 
     def resolve(self, ref: str) -> str | None:
-        """The file a code span in the document on display names, if any."""
+        """The file a code span or path in the document on display names."""
         if self.location is None:
             return None
         path = resolve_reference(ref, self.location)

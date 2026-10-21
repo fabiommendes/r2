@@ -30,6 +30,8 @@ from textual.message import Message
 from textual.strip import Strip
 from textual.widget import Widget
 
+from r2.core.reports.candidates import detect_candidates
+
 # Rows rendered before update returns; the rest renders in a thread.
 FIRST_ROWS = 100
 
@@ -37,7 +39,8 @@ FIRST_ROWS = 100
 PLAIN = Style()
 
 type Resolve = Callable[[str], str | None]
-"""Finds the target of the text of a code span, or None if it names nothing."""
+"""Finds the target of a code span or of a path in the text, or None if it
+names nothing."""
 
 Highlight = tuple[int, int, Style]
 """Start and end of a span in the text of a row, and the style painted on it."""
@@ -151,23 +154,67 @@ class Rendered:
 
 
 def link_code(token: Token, resolve: Resolve) -> None:
-    """Turn the code spans of an inline token that resolve into links."""
+    """
+    Turn what an inline token names into links: code spans that resolve, and
+    paths in its text that do, as `r2 web` links them in a report.
+    """
     children: list[Token] = []
+    depth = 0
     for child in token.children or []:
-        href = resolve(child.content) if child.type == "code_inline" else None
-        if href is None:
+        if child.type == "link_open":
+            depth += 1
+        elif child.type == "link_close":
+            depth -= 1
+        if depth > 0 or child.type not in ("code_inline", "text"):
             children.append(child)
-            continue
-        children.append(Token("link_open", "a", 1, attrs={"href": href}))
-        children.append(child)
-        children.append(Token("link_close", "a", -1))
+        elif child.type == "code_inline":
+            children.extend(_linked(child, resolve(child.content)))
+        else:
+            children.extend(_link_paths(child, resolve))
     token.children = children
+
+
+def _linked(child: Token, href: str | None) -> list[Token]:
+    if href is None:
+        return [child]
+    return [
+        Token("link_open", "a", 1, attrs={"href": href}),
+        child,
+        Token("link_close", "a", -1),
+    ]
+
+
+def _link_paths(child: Token, resolve: Resolve) -> list[Token]:
+    """Split a text token around the paths in it that name a file."""
+    out: list[Token] = []
+    text = child.content
+    at = 0
+    for candidate in detect_candidates(text):
+        if candidate.kind != "path":
+            continue
+        href = resolve(candidate.raw)
+        if href is None:
+            continue
+        if candidate.start > at:
+            out.append(_text(text[at : candidate.start]))
+        out.extend(_linked(_text(candidate.raw), href))
+        at = candidate.end
+    if at == 0:
+        return [child]
+    if at < len(text):
+        out.append(_text(text[at:]))
+    return out
+
+
+def _text(content: str) -> Token:
+    return Token("text", "", 0, content=content)
 
 
 def parse(markdown: str, resolve: Resolve | None = None) -> list[list[Token]]:
     """Split markdown into its top level blocks, as tokens.
 
-    Code spans that resolve become links to what they name.
+    Code spans and paths in the text that resolve become links to what they
+    name.
     """
     parser = MarkdownIt("gfm-like").enable("strikethrough").enable("table")
     blocks: list[list[Token]] = []
