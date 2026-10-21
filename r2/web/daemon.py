@@ -26,6 +26,7 @@ from r2.web.state import (
     BIND_ADDRESS,
     DEFAULT_PORT,
     DaemonState,
+    alive,
     clear_daemon_state,
     daemon_lock,
     new_token,
@@ -90,7 +91,7 @@ def ensure_daemon(timeout: float = 10.0) -> DaemonState:
     )
 
 
-def stop_daemon() -> bool:
+def stop_daemon(timeout: float = 5.0) -> bool:
     """Stop the running daemon. False when none was running."""
     state = read_live_daemon_state()
     if state is None:
@@ -98,6 +99,11 @@ def stop_daemon() -> bool:
         return False
     with contextlib.suppress(ProcessLookupError):
         os.kill(state.pid, signal.SIGTERM)
+    # Wait for it to go, or a daemon started right after finds the lock
+    # still held and exits.
+    deadline = time.monotonic() + timeout
+    while alive(state.pid) and time.monotonic() < deadline:
+        time.sleep(0.05)
     return True
 
 
