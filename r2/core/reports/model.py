@@ -169,13 +169,16 @@ class ReviewMarks(Wire):
 class Candidate(Wire):
     """Something in prose that looks like a reference. See `candidates`."""
 
-    kind: Literal["path", "commit"]
+    #: `stem` comes only from a code span: the file stem of an issue, an ADR
+    #: or an RFC.
+    kind: Literal["path", "commit", "stem"]
     #: Exactly the source text matched, so a caller can splice it out.
     raw: str
     #: Offsets into the string that was scanned.
     start: int
     end: int
-    #: For `path`: the ref, already split into path and line range.
+    #: For `path`: the ref, already split into path and line range. For
+    #: `stem`: the stem.
     path: str | None = None
     start_line: int | None = None
     end_line: int | None = None
@@ -207,6 +210,9 @@ class Strong(Wire):
 class InlineCode(Wire):
     type: Literal["inlineCode"] = "inlineCode"
     value: str
+    #: What the span may name, when it is a path or a stem. A link only once
+    #: resolved.
+    candidate: Candidate | None = None
 
 
 class Link(Wire):

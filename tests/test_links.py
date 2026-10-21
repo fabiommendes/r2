@@ -46,3 +46,9 @@ def test_is_binary(tmp_path: Path) -> None:
     binary.write_bytes(b"\x89PNG\r\n\x1a\n\0\0\0")
     assert not is_binary(text)
     assert is_binary(binary)
+
+
+def test_extracts_absolute_paths(tmp_path: Path) -> None:
+    make_files(tmp_path, "src/app.py")
+    text = f"Read {tmp_path}/src/app.py:4 and /nowhere/x.py."
+    assert extract_links(text, tmp_path) == [Link(tmp_path / "src/app.py", 4, 4)]

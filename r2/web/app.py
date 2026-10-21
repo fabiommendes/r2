@@ -12,6 +12,7 @@ import asyncio
 import contextlib
 import json
 import mimetypes
+import os
 from collections.abc import AsyncIterator, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -30,8 +31,15 @@ from starlette.responses import (
 )
 from starlette.types import ASGIApp
 
+from r2.core.references import targets
 from r2.core.reports.candidates import detect_candidates
-from r2.core.reports.model import FileFact, RenderedReport, Resolutions, ReviewMarks
+from r2.core.reports.model import (
+    Candidate,
+    FileFact,
+    RenderedReport,
+    Resolutions,
+    ReviewMarks,
+)
 from r2.core.reports.project import Project
 from r2.core.reports.refs import normalize_repo_path
 from r2.core.reports.render import render_markdown
@@ -415,21 +423,25 @@ def resolve_references(document: ReportDocument, root: Path) -> Resolutions:
     The render step only finds candidates and decides nothing, since it does
     no I/O; a path with no entry here renders as plain text.
     """
-    return _resolve(_wanted(document.rendered), root, document.modified.timestamp())
+    wanted = _wanted(document.rendered)
+    return _resolve(wanted, root, root, document.modified.timestamp())
 
 
 def file_view(file: SourceFile, root: Path) -> WireFile:
-    """A file with its Markdown rendered and the paths in its lines linked."""
+    """
+    A file with its Markdown rendered and the paths in its lines linked. A
+    relative path is tried from the file's folder first, as the TUI does.
+    """
     rendered = (
         render_markdown("\n".join(file.lines)) if is_markdown(file.path) else None
     )
-    wanted = _wanted(rendered) if rendered is not None else set()
+    wanted = _wanted(rendered) if rendered is not None else {}
     found: list[LineLink] = []
     for number, text in enumerate(file.lines, start=1):
         for candidate in detect_candidates(text):
             if candidate.kind != "path" or candidate.path is None:
                 continue
-            wanted.add(candidate.path)
+            wanted.setdefault(candidate.path, candidate)
             found.append(
                 LineLink(
                     line=number,
@@ -438,7 +450,8 @@ def file_view(file: SourceFile, root: Path) -> WireFile:
                     candidate=candidate,
                 )
             )
-    resolutions = _resolve(wanted, root, file.modified.timestamp())
+    folder = (root / file.path).parent
+    resolutions = _resolve(wanted, root, folder, file.modified.timestamp())
     links = [link for link in found if link.candidate.path in resolutions]
     return WireFile.of(file, rendered, links, resolutions)
 
@@ -450,25 +463,56 @@ def is_markdown(path: str) -> bool:
     )
 
 
-def _wanted(rendered: RenderedReport) -> set[str]:
-    wanted = {ref.path for ref in rendered.refs}
+def _wanted(rendered: RenderedReport) -> dict[str, Candidate]:
+    """What to resolve, keyed by the path or stem as the document carries it."""
+    wanted: dict[str, Candidate] = {}
+    for ref in rendered.refs:
+        wanted[ref.path] = Candidate(
+            kind="path", raw=ref.path, start=0, end=0, path=ref.path
+        )
     for candidate in rendered.candidates:
-        if candidate.kind == "path" and candidate.path is not None:
-            wanted.add(candidate.path)
+        if candidate.kind != "commit" and candidate.path is not None:
+            wanted.setdefault(candidate.path, candidate)
     return wanted
 
 
-def _resolve(wanted: set[str], root: Path, written: float) -> Resolutions:
-    if not wanted:
-        return {}
+def _resolve(
+    wanted: dict[str, Candidate], root: Path, folder: Path, written: float
+) -> Resolutions:
+    """
+    Facts keyed as the document carries each reference, with the path of the
+    file found relative to the project root. Only files inside the project
+    resolve, whatever the reference says.
+    """
+    options: dict[str, list[str]] = {}
+    for key, candidate in wanted.items():
+        options[key] = [
+            relative
+            for target in targets(candidate, folder, root)
+            if (relative := _inside(target, root)) is not None
+        ]
+    stats = stat_files(
+        root, sorted({path for paths in options.values() for path in paths})
+    )
     resolutions: Resolutions = {}
-    for path, stat in stat_files(root, sorted(wanted)).items():
+    for key, paths in options.items():
+        stat = next((stats[path] for path in paths if path in stats), None)
+        if stat is None:
+            continue
         # The only staleness signal in the product, and deliberately not git.
         changed = stat.modified.timestamp() > written
-        resolutions[path] = FileFact(
-            path=path, modified=iso(stat.modified), changed=changed or None
+        resolutions[key] = FileFact(
+            path=stat.path, modified=iso(stat.modified), changed=changed or None
         )
     return resolutions
+
+
+def _inside(target: Path, root: Path) -> str | None:
+    """target as a project-relative path, or None when it is outside."""
+    normal = Path(os.path.normpath(target))
+    if not normal.is_relative_to(root) or normal == root:
+        return None
+    return normal.relative_to(root).as_posix()
 
 
 def _utf16(text: str, offset: int) -> int:

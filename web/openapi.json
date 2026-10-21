@@ -105,7 +105,8 @@
           "kind": {
             "enum": [
               "path",
-              "commit"
+              "commit",
+              "stem"
             ],
             "title": "Kind",
             "type": "string"
@@ -619,6 +620,9 @@
       },
       "InlineCode": {
         "properties": {
+          "candidate": {
+            "$ref": "#/components/schemas/Candidate"
+          },
           "type": {
             "const": "inlineCode",
             "default": "inlineCode",

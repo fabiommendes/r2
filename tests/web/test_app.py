@@ -268,6 +268,48 @@ class TestResolvingReferences:
         assert get_report(client, repo, "auth")["resolutions"] == {}
 
 
+class TestResolvingLikeTheTui:
+    """Reports and file views resolve references the way the TUI does."""
+
+    def test_resolves_a_code_span_and_a_thread_stem(
+        self, client: TestClient, repo: Repo
+    ) -> None:
+        repo.write_file("src/a.ts", "x\n")
+        repo.write_file("dev/issues/fix.md", "# Fix\n")
+        repo.write_report("r", "See `src/a.ts:1` and `fix`, not `nope`.\n")
+        resolutions = get_report(client, repo, "r")["resolutions"]
+        assert resolutions["src/a.ts"]["path"] == "src/a.ts"
+        assert resolutions["fix"]["path"] == "dev/issues/fix.md"
+        assert "nope" not in resolutions
+
+    def test_an_absolute_path_resolves_inside_the_project_only(
+        self, client: TestClient, repo: Repo, tmp_path_factory: pytest.TempPathFactory
+    ) -> None:
+        repo.write_file("src/a.ts", "x\n")
+        outside = tmp_path_factory.mktemp("outside") / "secret.txt"
+        outside.write_text("no\n")
+        repo.write_report("r", f"Read {repo.root}/src/a.ts:1 and {outside}.\n")
+        resolutions = get_report(client, repo, "r")["resolutions"]
+        assert {key: fact["path"] for key, fact in resolutions.items()} == {
+            f"{repo.root}/src/a.ts": "src/a.ts"
+        }
+
+    def test_a_file_view_resolves_from_the_file_folder_first(
+        self, client: TestClient, repo: Repo
+    ) -> None:
+        repo.write_file("src/a.ts", "x\n")
+        repo.write_file("docs/b.md", "x\n")
+        repo.write_file("docs/guide.md", "See ../src/a.ts and `b.md`.\n")
+        response = client.get(
+            f"/api/p/{repo.project.id}/file",
+            params={"path": "docs/guide.md"},
+            headers=BEARER,
+        )
+        resolutions = response.json()["resolutions"]
+        assert resolutions["../src/a.ts"]["path"] == "src/a.ts"
+        assert resolutions["b.md"]["path"] == "docs/b.md"
+
+
 class TestFileListing:
     def test_lists_project_files(self, client: TestClient, repo: Repo) -> None:
         repo.write_file("src/a.ts", "const a = 1\n")

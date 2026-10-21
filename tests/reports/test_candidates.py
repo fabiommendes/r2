@@ -84,3 +84,32 @@ def test_keys_a_candidate_by_kind_and_raw() -> None:
 def test_word_characters_are_ascii_as_in_the_original() -> None:
     # `ç` is not a word character, so the path starts right after it.
     assert kinds("see ação/a.ts") == ["path:o/a.ts"]
+
+
+def test_finds_absolute_home_and_parent_paths() -> None:
+    assert only("read /home/me/src/a.py:3 now").path == "/home/me/src/a.py"
+    assert only("see ~/notes/todo.md").path == "~/notes/todo.md"
+    assert only("in ../lib/b.py").path == "../lib/b.py"
+    assert only("or ./a.toml.").path == "./a.toml"
+
+
+def test_an_absolute_path_inside_a_url_is_not_a_candidate() -> None:
+    assert kinds("https://example.com/src/a.py") == []
+
+
+def test_a_code_span_that_is_a_path_is_a_candidate() -> None:
+    from r2.core.reports.candidates import code_span_candidate
+
+    c = code_span_candidate("src/a.py:10-20")
+    assert c is not None
+    assert (c.kind, c.path, c.start_line, c.end_line) == ("path", "src/a.py", 10, 20)
+
+
+def test_a_code_span_that_is_a_word_is_a_stem() -> None:
+    from r2.core.reports.candidates import code_span_candidate
+
+    c = code_span_candidate("issue-flow")
+    assert c is not None
+    assert (c.kind, c.path) == ("stem", "issue-flow")
+    for text in ("x = 1", "--json", "a b", ""):
+        assert code_span_candidate(text) is None

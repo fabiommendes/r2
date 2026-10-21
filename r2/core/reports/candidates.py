@@ -21,7 +21,7 @@ import re
 
 from r2.core.reports.model import Candidate
 
-__all__ = ["candidate_key", "detect_candidates"]
+__all__ = ["candidate_key", "code_span_candidate", "detect_candidates"]
 
 #: A path with an extension, optionally followed by a locator.
 #:
@@ -29,12 +29,19 @@ __all__ = ["candidate_key", "detect_candidates"]
 #: what compilers, linters and editors print and therefore what an agent echoes
 #: without thinking about it, plus the older `#L10-40`, which earlier versions of
 #: the contract asked for (dev/adr/0012-ripgrep-style-locators.md).
+#:
+#: A path may be absolute or start at the home folder, as tools print them in
+#: a transcript; resolving decides whether it is inside the project.
 _PATH = re.compile(
-    r"(?<![\w/@:.-])"
-    r"((?:[\w.-]+/)+[\w.-]*[\w-]\.[A-Za-z]\w{0,9}|[\w-]+\.[A-Za-z]\w{0,9})"
+    r"(?<![\w/@:.~-])"
+    r"((?:~?/)?(?:[\w.-]+/)+[\w.-]*[\w-]\.[A-Za-z]\w{0,9}|[\w-]+\.[A-Za-z]\w{0,9})"
     r"(?::(\d+)(?:-L?(\d+)|:(\d+))?|#L(\d+)(?:-L?(\d+))?)?",
     re.ASCII,
 )
+
+#: A code span holding only a word may be the file stem of an issue, an ADR or
+#: an RFC, such as `issue-flow`.
+_STEM = re.compile(r"\w[\w.-]*", re.ASCII)
 
 #: A short or full hash. Must contain a hex letter, or it is just a number.
 _COMMIT = re.compile(
@@ -47,38 +54,16 @@ def detect_candidates(text: str) -> list[Candidate]:
     """
     Find every candidate in a run of plain text. Offsets are into `text`.
 
-    Callers must not pass code spans, code blocks or link destinations: a path
-    inside `` `foo/bar.ts` `` is already marked up, and a URL is linkified
-    before this runs.
+    In Markdown, callers must not pass code spans, code blocks or link
+    destinations: a code span is a candidate as a whole
+    (`code_span_candidate`), and a URL is linkified before this runs.
     """
     found: list[Candidate] = []
 
     for match in _PATH.finditer(text):
         if _overlaps(found, match.start(), match.end()):
             continue
-        start_text = match[2] if match[2] is not None else match[5]
-        end_text = match[3] if match[3] is not None else match[6]
-        start_line: int | None = None
-        end_line: int | None = None
-        column: int | None = None
-        if start_text is not None:
-            start_line = int(start_text)
-            if end_text is not None and int(end_text) > start_line:
-                end_line = int(end_text)
-            if match[4] is not None:
-                column = int(match[4])
-        found.append(
-            Candidate(
-                kind="path",
-                raw=match[0],
-                start=match.start(),
-                end=match.end(),
-                path=match[1],
-                start_line=start_line,
-                end_line=end_line,
-                column=column,
-            )
-        )
+        found.append(_path_candidate(match))
 
     for match in _COMMIT.finditer(text):
         if _overlaps(found, match.start(1), match.end(1)):
@@ -93,6 +78,42 @@ def detect_candidates(text: str) -> list[Candidate]:
         )
 
     return sorted(found, key=lambda candidate: candidate.start)
+
+
+def code_span_candidate(text: str) -> Candidate | None:
+    """
+    The candidate a whole code span is, such as `` `src/a.py:3` `` or
+    `` `issue-flow` ``, or None. Offsets cover the span's text.
+    """
+    if match := _PATH.fullmatch(text):
+        return _path_candidate(match)
+    if _STEM.fullmatch(text):
+        return Candidate(kind="stem", raw=text, start=0, end=len(text), path=text)
+    return None
+
+
+def _path_candidate(match: re.Match[str]) -> Candidate:
+    start_text = match[2] if match[2] is not None else match[5]
+    end_text = match[3] if match[3] is not None else match[6]
+    start_line: int | None = None
+    end_line: int | None = None
+    column: int | None = None
+    if start_text is not None:
+        start_line = int(start_text)
+        if end_text is not None and int(end_text) > start_line:
+            end_line = int(end_text)
+        if match[4] is not None:
+            column = int(match[4])
+    return Candidate(
+        kind="path",
+        raw=match[0],
+        start=match.start(),
+        end=match.end(),
+        path=match[1],
+        start_line=start_line,
+        end_line=end_line,
+        column=column,
+    )
 
 
 def _overlaps(found: list[Candidate], start: int, end: int) -> bool:

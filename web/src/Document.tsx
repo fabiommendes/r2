@@ -214,7 +214,15 @@ function InlinePart(props: { part: Inline }): JSX.Element {
         </strong>
       )
     case 'inlineCode':
-      return <code>{part.value}</code>
+      return (
+        <Show when={part.candidate} fallback={<code>{part.value}</code>}>
+          {(candidate) => (
+            <CandidateText candidate={candidate()}>
+              <code>{part.value}</code>
+            </CandidateText>
+          )}
+        </Show>
+      )
     case 'link':
       return (
         <a href={part.url} rel="noreferrer noopener" target="_blank">
@@ -267,10 +275,14 @@ function RefLink(props: { to: Ref; children: JSX.Element }): JSX.Element {
 }
 
 /**
- * A path detected in prose. Unresolved, it is the text the agent wrote and
- * nothing more: no styling, because nothing here is clickable.
+ * A path detected in prose, or a code span naming a file. Unresolved, it is
+ * what the agent wrote and nothing more: no styling, because nothing here is
+ * clickable.
  */
-function CandidateText(props: { candidate: Candidate }): JSX.Element {
+function CandidateText(props: {
+  candidate: Candidate
+  children?: JSX.Element
+}): JSX.Element {
   const refs = useRefs()
   const path = () => props.candidate.path
   const fact = () => {
@@ -279,7 +291,7 @@ function CandidateText(props: { candidate: Candidate }): JSX.Element {
   }
 
   return (
-    <Show when={fact()} fallback={<>{props.candidate.raw}</>}>
+    <Show when={fact()} fallback={props.children ?? <>{props.candidate.raw}</>}>
       {(found) => (
         <a
           class="ref"
@@ -293,7 +305,7 @@ function CandidateText(props: { candidate: Candidate }): JSX.Element {
           }
           title={title(props.candidate.raw, found().changed === true)}
         >
-          {props.candidate.raw}
+          {props.children ?? props.candidate.raw}
         </a>
       )}
     </Show>

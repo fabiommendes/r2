@@ -231,7 +231,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "path" | "commit";
+            kind: "path" | "commit" | "stem";
             /** Path */
             path?: string;
             /** Raw */
@@ -414,6 +414,7 @@ export interface components {
         Inline: components["schemas"]["Text"] | components["schemas"]["Break"] | components["schemas"]["Emphasis"] | components["schemas"]["Strong"] | components["schemas"]["InlineCode"] | components["schemas"]["Link"] | components["schemas"]["Image"] | components["schemas"]["RefLink"] | components["schemas"]["CandidateNode"];
         /** InlineCode */
         InlineCode: {
+            candidate?: components["schemas"]["Candidate"];
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}

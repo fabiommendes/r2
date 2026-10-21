@@ -24,7 +24,11 @@ from markdown_it import MarkdownIt
 from markdown_it.token import Token
 
 from r2.core.reports.blocks import BlockTagError, parse_block_tag
-from r2.core.reports.candidates import candidate_key, detect_candidates
+from r2.core.reports.candidates import (
+    candidate_key,
+    code_span_candidate,
+    detect_candidates,
+)
 from r2.core.reports.model import (
     SEVERITIES,
     BlockError,
@@ -401,7 +405,7 @@ class _Transformer:
                 case "text":
                     out.extend(self._text(token.content))
                 case "code_inline":
-                    out.append(InlineCode(value=token.content))
+                    out.append(self._code_span(token.content))
                 case "softbreak":
                     out.append(Text(value=" "))
                 case "hardbreak":
@@ -450,6 +454,12 @@ class _Transformer:
         if cursor < len(value):
             out.append(Text(value=value[cursor:]))
         return out
+
+    def _code_span(self, value: str) -> InlineCode:
+        candidate = code_span_candidate(value.strip())
+        if candidate is not None:
+            self._collect_candidate(candidate)
+        return InlineCode(value=value, candidate=candidate)
 
     def _collect_ref(self, ref: Ref) -> None:
         key = format_ref(ref)

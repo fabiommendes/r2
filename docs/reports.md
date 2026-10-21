@@ -178,6 +178,16 @@ wrong renders as plain text rather than as a broken link.
 
 Commit hashes are detected and never linked: the viewer runs no git.
 
+A code span is a reference when it holds nothing but a path, with or without a
+locator, as in `` `src/auth/session.py:45` ``, or the file stem of an issue, an
+ADR or an RFC of the project, as in `` `issue-flow` ``, which links to
+`dev/issues/issue-flow.md`. Any other code span stays code.
+
+A relative path is tried from the folder of the Markdown file that cites it,
+then from the repository root; in a report, from the root. An absolute path,
+or one starting with `~/`, links only when it points inside the project. The
+TUI resolves references the same way.
+
 Directories are not detected: a word pair like `and/or` is indistinguishable from
 a path. Write those as an explicit link with an `rl:` target, which degrades to
 readable text everywhere else:

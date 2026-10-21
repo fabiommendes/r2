@@ -217,7 +217,18 @@ class TestInlineContent:
         assert isinstance(part, CandidateNode)
         assert part.candidate.path == "src/a.ts"
 
-    def test_leaves_a_path_inside_inline_code_alone(self) -> None:
+    def test_a_code_span_naming_a_path_or_stem_is_a_candidate(self) -> None:
+        r = render_markdown("Run `src/a.py:3`, see `issue-flow`, not `x = 1`.\n")
+        assert [(c.kind, c.path) for c in r.candidates] == [
+            ("path", "src/a.py"),
+            ("stem", "issue-flow"),
+        ]
+        codes = [
+            n for n in inlines("`src/a.py:3` and `x = 1`") if n.type == "inlineCode"
+        ]
+        assert [n.candidate is not None for n in codes] == [True, False]
+
+    def test_keeps_a_path_inside_inline_code_as_code(self) -> None:
         parts = inlines("the file `src/a.ts` is fine")
         assert not any(p.type == "candidate" for p in parts)
 

@@ -29,11 +29,16 @@ export function useRefs(): Refs | undefined {
   return useContext(RefsContext)
 }
 
-/** Resolution backed by what the server said about one report. */
+/**
+ * Resolution backed by what the server said about one report. A link goes to
+ * the file the server found, which differs from what the document says for a
+ * relative path, an absolute one, or the stem of an issue.
+ */
 export function refsFor(project: string, resolutions: Resolutions): Refs {
   return {
     fact: (path) => resolutions[path],
-    href: (path, start, end) => fileHref(project, path, start, end),
+    href: (path, start, end) =>
+      fileHref(project, resolutions[path]?.path ?? path, start, end),
   }
 }
 

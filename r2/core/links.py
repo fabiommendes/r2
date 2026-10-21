@@ -1,17 +1,10 @@
 """File references collected from Claude sessions."""
 
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-# Paths with an extension, optionally followed by ":line" or ":start-end".
-# The lookbehind skips matches inside URLs and longer tokens.
-LINK_RE = re.compile(
-    r"(?<![\w/.:~-])"
-    r"(?P<path>(?:\.{0,2}/)?(?:[\w.-]+/)*[\w-][\w.-]*\.[A-Za-z0-9]+)"
-    r"(?::(?P<start>\d+)(?:-(?P<end>\d+))?)?"
-)
+from r2.core.reports.candidates import detect_candidates
 
 
 @dataclass(frozen=True)
@@ -46,12 +39,14 @@ def is_binary(path: Path) -> bool:
 def extract_links(text: str, root: Path) -> list[Link]:
     """Find references to existing files in text, in order and without repeats."""
     links: dict[Link, None] = {}
-    for match in LINK_RE.finditer(text):
-        path = (root / match["path"]).resolve()
+    for candidate in detect_candidates(text):
+        if candidate.kind != "path" or candidate.path is None:
+            continue
+        path = (root / Path(candidate.path).expanduser()).resolve()
         if not path.is_file():
             continue
-        start = int(match["start"]) if match["start"] else None
-        end = int(match["end"]) if match["end"] else start
+        start = candidate.start_line
+        end = candidate.end_line or start
         links[Link(path, start, end)] = None
     return list(links)
 
