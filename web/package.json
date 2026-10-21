@@ -1,0 +1,30 @@
+{
+  "name": "r2-web",
+  "version": "0.0.0",
+  "description": "Browser UI for the r2 web daemon.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "gen": "uv run --directory .. r2 web openapi > openapi.json && openapi-typescript openapi.json -o src/api.gen.ts",
+    "check-gen": "pnpm run gen && git diff --exit-code -- openapi.json src/api.gen.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "^24.0.0",
+    "openapi-typescript": "^7.0.0",
+    "typescript": "^5.9.0",
+    "vite": "^8.3.1",
+    "vite-plugin-solid": "^2.11.14"
+  },
+  "dependencies": {
+    "@solidjs/router": "^1.0.0",
+    "openapi-fetch": "^0.14.0",
+    "shiki": "^3.0.0",
+    "solid-js": "^1.9.15"
+  }
+}

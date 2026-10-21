@@ -10,3 +10,5 @@ docs/_build/
 .claude/settings.local.json
 .base-ast/
 .base-ast-cache/
+web/node_modules/
+r2/web/static/

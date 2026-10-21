@@ -19,6 +19,7 @@ from r2.cli.plugins import app as plugins_app
 from r2.cli.roadmap import changelog, roadmap_command
 from r2.cli.stories import story_app
 from r2.cli.threads import adr_app, issue_app, rfc_app
+from r2.cli.web import web_app
 from r2.core import console
 from r2.core.mode import configure
 from r2.core.project import get_project
@@ -191,6 +192,7 @@ app.add_typer(rfc_app, name="rfc")
 app.add_typer(handoff_app, name="handoff")
 app.add_typer(story_app, name="story")
 app.add_typer(plugins_app, name="plugins")
+app.add_typer(web_app, name="web")
 
 
 def build_app(

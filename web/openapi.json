@@ -1,0 +1,1753 @@
+{
+  "components": {
+    "schemas": {
+      "AgentContext": {
+        "properties": {
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "session": {
+            "title": "Session",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "AgentContext",
+        "type": "object"
+      },
+      "BlockError": {
+        "description": "A malformed block, rendered in place so the rest of the report survives.",
+        "properties": {
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "const": "error",
+            "default": "error",
+            "title": "Type",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "message"
+        ],
+        "title": "BlockError",
+        "type": "object"
+      },
+      "Blockquote": {
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/DocNode"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "type": {
+            "const": "blockquote",
+            "default": "blockquote",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "children"
+        ],
+        "title": "Blockquote",
+        "type": "object"
+      },
+      "Break": {
+        "properties": {
+          "type": {
+            "const": "break",
+            "default": "break",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "Break",
+        "type": "object"
+      },
+      "Candidate": {
+        "description": "Something in prose that looks like a reference. See `candidates`.",
+        "properties": {
+          "column": {
+            "title": "Column",
+            "type": "integer"
+          },
+          "end": {
+            "title": "End",
+            "type": "integer"
+          },
+          "endLine": {
+            "title": "Endline",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "path",
+              "commit"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "raw": {
+            "title": "Raw",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "integer"
+          },
+          "startLine": {
+            "title": "Startline",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "raw",
+          "start",
+          "end"
+        ],
+        "title": "Candidate",
+        "type": "object"
+      },
+      "CandidateNode": {
+        "description": "Something that looks like a reference. A link only once resolved.",
+        "properties": {
+          "candidate": {
+            "$ref": "#/components/schemas/Candidate"
+          },
+          "type": {
+            "const": "candidate",
+            "default": "candidate",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "candidate"
+        ],
+        "title": "CandidateNode",
+        "type": "object"
+      },
+      "Cell": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "Code": {
+        "properties": {
+          "lang": {
+            "title": "Lang",
+            "type": "string"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "type": {
+            "const": "code",
+            "default": "code",
+            "title": "Type",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "value"
+        ],
+        "title": "Code",
+        "type": "object"
+      },
+      "DataTable": {
+        "properties": {
+          "caption": {
+            "title": "Caption",
+            "type": "string"
+          },
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/Cell"
+              },
+              "type": "array"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "type": {
+            "const": "dataTable",
+            "default": "dataTable",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "columns",
+          "rows"
+        ],
+        "title": "DataTable",
+        "type": "object"
+      },
+      "Diagnostic": {
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "error",
+              "warning"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "severity",
+          "message"
+        ],
+        "title": "Diagnostic",
+        "type": "object"
+      },
+      "DocNode": {
+        "discriminator": {
+          "mapping": {
+            "blockquote": "#/components/schemas/Blockquote",
+            "code": "#/components/schemas/Code",
+            "dataTable": "#/components/schemas/DataTable",
+            "error": "#/components/schemas/BlockError",
+            "finding": "#/components/schemas/Finding",
+            "heading": "#/components/schemas/Heading",
+            "list": "#/components/schemas/ListNode",
+            "paragraph": "#/components/schemas/Paragraph",
+            "table": "#/components/schemas/Table",
+            "thematicBreak": "#/components/schemas/ThematicBreak",
+            "unknownBlock": "#/components/schemas/UnknownBlock"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Heading"
+          },
+          {
+            "$ref": "#/components/schemas/Paragraph"
+          },
+          {
+            "$ref": "#/components/schemas/ListNode"
+          },
+          {
+            "$ref": "#/components/schemas/Blockquote"
+          },
+          {
+            "$ref": "#/components/schemas/Code"
+          },
+          {
+            "$ref": "#/components/schemas/Table"
+          },
+          {
+            "$ref": "#/components/schemas/ThematicBreak"
+          },
+          {
+            "$ref": "#/components/schemas/Finding"
+          },
+          {
+            "$ref": "#/components/schemas/DataTable"
+          },
+          {
+            "$ref": "#/components/schemas/UnknownBlock"
+          },
+          {
+            "$ref": "#/components/schemas/BlockError"
+          }
+        ]
+      },
+      "Emphasis": {
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/Inline"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "type": {
+            "const": "emphasis",
+            "default": "emphasis",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "children"
+        ],
+        "title": "Emphasis",
+        "type": "object"
+      },
+      "FileFact": {
+        "description": "One file that a report cites, as it is on disk right now.",
+        "properties": {
+          "changed": {
+            "title": "Changed",
+            "type": "boolean"
+          },
+          "modified": {
+            "title": "Modified",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "modified"
+        ],
+        "title": "FileFact",
+        "type": "object"
+      },
+      "Finding": {
+        "description": "One `rl:finding`. `id` is positional (`f1`, `f2`) and keys the marks.",
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/DocNode"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "ref": {
+            "$ref": "#/components/schemas/Ref"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "const": "finding",
+            "default": "finding",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "severity",
+          "title",
+          "children"
+        ],
+        "title": "Finding",
+        "type": "object"
+      },
+      "FindingMark": {
+        "properties": {
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/FindingState"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "FindingMark",
+        "type": "object"
+      },
+      "FindingState": {
+        "enum": [
+          "seen",
+          "accepted",
+          "rejected"
+        ],
+        "type": "string"
+      },
+      "Frontmatter": {
+        "description": "Every field is optional, including all of them. A file with no\nfrontmatter is a valid report: the cheapest thing an agent can do is\nwrite Markdown to a path, and nothing in this format should make it\nhesitate.",
+        "properties": {
+          "agent": {
+            "$ref": "#/components/schemas/AgentContext"
+          },
+          "commit": {
+            "title": "Commit",
+            "type": "string"
+          },
+          "extra": {
+            "additionalProperties": true,
+            "title": "Extra",
+            "type": "object"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "extra"
+        ],
+        "title": "Frontmatter",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Heading": {
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/Inline"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "depth": {
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6
+            ],
+            "title": "Depth",
+            "type": "integer"
+          },
+          "type": {
+            "const": "heading",
+            "default": "heading",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "depth",
+          "children"
+        ],
+        "title": "Heading",
+        "type": "object"
+      },
+      "Health": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "projects": {
+            "title": "Projects",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ok",
+          "projects"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "Image": {
+        "properties": {
+          "alt": {
+            "title": "Alt",
+            "type": "string"
+          },
+          "type": {
+            "const": "image",
+            "default": "image",
+            "title": "Type",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "url",
+          "alt"
+        ],
+        "title": "Image",
+        "type": "object"
+      },
+      "Inline": {
+        "discriminator": {
+          "mapping": {
+            "break": "#/components/schemas/Break",
+            "candidate": "#/components/schemas/CandidateNode",
+            "emphasis": "#/components/schemas/Emphasis",
+            "image": "#/components/schemas/Image",
+            "inlineCode": "#/components/schemas/InlineCode",
+            "link": "#/components/schemas/Link",
+            "refLink": "#/components/schemas/RefLink",
+            "strong": "#/components/schemas/Strong",
+            "text": "#/components/schemas/Text"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Text"
+          },
+          {
+            "$ref": "#/components/schemas/Break"
+          },
+          {
+            "$ref": "#/components/schemas/Emphasis"
+          },
+          {
+            "$ref": "#/components/schemas/Strong"
+          },
+          {
+            "$ref": "#/components/schemas/InlineCode"
+          },
+          {
+            "$ref": "#/components/schemas/Link"
+          },
+          {
+            "$ref": "#/components/schemas/Image"
+          },
+          {
+            "$ref": "#/components/schemas/RefLink"
+          },
+          {
+            "$ref": "#/components/schemas/CandidateNode"
+          }
+        ]
+      },
+      "InlineCode": {
+        "properties": {
+          "type": {
+            "const": "inlineCode",
+            "default": "inlineCode",
+            "title": "Type",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "value"
+        ],
+        "title": "InlineCode",
+        "type": "object"
+      },
+      "LineLink": {
+        "description": "A path cited in a line of a file, that is a file on disk. Offsets count\nUTF-16 code units, as JavaScript strings do.",
+        "properties": {
+          "candidate": {
+            "$ref": "#/components/schemas/Candidate"
+          },
+          "end": {
+            "title": "End",
+            "type": "integer"
+          },
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "start": {
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "line",
+          "start",
+          "end",
+          "candidate"
+        ],
+        "title": "LineLink",
+        "type": "object"
+      },
+      "Link": {
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/Inline"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "type": {
+            "const": "link",
+            "default": "link",
+            "title": "Type",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "url",
+          "children"
+        ],
+        "title": "Link",
+        "type": "object"
+      },
+      "ListNode": {
+        "properties": {
+          "items": {
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/DocNode"
+              },
+              "type": "array"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "ordered": {
+            "title": "Ordered",
+            "type": "boolean"
+          },
+          "type": {
+            "const": "list",
+            "default": "list",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "ordered",
+          "items"
+        ],
+        "title": "ListNode",
+        "type": "object"
+      },
+      "MarksEvent": {
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "project": {
+            "title": "Project",
+            "type": "string"
+          },
+          "type": {
+            "const": "marks",
+            "default": "marks",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "project",
+          "path"
+        ],
+        "title": "MarksEvent",
+        "type": "object"
+      },
+      "Paragraph": {
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/Inline"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "type": {
+            "const": "paragraph",
+            "default": "paragraph",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "children"
+        ],
+        "title": "Paragraph",
+        "type": "object"
+      },
+      "ProjectsEvent": {
+        "properties": {
+          "type": {
+            "const": "projects",
+            "default": "projects",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "ProjectsEvent",
+        "type": "object"
+      },
+      "Ref": {
+        "description": "A pointer into the repository, resolved against the working tree. Lines\nare 1-based and inclusive.",
+        "properties": {
+          "column": {
+            "title": "Column",
+            "type": "integer"
+          },
+          "end": {
+            "title": "End",
+            "type": "integer"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "Ref",
+        "type": "object"
+      },
+      "RefLink": {
+        "description": "An explicit `rl:` link, or a ref attribute. Always a link.",
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/Inline"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "ref": {
+            "$ref": "#/components/schemas/Ref"
+          },
+          "type": {
+            "const": "refLink",
+            "default": "refLink",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "ref",
+          "children"
+        ],
+        "title": "RefLink",
+        "type": "object"
+      },
+      "Reloaded": {
+        "properties": {
+          "projects": {
+            "title": "Projects",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "projects"
+        ],
+        "title": "Reloaded",
+        "type": "object"
+      },
+      "RenderedReport": {
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/Candidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "diagnostics": {
+            "items": {
+              "$ref": "#/components/schemas/Diagnostic"
+            },
+            "title": "Diagnostics",
+            "type": "array"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "firstHeading": {
+            "title": "Firstheading",
+            "type": "string"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/DocNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "refs": {
+            "items": {
+              "$ref": "#/components/schemas/Ref"
+            },
+            "title": "Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "nodes",
+          "refs",
+          "candidates",
+          "findings",
+          "diagnostics"
+        ],
+        "title": "RenderedReport",
+        "type": "object"
+      },
+      "ReportEvent": {
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "project": {
+            "title": "Project",
+            "type": "string"
+          },
+          "type": {
+            "const": "report",
+            "default": "report",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "project",
+          "path"
+        ],
+        "title": "ReportEvent",
+        "type": "object"
+      },
+      "ReportRemovedEvent": {
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "project": {
+            "title": "Project",
+            "type": "string"
+          },
+          "type": {
+            "const": "report-removed",
+            "default": "report-removed",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "project",
+          "path"
+        ],
+        "title": "ReportRemovedEvent",
+        "type": "object"
+      },
+      "Resolutions": {
+        "additionalProperties": {
+          "$ref": "#/components/schemas/FileFact"
+        },
+        "type": "object"
+      },
+      "ReviewMarks": {
+        "description": "`<name>.review.json`, beside the report. Deleted with it.",
+        "properties": {
+          "findings": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FindingMark"
+            },
+            "title": "Findings",
+            "type": "object"
+          },
+          "read": {
+            "title": "Read",
+            "type": "string"
+          }
+        },
+        "required": [
+          "findings"
+        ],
+        "title": "ReviewMarks",
+        "type": "object"
+      },
+      "Severity": {
+        "enum": [
+          "high",
+          "medium",
+          "low",
+          "info"
+        ],
+        "type": "string"
+      },
+      "Strong": {
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/Inline"
+            },
+            "title": "Children",
+            "type": "array"
+          },
+          "type": {
+            "const": "strong",
+            "default": "strong",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "children"
+        ],
+        "title": "Strong",
+        "type": "object"
+      },
+      "Table": {
+        "properties": {
+          "head": {
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/Inline"
+              },
+              "type": "array"
+            },
+            "title": "Head",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "items": {
+                  "$ref": "#/components/schemas/Inline"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "type": {
+            "const": "table",
+            "default": "table",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "head",
+          "rows"
+        ],
+        "title": "Table",
+        "type": "object"
+      },
+      "Text": {
+        "properties": {
+          "type": {
+            "const": "text",
+            "default": "text",
+            "title": "Type",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "value"
+        ],
+        "title": "Text",
+        "type": "object"
+      },
+      "ThematicBreak": {
+        "properties": {
+          "type": {
+            "const": "thematicBreak",
+            "default": "thematicBreak",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "ThematicBreak",
+        "type": "object"
+      },
+      "UnknownBlock": {
+        "description": "An `rl:` block this version does not know. Rendered as code.",
+        "properties": {
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "tag": {
+            "title": "Tag",
+            "type": "string"
+          },
+          "type": {
+            "const": "unknownBlock",
+            "default": "unknownBlock",
+            "title": "Type",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "tag",
+          "value"
+        ],
+        "title": "UnknownBlock",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "WireDocument": {
+        "properties": {
+          "frontmatter": {
+            "$ref": "#/components/schemas/Frontmatter"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "marks": {
+            "$ref": "#/components/schemas/ReviewMarks"
+          },
+          "modified": {
+            "title": "Modified",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "rendered": {
+            "$ref": "#/components/schemas/RenderedReport"
+          },
+          "resolutions": {
+            "$ref": "#/components/schemas/Resolutions"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "title",
+          "kind",
+          "tags",
+          "modified",
+          "frontmatter",
+          "rendered",
+          "resolutions"
+        ],
+        "title": "WireDocument",
+        "type": "object"
+      },
+      "WireEvent": {
+        "discriminator": {
+          "mapping": {
+            "marks": "#/components/schemas/MarksEvent",
+            "projects": "#/components/schemas/ProjectsEvent",
+            "report": "#/components/schemas/ReportEvent",
+            "report-removed": "#/components/schemas/ReportRemovedEvent"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ReportEvent"
+          },
+          {
+            "$ref": "#/components/schemas/ReportRemovedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/MarksEvent"
+          },
+          {
+            "$ref": "#/components/schemas/ProjectsEvent"
+          }
+        ]
+      },
+      "WireFile": {
+        "description": "One file of the working tree, ready to render.",
+        "properties": {
+          "hash": {
+            "title": "Hash",
+            "type": "string"
+          },
+          "lang": {
+            "title": "Lang",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/LineLink"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "modified": {
+            "title": "Modified",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "rendered": {
+            "$ref": "#/components/schemas/RenderedReport"
+          },
+          "resolutions": {
+            "$ref": "#/components/schemas/Resolutions"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "path",
+          "modified",
+          "size",
+          "hash",
+          "lines",
+          "links",
+          "resolutions"
+        ],
+        "title": "WireFile",
+        "type": "object"
+      },
+      "WireFileEntry": {
+        "properties": {
+          "modified": {
+            "title": "Modified",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "modified",
+          "size"
+        ],
+        "title": "WireFileEntry",
+        "type": "object"
+      },
+      "WireProject": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "root": {
+            "title": "Root",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "root"
+        ],
+        "title": "WireProject",
+        "type": "object"
+      },
+      "WireSummary": {
+        "properties": {
+          "findings": {
+            "title": "Findings",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "modified": {
+            "title": "Modified",
+            "type": "string"
+          },
+          "open": {
+            "title": "Open",
+            "type": "boolean"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "read": {
+            "title": "Read",
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "title",
+          "kind",
+          "tags",
+          "modified",
+          "findings",
+          "open"
+        ],
+        "title": "WireSummary",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "r2 web",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/api/p/{project}/file": {
+      "get": {
+        "description": "A file of the working tree. This route serves the user's repository\nto a browser, so the path is checked twice: for its shape here, and\nagainst a symlink that leaves the project in `confine`.",
+        "operationId": "file_api_p__project__file_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "path",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Path",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireFile"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "415": {
+            "description": "Not a text file"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "File"
+      }
+    },
+    "/api/p/{project}/files": {
+      "get": {
+        "operationId": "files_api_p__project__files_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WireFileEntry"
+                  },
+                  "title": "Response Files Api P  Project  Files Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Files"
+      }
+    },
+    "/api/p/{project}/marks": {
+      "put": {
+        "description": "Lenient: anything unrecognized in the body is dropped.",
+        "operationId": "marks_api_p__project__marks_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "path",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Path",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewMarks"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewMarks"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Marks"
+      }
+    },
+    "/api/p/{project}/report": {
+      "get": {
+        "operationId": "report_api_p__project__report_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "path",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Path",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireDocument"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Report"
+      }
+    },
+    "/api/p/{project}/reports": {
+      "get": {
+        "operationId": "reports_api_p__project__reports_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WireSummary"
+                  },
+                  "title": "Response Reports Api P  Project  Reports Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reports"
+      }
+    },
+    "/api/p/{project}/stream": {
+      "get": {
+        "operationId": "stream_api_p__project__stream_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project",
+            "required": true,
+            "schema": {
+              "title": "Project",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {}
+            },
+            "description": "Server-sent events, one `WireEvent` per frame."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream"
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "operationId": "projects_api_projects_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WireProject"
+                  },
+                  "title": "Response Projects Api Projects Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Projects"
+      }
+    },
+    "/api/reload": {
+      "post": {
+        "description": "Re-read the registry. `r2 web` calls it after attaching a project.",
+        "operationId": "reload_api_reload_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reloaded"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Reload"
+      }
+    }
+  }
+}

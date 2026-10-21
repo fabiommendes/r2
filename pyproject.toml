@@ -7,6 +7,7 @@ license = "MIT"
 authors = [{ name = "Fábio Macêdo Mendes", email = "fabiomacedomendes@gmail.com" }]
 requires-python = ">=3.13"
 dependencies = [
+    "markdown-it-py[linkify]>=4.0",
     "pydantic>=2.13.2",
     "pyyaml>=6.0.3",
     "rich>=14.2.0",
@@ -17,6 +18,11 @@ dependencies = [
 tui = [
     "textual-image>=0.14.1",
     "textual[syntax]>=8.2.8",
+]
+web = [
+    "fastapi>=0.120",
+    "uvicorn>=0.38",
+    "watchfiles>=1.1",
 ]
 
 [project.scripts]
@@ -65,7 +71,7 @@ release = "task ci && uv build"
 
 [dependency-groups]
 dev = [
-    "r2-assistant[tui]",
+    "r2-assistant[tui,web]",
     "doc-zero>=0.2.3",
     "mypy>=2.4.0",
     "pyright>=1.1.414",
@@ -74,4 +80,5 @@ dev = [
     "taskipy>=1.14.1",
     "types-pyyaml>=6.0.12.20260906",
     "pytest-xdist>=3.8.0",
+    "httpx2>=2.15.1",
 ]

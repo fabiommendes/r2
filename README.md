@@ -10,7 +10,10 @@ R2 is a personal computer assistant with two faces:
 - a **command line** for humans and coding agents: `r2 glossary`, the project
   commands `r2 test`, `r2 build` and `r2 docs`, and whatever plugins add. An
   agent mode keeps the output short and refuses destructive commands without
-  an explicit go-ahead.
+  an explicit go-ahead;
+- a **report viewer** in the browser, `r2 web`: agents write Markdown reports
+  into `.reportlab/reports/`, and every path they cite links to the lines of
+  code it is about.
 
 I assume this project is not useful for anyone else but me, but feel free to
 fork it if you want to use it as inspiration. The command line assumes some
@@ -28,7 +31,8 @@ things about my setup:
 uv tool install "r2-assistant[tui]"
 ```
 
-The `tui` extra pulls in Textual. Without it you get the command line and the
+The `tui` extra pulls in Textual, and the `web` extra FastAPI, for `r2 web`
+(`"r2-assistant[tui,web]"` installs both). Without it you get the command line and the
 hook only, and `r2` with no arguments tells you to install the extra. You can
 also skip the install and create an alias in your shell configuration:
 
@@ -163,6 +167,28 @@ only source of the plan (format in `dev/spec/roadmap.md`).
 
 Issues without a milestone stay out of the roadmap. The issue titles are
 copied as written.
+
+**`r2 web`**
+
+Serve the reports agents write into `.reportlab/reports/` in the browser.
+An agent writes a Markdown file and the page updates live; there is no
+command for it to run. Every path a report mentions, such as
+`src/auth/session.py:45`, becomes a link to those lines when the file exists,
+and findings are a checklist the human ticks off. Needs the `web` extra.
+
+| Command | Does |
+| --- | --- |
+| `init [--no-browser]` | attach this project (creates `.reportlab/`), start the daemon and open the browser |
+| `open [--no-browser]` | open this project; it must be attached |
+| `detach [--purge]` | stop watching this project; `--purge` also deletes `.reportlab/` |
+| `status` | whether the daemon is up, and the projects it serves |
+| `stop` | stop the daemon |
+| `serve [--port N]` | run the daemon in the foreground |
+| `skill [--install]` | print the skill that teaches agents the format, or install it in `.claude/skills/reportlab/` |
+
+One daemon serves every attached project, on 127.0.0.1 only. The report
+format, the URLs and the discovery of projects under configured folders are
+in [docs/reports.md](docs/reports.md).
 
 **`r2 test`, `r2 build`, `r2 docs`**
 
